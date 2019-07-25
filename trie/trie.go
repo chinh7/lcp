@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/QuoineFinancial/vertex/db"
 	"github.com/ethereum/go-ethereum/common"
@@ -18,17 +19,21 @@ type Trie struct {
 // Hash represents the Keccak-256 hash with 32 byte length
 type Hash = common.Hash
 
+var emptyRoot = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+
 // New returns a Trie based
 func New(rootHash Hash, db *db.RocksDB) *Trie {
 	if db == nil {
 		panic("Could not run trie.New without db.")
 	}
 	trie := &Trie{db: db}
+	log.Println("RootHash", rootHash)
 	if (rootHash != Hash{}) {
 		rootNode, err := trie.loadNode(rootHash[:])
 		if err != nil {
 			panic(err)
 		}
+		log.Println("rootnode", rootNode)
 		trie.root = rootNode
 	}
 	return trie
@@ -165,6 +170,9 @@ func (tree *Trie) Update(key, value []byte) error {
 
 // Hash returns the root hash
 func (tree *Trie) Hash() common.Hash {
+	if tree.root == nil {
+		return common.BytesToHash(hashNode(emptyRoot.Bytes()))
+	}
 	hasher := newHasher()
 	defer returnHasherToPool(hasher)
 	hash, cached, _ := hasher.hash(tree.root, nil, true)
@@ -174,6 +182,9 @@ func (tree *Trie) Hash() common.Hash {
 
 // Commit returns the root hash and write to disk db
 func (tree *Trie) Commit() common.Hash {
+	if tree.root == nil {
+		return common.BytesToHash(hashNode(emptyRoot.Bytes()))
+	}
 	hasher := newHasher()
 	defer returnHasherToPool(hasher)
 	hash, cached, _ := hasher.hash(tree.root, tree.db, true)

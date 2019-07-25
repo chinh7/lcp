@@ -29,7 +29,7 @@ type State struct {
 }
 
 var state *State
-var database = db.NewRocksDB("./tmp/vertex/state") // TODO: Make this ENV
+var database = db.NewRocksDB("state.db") // TODO: Make this ENV
 
 // GetState get the singleton state
 func GetState() *State {
