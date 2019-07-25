@@ -70,7 +70,7 @@ func printBytes(proc *exec.Process, size int32, ptr int32) {
 
 func getStorage(proc *exec.Process, keyPtr int32) (valuePtr int32) {
 	key := readAt(proc, keyPtr)
-	value := storage.GetState().StorageGet(accountState.Address, sha3.Sum256(key))
+	value := storage.GetState().StorageGet(accountState.GetAddress(), sha3.Sum256(key))
 	if len(value) > 0 {
 		valuePtr = malloc(int32(len(value)))
 		proc.WriteAt(value, int64(valuePtr))
@@ -84,7 +84,7 @@ func setStorage(proc *exec.Process, keyPtr int32, valuePtr int32) {
 	key := readAt(proc, keyPtr)
 	value := readAt(proc, valuePtr)
 	// log.Println("setStorage", keyPtr, string(key), valuePtr, string(value))
-	storage.GetState().StorageSet(accountState.Address, sha3.Sum256(key), value)
+	storage.GetState().StorageSet(accountState.GetAddress(), sha3.Sum256(key), value)
 }
 
 func resolveImports(name string) (*wasm.Module, error) {
