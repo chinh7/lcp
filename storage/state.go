@@ -2,20 +2,18 @@ package storage
 
 import (
 	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/vertex/trie"
 )
-
-// Account Nonce + Merkel hash
-type Account struct {
-	Nonce    uint64
-	CodeHash []byte
-	// Root common.Hash // merkle root of the storage trie
-}
 
 // AccountState stores information related to the account
 type AccountState struct {
-	Address crypto.Address
+	Nonce       uint64
+	CodeHash    []byte
+	StorageHash []byte // merkle root of the storage trie
+
+	address crypto.Address
 	// contract execution storage
-	storage map[[32]byte][]byte
+	storage trie.Trie
 	// account information
 	account Account
 	// contract code
@@ -25,6 +23,7 @@ type AccountState struct {
 // State is the global account state consisting of many address->state mapping
 type State struct {
 	accountStates map[crypto.Address]*AccountState
+	trie          trie.Trie
 }
 
 var state *State
@@ -78,6 +77,11 @@ func (state *State) StorageSet(addr crypto.Address, key [32]byte, value []byte) 
 // SetCode store contract code to the account state
 func (state *AccountState) SetCode(code []byte) {
 	state.code = code
+}
+
+// GetAddress returns state address
+func (state *AccountState) GetAddress() crypto.Address {
+	return state.address
 }
 
 // GetCode retrieves contract code for account state
