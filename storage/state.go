@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/vertexdlt/vertex/crypto"
+	"github.com/QuoineFinancial/vertex/crypto"
 )
 
 // Account Nonce + Merkel hash

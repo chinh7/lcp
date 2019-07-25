@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/vertexdlt/vertex/core"
-	"github.com/vertexdlt/vertex/crypto"
+	"github.com/QuoineFinancial/vertex/core"
+	"github.com/QuoineFinancial/vertex/crypto"
 
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"

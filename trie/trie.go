@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/QuoineFinancial/vertex-storage/db"
+	"github.com/QuoineFinancial/vertex/db"
 	"github.com/ethereum/go-ethereum/common"
 )
 

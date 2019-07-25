@@ -4,7 +4,7 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/vertexdlt/vertex/storage"
+	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/go-interpreter/wagon/exec"
 	"github.com/go-interpreter/wagon/wasm"
 	"golang.org/x/crypto/sha3"

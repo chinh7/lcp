@@ -1,4 +1,4 @@
-module github.com/vertexdlt/vertex
+module github.com/QuoineFinancial/vertex
 
 go 1.12
 

@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/QuoineFinancial/vertex-storage/db"
-	"github.com/QuoineFinancial/vertex-storage/trie"
+	"github.com/QuoineFinancial/vertex/db"
+	"github.com/QuoineFinancial/vertex/trie"
 	"github.com/ethereum/go-ethereum/common"
 )
 

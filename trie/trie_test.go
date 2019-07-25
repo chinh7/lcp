@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/QuoineFinancial/vertex-storage/db"
+	"github.com/QuoineFinancial/vertex/db"
 )
 
 var items = []struct {

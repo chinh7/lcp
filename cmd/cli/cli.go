@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ed25519"
 
-	"github.com/vertexdlt/vertex/crypto"
+	"github.com/QuoineFinancial/vertex/crypto"
 )
 
 // type Submission struct {

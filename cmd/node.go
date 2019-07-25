@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/vertexdlt/vertex/consensus"
+	"github.com/QuoineFinancial/vertex/consensus"
 	cmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
 	"github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/libs/cli"
