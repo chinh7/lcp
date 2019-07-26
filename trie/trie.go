@@ -19,8 +19,6 @@ type Trie struct {
 // Hash represents the Keccak-256 hash with 32 byte length
 type Hash = common.Hash
 
-var emptyRoot = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-
 // New returns a Trie based
 func New(rootHash Hash, db *db.RocksDB) *Trie {
 	if db == nil {
@@ -35,6 +33,8 @@ func New(rootHash Hash, db *db.RocksDB) *Trie {
 		}
 		log.Println("rootnode", rootNode)
 		trie.root = rootNode
+	} else {
+		trie.root = valueNode(nil)
 	}
 	return trie
 }
@@ -170,9 +170,6 @@ func (tree *Trie) Update(key, value []byte) error {
 
 // Hash returns the root hash
 func (tree *Trie) Hash() common.Hash {
-	if tree.root == nil {
-		return common.BytesToHash(hashNode(emptyRoot.Bytes()))
-	}
 	hasher := newHasher()
 	defer returnHasherToPool(hasher)
 	hash, cached, _ := hasher.hash(tree.root, nil, true)
@@ -182,9 +179,6 @@ func (tree *Trie) Hash() common.Hash {
 
 // Commit returns the root hash and write to disk db
 func (tree *Trie) Commit() common.Hash {
-	if tree.root == nil {
-		return common.BytesToHash(hashNode(emptyRoot.Bytes()))
-	}
 	hasher := newHasher()
 	defer returnHasherToPool(hasher)
 	hash, cached, _ := hasher.hash(tree.root, tree.db, true)
