@@ -12,7 +12,7 @@ import (
 
 // Trie is Merkle Patricia Trie
 type Trie struct {
-	db   *db.RocksDB
+	db   db.Database
 	root Node
 }
 
@@ -20,7 +20,7 @@ type Trie struct {
 type Hash = common.Hash
 
 // New returns a Trie based
-func New(rootHash Hash, db *db.RocksDB) *Trie {
+func New(rootHash Hash, db db.Database) *Trie {
 	if db == nil {
 		panic("Could not run trie.New without db.")
 	}
@@ -33,8 +33,6 @@ func New(rootHash Hash, db *db.RocksDB) *Trie {
 		}
 		log.Println("rootnode", rootNode)
 		trie.root = rootNode
-	} else {
-		trie.root = valueNode(nil)
 	}
 	return trie
 }

@@ -46,7 +46,7 @@ func newHasher() *hasher { return hasherPool.Get().(*hasher) }
 
 func returnHasherToPool(h *hasher) { hasherPool.Put(h) }
 
-func (h *hasher) hash(n Node, db *db.RocksDB, force bool) (Node, Node, error) {
+func (h *hasher) hash(n Node, db db.Database, force bool) (Node, Node, error) {
 	if hash, dirty := n.cache(); hash != nil {
 		if db == nil {
 			return hash, n, nil
@@ -93,7 +93,7 @@ func (h *hasher) hash(n Node, db *db.RocksDB, force bool) (Node, Node, error) {
 // hashChildren replaces the children of a node with their hashes if the encoded
 // size of the child is larger than a hash, returning the collapsed node as well
 // as a replacement for the original node with the child hashes cached in.
-func (h *hasher) hashChildren(original Node, db *db.RocksDB) (Node, Node, error) {
+func (h *hasher) hashChildren(original Node, db db.Database) (Node, Node, error) {
 	var err error
 
 	switch node := original.(type) {
@@ -136,7 +136,7 @@ func (h *hasher) hashChildren(original Node, db *db.RocksDB) (Node, Node, error)
 // store hashes the node n and if we have a storage layer specified, it writes
 // the key/value pair to it and tracks any node->child references as well as any
 // node->external trie references.
-func (h *hasher) store(node Node, db *db.RocksDB, force bool) (Node, error) {
+func (h *hasher) store(node Node, db db.Database, force bool) (Node, error) {
 
 	// Don't store hashes or empty nodes.
 	if _, isHash := node.(hashNode); node == nil || isHash {
