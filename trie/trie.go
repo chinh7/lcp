@@ -168,20 +168,30 @@ func (tree *Trie) Update(key, value []byte) error {
 
 // Hash returns the root hash
 func (tree *Trie) Hash() common.Hash {
-	hasher := newHasher()
-	defer returnHasherToPool(hasher)
-	hash, cached, _ := hasher.hash(tree.root, nil, true)
+	hash, cached, _ := tree.hashRoot(nil)
 	tree.root = cached
 	return common.BytesToHash(hash.(hashNode))
 }
 
 // Commit returns the root hash and write to disk db
-func (tree *Trie) Commit() common.Hash {
+func (tree *Trie) Commit() (Hash, error) {
+	hash, cached, err := tree.hashRoot(tree.db)
+	if err != nil {
+		return Hash{}, err
+	}
+	tree.root = cached
+	return common.BytesToHash(hash.(hashNode)), nil
+}
+
+func (tree *Trie) hashRoot(db db.Database) (Node, Node, error) {
 	hasher := newHasher()
 	defer returnHasherToPool(hasher)
-	hash, cached, _ := hasher.hash(tree.root, tree.db, true)
-	tree.root = cached
-	return common.BytesToHash(hash.(hashNode))
+	if tree.root == nil {
+		// Could not cache nil root
+		hash, _, err := hasher.hash(valueNode(nil), db, true)
+		return hash, nil, err
+	}
+	return hasher.hash(tree.root, db, true)
 }
 
 // Get will retrieve the value of key in tree

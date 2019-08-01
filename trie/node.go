@@ -1,6 +1,7 @@
 package trie
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -87,6 +88,10 @@ func (n hashNode) cache() (hashNode, bool)    { return nil, true }
 func (n valueNode) cache() (hashNode, bool)   { return nil, true }
 
 func mustDecodeNode(hash, buf []byte) Node {
+	if s, _, err := rlp.SplitString(buf); err == nil && len(s) == 0 {
+		// Handle nil node
+		return nil
+	}
 	node, err := newNode(hash, buf)
 	if err != nil {
 		panic(fmt.Sprintf("node %x: %v", hash, err))
@@ -97,7 +102,7 @@ func mustDecodeNode(hash, buf []byte) Node {
 // newNode parses the RLP encoding of a trie node.
 func newNode(hash, buf []byte) (Node, error) {
 	if len(buf) == 0 {
-		return nil, nil
+		return nil, errors.New("Unexpected end of buffer")
 	}
 	elements, _, err := rlp.SplitList(buf)
 	if err != nil {
