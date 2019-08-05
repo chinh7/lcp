@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	"github.com/vertexdlt/vertex/crypto"
+	"github.com/QuoineFinancial/vertex/crypto"
 )
 
 func TestTransaction(t *testing.T) {

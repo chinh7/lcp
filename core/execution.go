@@ -3,9 +3,9 @@ package core
 import (
 	"log"
 
-	"github.com/vertexdlt/vertex/crypto"
-	"github.com/vertexdlt/vertex/storage"
-	"github.com/vertexdlt/vertex/vm"
+	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/vertex/storage"
+	"github.com/QuoineFinancial/vertex/vm"
 )
 
 // ApplyTx executes a transaction by either deploying the contract code or invoking a contract method call

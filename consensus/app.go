@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/vertexdlt/vertex/core"
-	"github.com/vertexdlt/vertex/crypto"
+	"github.com/QuoineFinancial/vertex/core"
+	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/vertex/storage"
 
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
@@ -50,6 +51,6 @@ func (app *App) DeliverTx(txBytes []byte) types.ResponseDeliverTx {
 // Commit returns the state root of application storage. Called once all block processing is complete
 func (app *App) Commit() types.ResponseCommit {
 	// Using a memdb - just return the big endian size of the db
-	appHash := make([]byte, 8)
-	return types.ResponseCommit{Data: appHash}
+	appHash, _ := storage.GetState().Commit()
+	return types.ResponseCommit{Data: appHash[:]}
 }
