@@ -6,10 +6,13 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . ./
-RUN go build -o /vertex .
+RUN cd cmd && go build -o /vertex .
 
-FROM scratch
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /vertex ./
-EXPOSE 3000
-ENTRYPOINT ["./vertex"]
+
+# TODO: Make the built image clean by copy binary to scratch
+# FROM scratch
+# COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# COPY --from=builder /vertex ./
+
+EXPOSE 26657
+ENTRYPOINT ["/vertex"]
