@@ -148,9 +148,5 @@ func (state *State) Commit() (trie.Hash, error) {
 			return trie.Hash{}, err
 		}
 	}
-	hash, err := state.trie.Commit()
-	if err != nil {
-		return trie.Hash{}, err
-	}
-	return hash, nil
+	return state.trie.Commit()
 }
