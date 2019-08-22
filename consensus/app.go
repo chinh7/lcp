@@ -32,17 +32,17 @@ func (app *App) Info(req types.RequestInfo) (resInfo types.ResponseInfo) {
 }
 
 // CheckTx checks if submitted transaction is valid and can be passed to next step
-func (app *App) CheckTx(tx []byte) types.ResponseCheckTx {
+func (app *App) CheckTx(req types.RequestCheckTx) types.ResponseCheckTx {
 	return types.ResponseCheckTx{Code: code.CodeTypeOK}
 }
 
 //DeliverTx executes the submitted transaction
-func (app *App) DeliverTx(txBytes []byte) types.ResponseDeliverTx {
+func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 	// timed out after config.TimeoutBroadcastTxCommit
 	// time.Sleep(5 * time.Second)
 	// log.Println("DeliverTx", hex.EncodeToString(txBytes))
 	tx := &crypto.Tx{}
-	tx.Deserialize(txBytes)
+	tx.Deserialize(req.Tx)
 	log.Println(tx)
 	core.ApplyTx(tx)
 	return types.ResponseDeliverTx{Code: code.CodeTypeOK}
@@ -53,4 +53,8 @@ func (app *App) Commit() types.ResponseCommit {
 	// Using a memdb - just return the big endian size of the db
 	appHash, _ := storage.GetState().Commit()
 	return types.ResponseCommit{Data: appHash[:]}
+}
+
+func (app *App) Query(reqQuery types.RequestQuery) (resQuery types.ResponseQuery) {
+	return types.ResponseQuery{Log: "hello"}
 }
