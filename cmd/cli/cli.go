@@ -118,8 +118,6 @@ func invoke(cmd *cobra.Command, args []string) {
 }
 
 func main() {
-	crypto.RegisterCodec()
-
 	var cmdDeploy = &cobra.Command{
 		Use:   "deploy [nonce] [path to wasm]",
 		Short: "Deploy a wasm contract",
