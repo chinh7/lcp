@@ -29,7 +29,7 @@ require (
 	github.com/stellar/go v0.0.0-20190723221356-14eed5a46caf
 	github.com/syndtr/goleveldb v1.0.0 // indirect
 	github.com/tecbot/gorocksdb v0.0.0-20190705090504-162552197222
-	github.com/tendermint/go-amino v0.15.0
+	github.com/tendermint/go-amino v0.15.0 // indirect
 	github.com/tendermint/tendermint v0.31.5
 	golang.org/x/arch v0.0.0-20190312162104-788fe5ffcd8c // indirect
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4

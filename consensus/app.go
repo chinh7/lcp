@@ -20,7 +20,6 @@ type App struct {
 
 // NewApp initializes a new app
 func NewApp(nodeInfo string) *App {
-	crypto.RegisterCodec()
 	return &App{
 		nodeInfo: nodeInfo,
 	}
