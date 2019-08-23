@@ -10,10 +10,12 @@ import (
 )
 
 var accountState *storage.AccountState
+var events [][]byte
 
 // Call executes a contract given its code, method, and arguments
-func Call(state *storage.AccountState, method string, methodArgs ...interface{}) interface{} {
+func Call(state *storage.AccountState, method string, methodArgs ...interface{}) (interface{}, [][]byte) {
 	accountState = state
+	events = make([][]byte, 0)
 	programReader := bytes.NewReader(accountState.GetCode())
 
 	m, err := wasm.ReadModule(programReader, func(n string) (*wasm.Module, error) { return resolveImports(n) })
@@ -43,5 +45,5 @@ func Call(state *storage.AccountState, method string, methodArgs ...interface{})
 		log.Fatalf("Error executing the default function: %v", err)
 	}
 	log.Println("return value = ", ret)
-	return ret
+	return ret, events
 }

@@ -68,6 +68,11 @@ func printBytes(proc *exec.Process, size int32, ptr int32) {
 	log.Println("printBytes", string(key))
 }
 
+func emitEvent(proc *exec.Process, ptr int32) {
+	data := readAt(proc, ptr)
+	events = append(events, data)
+}
+
 func getStorage(proc *exec.Process, keyPtr int32) (valuePtr int32) {
 	key := readAt(proc, keyPtr)
 	value := storage.GetState().StorageGet(accountState.GetAddress(), sha3.Sum256(key))
@@ -133,6 +138,11 @@ func resolveImports(name string) (*wasm.Module, error) {
 				ParamTypes:  []wasm.ValueType{wasm.ValueTypeI32, wasm.ValueTypeI32},
 				ReturnTypes: []wasm.ValueType{},
 			},
+			{
+				Form:        0,
+				ParamTypes:  []wasm.ValueType{wasm.ValueTypeI32},
+				ReturnTypes: []wasm.ValueType{},
+			},
 		},
 	}
 	m.FunctionIndexSpace = []wasm.Function{
@@ -184,6 +194,11 @@ func resolveImports(name string) (*wasm.Module, error) {
 		{
 			Sig:  &m.Types.Entries[7],
 			Host: reflect.ValueOf(printBytes),
+			Body: &wasm.FunctionBody{},
+		},
+		{
+			Sig:  &m.Types.Entries[8],
+			Host: reflect.ValueOf(emitEvent),
 			Body: &wasm.FunctionBody{},
 		},
 	}
@@ -239,6 +254,11 @@ func resolveImports(name string) (*wasm.Module, error) {
 				FieldStr: "print_bytes",
 				Kind:     wasm.ExternalFunction,
 				Index:    9,
+			},
+			"emit_event": {
+				FieldStr: "emit_event",
+				Kind:     wasm.ExternalFunction,
+				Index:    10,
 			},
 		},
 	}
