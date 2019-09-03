@@ -13,6 +13,7 @@ require (
 	github.com/go-kit/kit v0.9.0 // indirect
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/gorilla/websocket v1.4.0 // indirect
+	github.com/gorilla/rpc v1.2.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.0.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20190706150252-9beb055b7962 // indirect
