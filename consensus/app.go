@@ -10,6 +10,7 @@ import (
 
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/common"
 )
 
 // App basic Tendermint base app
@@ -44,7 +45,13 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 	tx.Deserialize(req.GetTx())
 	log.Println(tx)
 	core.ApplyTx(tx)
-	return types.ResponseDeliverTx{Code: code.CodeTypeOK, Events: core.GetEvents()}
+	events := core.GetEvents()
+	address := tx.From.Address()
+	attributes := []common.KVPair{common.KVPair{Key: []byte("account.address"), Value: []byte(address.String())}}
+	events = append(events, types.Event{
+		Attributes: attributes,
+	})
+	return types.ResponseDeliverTx{Code: code.CodeTypeOK, Events: events}
 }
 
 // Commit returns the state root of application storage. Called once all block processing is complete
