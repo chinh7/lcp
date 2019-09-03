@@ -41,12 +41,18 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 	// timed out after config.TimeoutBroadcastTxCommit
 	// time.Sleep(5 * time.Second)
 	// log.Println("DeliverTx", hex.EncodeToString(txBytes))
+	var address crypto.Address
 	tx := &crypto.Tx{}
 	tx.Deserialize(req.GetTx())
 	log.Println(tx)
 	core.ApplyTx(tx)
 	events := core.GetEvents()
-	address := tx.From.Address()
+	if (tx.To == crypto.Address{}) {
+		address = tx.From.Address()
+	} else {
+		address = tx.To
+	}
+
 	attributes := []common.KVPair{common.KVPair{Key: []byte("account.address"), Value: []byte(address.String())}}
 	events = append(events, types.Event{
 		Attributes: attributes,
