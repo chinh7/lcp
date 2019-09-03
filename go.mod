@@ -9,6 +9,7 @@ require (
 	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-interpreter/wagon v0.5.0
+	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/rpc v1.2.0
 	github.com/pkg/errors v0.8.1
 	github.com/segmentio/go-loggly v0.5.0 // indirect
