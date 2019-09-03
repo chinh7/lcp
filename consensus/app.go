@@ -20,7 +20,6 @@ type App struct {
 
 // NewApp initializes a new app
 func NewApp(nodeInfo string) *App {
-	crypto.RegisterCodec()
 	return &App{
 		nodeInfo: nodeInfo,
 	}
@@ -42,10 +41,10 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 	// time.Sleep(5 * time.Second)
 	// log.Println("DeliverTx", hex.EncodeToString(txBytes))
 	tx := &crypto.Tx{}
-	tx.Deserialize(req.Tx)
+	tx.Deserialize(req.GetTx())
 	log.Println(tx)
 	core.ApplyTx(tx)
-	return types.ResponseDeliverTx{Code: code.CodeTypeOK}
+	return types.ResponseDeliverTx{Code: code.CodeTypeOK, Events: core.GetEvents()}
 }
 
 // Commit returns the state root of application storage. Called once all block processing is complete

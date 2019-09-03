@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/tendermint/go-amino"
+	cdc "github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/sha3"
 )
@@ -29,8 +29,6 @@ type Tx struct {
 	Data []byte
 	To   Address
 }
-
-var cdc = amino.NewCodec()
 
 // Address derived from TxSigner PubKey
 func (txSigner *TxSigner) Address() Address {
@@ -59,7 +57,7 @@ func (tx Tx) String() string {
 func (tx *Tx) GetSigHash() []byte {
 	clone := *tx
 	clone.From.Signature = nil
-	bz, _ := cdc.MarshalBinaryLengthPrefixed(clone)
+	bz, _ := cdc.EncodeToBytes(clone)
 	return bz
 }
 
@@ -71,36 +69,33 @@ func (tx *Tx) sigVerified() bool {
 
 // Serialize a Tx to bytes
 func (tx *Tx) Serialize() []byte {
-	return cdc.MustMarshalBinaryLengthPrefixed(tx)
+	bytes, _ := cdc.EncodeToBytes(tx)
+	return bytes
 }
 
 // Serialize a TxData to bytes
 func (txData *TxData) Serialize() []byte {
-	return cdc.MustMarshalBinaryLengthPrefixed(txData)
+	bytes, _ := cdc.EncodeToBytes(txData)
+	return bytes
 }
 
 // Serialize a TxData to bytes
 func (txSigner *TxSigner) Serialize() []byte {
-	return cdc.MustMarshalBinaryLengthPrefixed(txSigner)
+	bytes, _ := cdc.EncodeToBytes(txSigner)
+	return bytes
 }
 
 // Deserialize converts bytes to Tx
 func (tx *Tx) Deserialize(bz []byte) {
-	cdc.MustUnmarshalBinaryLengthPrefixed(bz, tx)
+	cdc.DecodeBytes(bz, &tx)
 }
 
 // Deserialize converts bytes to TxData
 func (txData *TxData) Deserialize(bz []byte) {
-	cdc.MustUnmarshalBinaryLengthPrefixed(bz, txData)
+	cdc.DecodeBytes(bz, &txData)
 }
 
-// RegisterCodec registers types that need encoding to the animo codec
-func RegisterCodec() {
-	log.Println("Registering Codec")
-	cdc.RegisterConcrete(&Tx{}, "Tx", nil)
-	cdc.RegisterConcrete(&TxSigner{}, "TxSigner", nil)
-	cdc.RegisterConcrete(&TxData{}, "TxData", nil)
-	cdc.RegisterInterface((*interface{})(nil), nil)
-	cdc.RegisterConcrete(int64(0), "int", nil)
-	cdc.RegisterConcrete(string(""), "string", nil)
+// Deserialize converts bytes to txSigner
+func (txSigner *TxSigner) Deserialize(bz []byte) {
+	cdc.DecodeBytes(bz, &txSigner)
 }
