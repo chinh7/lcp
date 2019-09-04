@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -20,18 +21,18 @@ type API struct {
 
 // NewAPI return an new instance of API
 func NewAPI(address string, c rpcclient.Client) *API {
-	api := &API{Client: &c}
+	api := &API{Client: &c, Address: address}
 
 	// Register server
 	server := rpc.NewServer()
 	server.RegisterCodec(json.NewCodec(), "application/json")
 
 	// Register our services here
-	server.RegisterService(api.NewHelloService(), "")
+	server.RegisterService(api.NewStatusService(), "")
 
 	// Set up router
 	router := mux.NewRouter()
-	router.Handle("/", server)
+	router.Handle("/rpc", server).Methods("POST")
 
 	api.Server = server
 	api.Router = router
@@ -41,6 +42,7 @@ func NewAPI(address string, c rpcclient.Client) *API {
 
 // Serve starts the server to serve request
 func (api *API) Serve() {
+	fmt.Println("Server is ready at", api.Address)
 	err := http.ListenAndServe(api.Address, api.Router)
 	if err != nil {
 		panic(err)

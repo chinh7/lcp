@@ -31,6 +31,6 @@ func main() {
 	}
 	cert.SetLogger(logger)
 	sc := proxy.SecureClient(node, cert)
-	apiServer := api.NewAPI("localhost:8008", sc)
+	apiServer := api.NewAPI(":8008", sc)
 	apiServer.Serve()
 }
