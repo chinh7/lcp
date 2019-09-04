@@ -1,20 +1,37 @@
-package api
+package main
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
 
-type helloArgs struct {
+	rpcclient "github.com/tendermint/tendermint/rpc/client"
+)
+
+type HelloArgs struct {
 	Who string
 }
 
-type helloReply struct {
+type HelloReply struct {
 	Message string
 }
 
 // HelloService is first service
-type HelloService struct{}
+type HelloService struct {
+	c *rpcclient.Client
+}
+
+func (api *API) NewHelloService() *HelloService {
+	if api.Client == nil {
+		fmt.Println("error")
+		panic("api.NewHelloService call without api.c")
+	}
+	return &HelloService{api.Client}
+}
 
 // Say is handler of HelloService
-func (h *HelloService) Say(r *http.Request, args *helloArgs, reply *helloReply) error {
+func (h *HelloService) Say(r *http.Request, args *HelloArgs, reply *HelloReply) error {
 	reply.Message = "Hello, " + args.Who + "!"
+	client := *h.c
+	fmt.Println(client.Status())
 	return nil
 }
