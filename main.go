@@ -1,36 +1,36 @@
 package main
 
 import (
-	"fmt"
+	"os"
 
-	"github.com/QuoineFinancial/vertex/db"
-	"github.com/QuoineFinancial/vertex/trie"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/QuoineFinancial/vertex/api"
+	command "github.com/tendermint/tendermint/cmd/tendermint/commands"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/lite/proxy"
+	rpcclient "github.com/tendermint/tendermint/rpc/client"
 )
 
 func main() {
-	db := db.NewRocksDB("data")
+	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
+	nodeAddr := "tcp://localhost:26657"
+	chainID := "test-chain-JyjPVo"
+	home := ".tendermint-lite"
+	cacheSize := 10
 
-	root := common.HexToHash("0x5991bb8c6514148a29db676a14ac506cd2cd5775ace63c30a4fe457715e9ac84")
-	tree := trie.New(root, db)
+	nodeAddr, err := command.EnsureAddrHasSchemeOrDefaultToTCP(nodeAddr)
+	if err != nil {
+		cmn.Exit(err.Error())
+	}
 
-	// tree := trie.New(trie.Hash{}, db)
+	node := rpcclient.NewHTTP(nodeAddr, "/websocket")
 
-	// Update
-	tree.Update([]byte("do"), []byte("verb"))
-	tree.Update([]byte("dog"), []byte("puppy"))
-	tree.Update([]byte("doge"), []byte("coin"))
-
-	// Delete by update to nil
-	tree.Update([]byte("hors"), []byte(nil))
-
-	// Get data
-	v, _ := tree.Get([]byte("do"))
-	v, _ = tree.Get([]byte("do"))
-	v, _ = tree.Get([]byte("do"))
-	fmt.Println(string(v))
-
-	// Compute hash
-	newRootHash := tree.Hash()
-	fmt.Println(common.ToHex(newRootHash[:]))
+	cert, err := proxy.NewVerifier(chainID, home, node, logger, cacheSize)
+	if err != nil {
+		cmn.Exit(err.Error())
+	}
+	cert.SetLogger(logger)
+	sc := proxy.SecureClient(node, cert)
+	apiServer := api.NewAPI("localhost:8008", sc)
+	apiServer.Serve()
 }

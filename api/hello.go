@@ -1,7 +1,6 @@
-package main
+package api
 
 import (
-	"fmt"
 	"net/http"
 
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
@@ -12,26 +11,30 @@ type HelloArgs struct {
 }
 
 type HelloReply struct {
-	Message string
+	LatestBlockHash string `json:"latest_block_hash"`
 }
 
 // HelloService is first service
 type HelloService struct {
-	c *rpcclient.Client
+	client *rpcclient.Client
 }
 
 func (api *API) NewHelloService() *HelloService {
 	if api.Client == nil {
-		fmt.Println("error")
 		panic("api.NewHelloService call without api.c")
 	}
 	return &HelloService{api.Client}
 }
 
 // Say is handler of HelloService
-func (h *HelloService) Say(r *http.Request, args *HelloArgs, reply *HelloReply) error {
-	reply.Message = "Hello, " + args.Who + "!"
-	client := *h.c
-	fmt.Println(client.Status())
+func (service *HelloService) Say(r *http.Request, args *HelloArgs, reply *HelloReply) error {
+	client := *service.client
+	status, err := client.Status()
+	if err != nil {
+		return err
+	}
+	reply = &HelloReply{
+		LatestBlockHash: status.SyncInfo.LatestBlockHash.String(),
+	}
 	return nil
 }

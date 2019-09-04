@@ -1,19 +1,12 @@
-package main
+package api
 
 import (
-	"fmt"
 	"net/http"
-
-	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 
-	command "github.com/tendermint/tendermint/cmd/tendermint/commands"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/lite/proxy"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 )
 
@@ -34,7 +27,7 @@ func NewAPI(address string, c rpcclient.Client) *API {
 	server.RegisterCodec(json.NewCodec(), "application/json")
 
 	// Register our services here
-	server.RegisterService((*api).NewHelloService(), "")
+	server.RegisterService(api.NewHelloService(), "")
 
 	// Set up router
 	router := mux.NewRouter()
@@ -50,33 +43,6 @@ func NewAPI(address string, c rpcclient.Client) *API {
 func (api *API) Serve() {
 	err := http.ListenAndServe(api.Address, api.Router)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
-}
-
-func main() {
-	var (
-		logger = log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-	)
-
-	nodeAddr := "tcp://localhost:26657"
-	chainID := "test-chain-GSukkq"
-	home := ".tendermint-lite"
-	cacheSize := 10
-
-	nodeAddr, err := command.EnsureAddrHasSchemeOrDefaultToTCP(nodeAddr)
-	if err != nil {
-		cmn.Exit(err.Error())
-	}
-
-	node := rpcclient.NewHTTP(nodeAddr, "/websocket")
-
-	cert, err := proxy.NewVerifier(chainID, home, node, logger, cacheSize)
-	if err != nil {
-		cmn.Exit(err.Error())
-	}
-	cert.SetLogger(logger)
-	sc := proxy.SecureClient(node, cert)
-	api := NewAPI("localhost:8008", sc)
-	api.Serve()
 }
