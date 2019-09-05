@@ -30,6 +30,7 @@ func NewAPI(address string, c rpcclient.Client) *API {
 	// Register our services here
 	server.RegisterService(api.NewStatusService(), "")
 	server.RegisterService(api.NewBlockService(), "")
+	server.RegisterService(api.NewTransactionService(), "")
 
 	// Set up router
 	router := mux.NewRouter()
