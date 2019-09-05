@@ -5,7 +5,6 @@ import (
 	"time"
 
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
-	"github.com/tendermint/tendermint/types"
 )
 
 // BlockArgs is params of BlockService
@@ -15,17 +14,17 @@ type BlockArgs struct {
 
 // BlockReply is response of BlockService
 type BlockReply struct {
-	Hash            string     `json:"hash"`
-	Time            time.Time  `json:"time"`
-	Height          int64      `json:"height"`
-	TotalTxs        int64      `json:"total_txs"`
-	ChainID         string     `json:"chain_id"`
-	LastCommitHash  string     `json:"last_commit_hash"`  // commit from validators from the last block
-	DataHash        string     `json:"data_hash"`         // transactions
-	ConsensusHash   string     `json:"consensus_hash"`    // consensus params for current block
-	AppHash         string     `json:"app_hash"`          // state after txs from the previous block
-	LastResultsHash string     `json:"last_results_hash"` // root hash of all results from the txs from the previous block
-	Txs             []types.Tx `json:"txs"`
+	Hash            string    `json:"hash"`
+	Time            time.Time `json:"time"`
+	Height          int64     `json:"height"`
+	TotalTxs        int64     `json:"total_txs"`
+	ChainID         string    `json:"chain_id"`
+	LastCommitHash  string    `json:"last_commit_hash"`  // commit from validators from the last block
+	DataHash        string    `json:"data_hash"`         // transactions
+	ConsensusHash   string    `json:"consensus_hash"`    // consensus params for current block
+	AppHash         string    `json:"app_hash"`          // state after txs from the previous block
+	LastResultsHash string    `json:"last_results_hash"` // root hash of all results from the txs from the previous block
+	Txs             [][]byte  `json:"txs"`
 }
 
 // BlockService is first service
@@ -56,6 +55,8 @@ func (service *BlockService) Get(r *http.Request, args *BlockArgs, reply *BlockR
 	reply.ConsensusHash = block.BlockMeta.Header.ConsensusHash.String()
 	reply.AppHash = block.BlockMeta.Header.AppHash.String()
 	reply.LastResultsHash = block.BlockMeta.Header.LastResultsHash.String()
-	reply.Txs = block.Block.Data.Txs
+	for _, tx := range block.Block.Data.Txs {
+		reply.Txs = append(reply.Txs, tx)
+	}
 	return nil
 }
