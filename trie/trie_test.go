@@ -54,9 +54,12 @@ func TestInsert(t *testing.T) {
 	updateString(trie, "A", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 
 	exp = common.HexToHash("d23786fb4a010da3ce639d66d5e904a11dbc02746d1ce25029e53290cabf28ab")
-	root = trie.Commit()
+	root, err := trie.Commit()
 	if root != exp {
 		t.Errorf("exp %x got %x", exp, root)
+	}
+	if err != nil {
+		t.Errorf("expected nil got %x", err)
 	}
 }
 
