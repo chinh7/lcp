@@ -3,6 +3,7 @@ package vm
 import (
 	"bytes"
 	"log"
+	"strconv"
 
 	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/go-interpreter/wagon/exec"
@@ -30,10 +31,11 @@ func Call(state *storage.AccountState, method string, methodArgs ...interface{})
 	proc := exec.NewProcess(vm)
 	params := make([]uint64, len(methodArgs))
 	for i := range methodArgs {
-		arg, ok := methodArgs[i].(int64)
-		if !ok {
-			value := []byte(methodArgs[i].(string))
-			log.Println("malloc for", methodArgs[i].(string))
+		stringArg := string(methodArgs[i].([]byte))
+		arg, err := strconv.ParseInt(stringArg, 10, 64)
+		if err != nil {
+			value := methodArgs[i].([]byte)
+			log.Println("malloc for", string(methodArgs[i].([]byte)))
 			arg = int64(malloc(int32(len(value))))
 			proc.WriteAt(value, arg)
 		}

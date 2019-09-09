@@ -18,11 +18,20 @@ func TestTransaction(t *testing.T) {
 }
 
 func TestTxData(t *testing.T) {
-	txData := &crypto.TxData{Method: "method"}
-	txDataRecouped := &crypto.TxData{}
+	var params []interface{}
+	params = append(params, "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ1")
+	params = append(params, "100")
+	var txDataRecouped crypto.TxData
+
+	txData := &crypto.TxData{Method: "method", Params: params}
 	txDataRecouped.Deserialize(txData.Serialize())
 	if txData.Method != txDataRecouped.Method {
 		t.Errorf("Expect deserialization to produce the same value, expected: %s, got %s", txData.Method, txDataRecouped.Method)
+	}
+	for i, v := range txDataRecouped.Params {
+		if string(v.([]byte)) != txData.Params[i] {
+			t.Errorf("Expect deserialization to produce the same value, expected: %s, got %s", txData.Params[0], string(v.([]byte)))
+		}
 	}
 }
 
