@@ -86,8 +86,8 @@ func mappingTxTypes(tx ctypes.ResultTx) TxReply {
 	return txReply
 }
 
-// GetByHash is handler of TransactionService
-func (service *TransactionService) GetByHash(r *http.Request, args *TxByHashArgs, reply *TxReply) error {
+// GetTxByHash is handler of TransactionService
+func (service *TransactionService) GetTxByHash(r *http.Request, args *TxByHashArgs, reply *TxReply) error {
 	client := *service.client
 	hashBytes, err := hex.DecodeString(args.Hash)
 	if err != nil {
@@ -106,7 +106,7 @@ func (service *TransactionService) GetByHash(r *http.Request, args *TxByHashArgs
 // GetTxsByBlockHeight is handler of TransactionService
 func (service *TransactionService) GetTxsByBlockHeight(r *http.Request, args *TxsByBlockHeightArgs, reply *TxsByBlockHeightReply) error {
 	client := *service.client
-	query := fmt.Sprintf("tx.height: %d", args.Height)
+	query := fmt.Sprintf("tx.height='%d'", args.Height)
 	txs, err := client.TxSearch(query, false, args.Page, args.PerPage)
 	if err != nil {
 		return err
@@ -122,7 +122,8 @@ func (service *TransactionService) GetTxsByBlockHeight(r *http.Request, args *Tx
 // GetTxsByAccount is handler of TransactionService
 func (service *TransactionService) GetTxsByAccount(r *http.Request, args *TxsByAddressArgs, reply *TxsByBlockHeightReply) error {
 	client := *service.client
-	query := fmt.Sprintf("account.address: %s", args.Address)
+	query := fmt.Sprintf("account.address='%s'", args.Address)
+
 	txs, err := client.TxSearch(query, false, args.Page, args.PerPage)
 	if err != nil {
 		return err
