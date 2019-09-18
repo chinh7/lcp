@@ -1,6 +1,7 @@
 package test
 
 import (
+	"encoding/binary"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -22,22 +23,27 @@ func TestVM(t *testing.T) {
 	accountState.SetCode(data)
 	mintAddress := "LCHILMXMODD5DMDMPKVSD5MUODDQMBRU5GZVLGXEFBPG36HV4CLSYM7O"
 	toAddress := "LA7OPN4A3JNHLPHPEWM4PJDOYYDYNZOM7ES6YL3O7NC3PRY3V3UX6ANM"
-	var mintAmount int64 = 500
-	var transferAmount int64 = 321
+	var mintAmount uint64 = 500
+	var transferAmount uint64 = 321
 
-	vm.Call(accountState, "mint", mintAddress, mintAmount)
-	vm.Call(accountState, "transfer", mintAddress, toAddress, transferAmount)
-	ret := vm.Call(accountState, "get_balance", toAddress)
+	mintAmountBytes := make([]byte, 8)
+	transferAmountBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(mintAmountBytes, mintAmount)
+	binary.BigEndian.PutUint64(transferAmountBytes, transferAmount)
+
+	vm.Call(accountState, "mint", []byte(mintAddress), mintAmountBytes)
+	vm.Call(accountState, "transfer", []byte(mintAddress), []byte(toAddress), transferAmountBytes)
+	ret, _ := vm.Call(accountState, "get_balance", []byte(toAddress))
 	value, ok := ret.(uint32)
 	if !ok {
 		t.Error("Expect return value to be uint32, got {}", reflect.TypeOf(ret))
 	}
-	if int64(value) != transferAmount {
+	if uint64(value) != transferAmount {
 		t.Error("Expect return value to be {}, got {}", mintAmount, value)
 	}
-	ret = vm.Call(accountState, "get_balance", mintAddress)
+	ret, _ = vm.Call(accountState, "get_balance", []byte(mintAddress))
 	value, ok = ret.(uint32)
-	if int64(value) != mintAmount-transferAmount {
+	if uint64(value) != mintAmount-transferAmount {
 		t.Error("Expect return value to be {}, got {}", mintAmount-transferAmount, value)
 	}
 }
