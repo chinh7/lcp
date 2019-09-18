@@ -1,0 +1,34 @@
+version: 2.1
+jobs:
+  test:
+    working_directory: ~/qws
+    docker:
+      - image: quoine/rocksdb:latest
+        environment:
+          GO111MODULE: on
+    steps:
+      - checkout
+      - run:
+          name: "Create a temp directory for artifacts"
+          command: mkdir -p /tmp/artifacts
+      - run:
+          name: Install deps
+          command: go mod download
+      - run:
+          name: Build
+          command: cd cmd && go build -o /vertex .
+      - run:
+          name: Test
+          command: |
+            go test ./... -coverprofile=coverage.out
+            go tool cover ./... -html=coverage.out -o coverage.html
+            mv coverage.html /tmp/artifacts
+
+     - store_artifacts:
+          path: /tmp/artifacts
+
+workflows:
+  version: 2
+  qws-test-deploy:
+    jobs:
+      - test

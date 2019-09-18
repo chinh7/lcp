@@ -2,8 +2,8 @@ package vm
 
 import (
 	"bytes"
+	"encoding/binary"
 	"log"
-	"strconv"
 
 	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/go-interpreter/wagon/exec"
@@ -31,15 +31,19 @@ func Call(state *storage.AccountState, method string, methodArgs ...interface{})
 	proc := exec.NewProcess(vm)
 	params := make([]uint64, len(methodArgs))
 	for i := range methodArgs {
-		stringArg := string(methodArgs[i].([]byte))
-		arg, err := strconv.ParseInt(stringArg, 10, 64)
-		if err != nil {
-			value := methodArgs[i].([]byte)
-			log.Println("malloc for", string(methodArgs[i].([]byte)))
-			arg = int64(malloc(int32(len(value))))
-			proc.WriteAt(value, arg)
+		var arg uint64
+		bytes := methodArgs[i].([]byte)
+		if len(bytes) <= 8 {
+			uintBytes := make([]byte, 8)
+			copy(uintBytes[8-len(bytes):], bytes)
+			arg = binary.BigEndian.Uint64(uintBytes[:])
+		} else {
+			value := string(bytes)
+			log.Println("malloc for", value)
+			arg = uint64(malloc(int32(len(value))))
+			proc.WriteAt(bytes, int64(arg))
 		}
-		params[i] = uint64(arg)
+		params[i] = arg
 	}
 
 	ret, err := vm.ExecCode(funcID, params...)

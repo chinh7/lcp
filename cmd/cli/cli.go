@@ -100,7 +100,12 @@ func invoke(cmd *cobra.Command, args []string) {
 	params := make([]interface{}, 0)
 	method := args[2]
 	for i := 3; i < len(args); i++ {
-		params = append(params, args[i])
+		param, err := strconv.ParseUint(args[i], 10, 64)
+		if err == nil {
+			params = append(params, param)
+		} else {
+			params = append(params, args[i])
+		}
 	}
 	if err != nil {
 		panic(err)
