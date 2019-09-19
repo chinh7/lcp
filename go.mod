@@ -25,9 +25,8 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/stellar/go v0.0.0-20190822221948-f65ea5f764bc
 	github.com/tecbot/gorocksdb v0.0.0-20190705090504-162552197222
-	github.com/tendermint/go-amino v0.15.0
+	github.com/tendermint/go-amino v0.15.0 // indirect
 	github.com/tendermint/tendermint v0.32.2
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
-	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20190327125643-d831d65fe17d // indirect
 )

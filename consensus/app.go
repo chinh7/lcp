@@ -53,7 +53,11 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 		address = tx.To
 	}
 
-	attributes := []common.KVPair{common.KVPair{Key: []byte("account.address"), Value: []byte(address.String())}}
+	attributes := []common.KVPair{
+		common.KVPair{
+			Key: []byte("account.address"), Value: []byte(address.String()),
+		},
+	}
 	events = append(events, types.Event{
 		Attributes: attributes,
 	})
