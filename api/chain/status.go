@@ -11,8 +11,11 @@ type GetStatusResult struct {
 	LatestBlockHeight int64  `json:"latestBlockHeight"`
 }
 
+// GetStatusParams is params of GetStatus
+type GetStatusParams struct{}
+
 // GetStatus returns current status of chain
-func (service *Service) GetStatus(r *http.Request, _ interface{}, result *GetStatusResult) error {
+func (service *Service) GetStatus(r *http.Request, _ *GetStatusParams, result *GetStatusResult) error {
 	status, err := service.tAPI.Status()
 	if err != nil {
 		return err
