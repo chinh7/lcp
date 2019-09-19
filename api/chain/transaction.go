@@ -40,12 +40,13 @@ type QueryTransactionsResult struct {
 }
 
 // GetTransactionByHash is handler of Service
-func (service *Service) GetTransactionByHash(r *http.Request, params *GetTransactionByHashParams, result *GetTransactionByHashResult) error {
-	hashBytes, err := hex.DecodeString(params.Hash)
-	if err != nil {
-		return err
-	}
-	if tx, err := service.tAPI.Tx(hashBytes, false); err != nil {
+func (service *Service) GetTransactionByHash(
+	r *http.Request,
+	params *GetTransactionByHashParams,
+	result *GetTransactionByHashResult,
+) error {
+	hash, _ := hex.DecodeString(params.Hash)
+	if tx, err := service.tAPI.Tx(hash, false); err != nil {
 		return err
 	} else if block, err := service.tAPI.Block(&tx.Height); err != nil {
 		return err
@@ -76,7 +77,11 @@ func (service *Service) QueryTransactionsByAddress(
 	return service.queryTransaction(query, params.Page, result)
 }
 
-func (service *Service) queryTransaction(query string, page *int, result *QueryTransactionsResult) error {
+func (service *Service) queryTransaction(
+	query string,
+	page *int,
+	result *QueryTransactionsResult,
+) error {
 	p := 0
 	if page == nil {
 		p = *page

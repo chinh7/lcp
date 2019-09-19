@@ -23,6 +23,7 @@ func (service *Service) parseBlock(resultBlock *core_types.ResultBlock) *models.
 
 func (service *Service) parseTransaction(resultTx *core_types.ResultTx) *models.Transaction {
 	return &models.Transaction{
-		Hash: resultTx.Hash.String(),
+		Hash:   resultTx.Hash.String(),
+		Result: resultTx.TxResult.String(),
 	}
 }
