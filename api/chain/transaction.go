@@ -18,7 +18,7 @@ type GetTransactionByHashParams struct {
 
 // GetTransactionByHashResult is response of Service
 type GetTransactionByHashResult struct {
-	transaction *models.Transaction
+	Transaction *models.Transaction `json:"transaction"`
 }
 
 // QueryTransactionsByBlockHeightParams is params of GetTxsByBlockHeight
@@ -51,8 +51,8 @@ func (service *Service) GetTransactionByHash(
 	} else if block, err := service.tAPI.Block(&tx.Height); err != nil {
 		return err
 	} else {
-		result.transaction = service.parseTransaction(tx)
-		result.transaction.Block = service.parseBlock(block)
+		result.Transaction = service.parseTransaction(tx)
+		result.Transaction.Block = service.parseBlock(block)
 	}
 	return nil
 }

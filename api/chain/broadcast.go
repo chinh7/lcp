@@ -7,12 +7,12 @@ import (
 
 // BroadcastParams is params to broadcast transaction
 type BroadcastParams struct {
-	Transaction string
+	Transaction string `json:"transaction"`
 }
 
 // BroadcastResult is result of broadcast
 type BroadcastResult struct {
-	TransactionHash string
+	TransactionHash string `json:"hash"`
 }
 
 // Broadcast delivers transction to blockchain

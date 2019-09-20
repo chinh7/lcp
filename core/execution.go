@@ -2,6 +2,7 @@ package core
 
 import (
 	"log"
+	"strconv"
 
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/storage"
@@ -26,8 +27,8 @@ func ApplyTx(tx *crypto.Tx) {
 		accountState := state.GetAccountState(tx.To)
 		data := &crypto.TxData{}
 		data.Deserialize(tx.Data)
-		_, eventBytes := vm.Call(accountState, data.Method, data.Params...)
-		parseEvents(eventBytes)
+		_, results := vm.Call(accountState, data.Method, data.Params...)
+		parseEvents(results)
 	}
 }
 
@@ -36,11 +37,17 @@ func GetEvents() []types.Event {
 	return events
 }
 
-func parseEvents(eventBytes [][]byte) {
-	events = make([]types.Event, 0)
-	for _, bytes := range eventBytes {
-		attributes := []common.KVPair{common.KVPair{Key: make([]byte, 0), Value: bytes}}
-		event := types.Event{Attributes: attributes}
-		events = append(events, event)
+func parseEvents(results [][]byte) {
+	attributes := []common.KVPair{}
+	for index, result := range results {
+		attributes = append(attributes, common.KVPair{
+			Key: []byte(strconv.Itoa(index)), Value: result,
+		})
 	}
+	event := types.Event{
+		Type:       "result",
+		Attributes: attributes,
+	}
+	// events = make([]types.Event, 0)
+	events = append(events, event)
 }

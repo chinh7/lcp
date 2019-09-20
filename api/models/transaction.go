@@ -5,14 +5,16 @@ type Transaction struct {
 	Block *Block `json:"block,omitempty"`
 
 	Hash  string `json:"hash"`
-	Nonce string `json:"nonce"`
+	Nonce int64  `json:"nonce"`
+	Code  uint32 `json:"code"`
+	Data  string `json:"data"`
 
 	From string `json:"from"`
 	To   string `json:"to"`
 
-	GasUsed  string `json:"gasUsed"`
-	GasPrice string `json:"gasPrice"`
-	GasLimit string `json:"gasLimit"`
+	GasUsed  int64  `json:"gasUsed"`
+	GasLimit int64  `json:"gasLimit"`
+	GasPrice string `json:"-"`
 
-	Result string `json:"result"`
+	Results []string `json:"results"`
 }

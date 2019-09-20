@@ -3,6 +3,7 @@ package consensus
 import (
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/QuoineFinancial/vertex/core"
 	"github.com/QuoineFinancial/vertex/crypto"
@@ -41,21 +42,21 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 	// timed out after config.TimeoutBroadcastTxCommit
 	// time.Sleep(5 * time.Second)
 	// log.Println("DeliverTx", hex.EncodeToString(txBytes))
-	var address crypto.Address
 	tx := &crypto.Tx{}
 	tx.Deserialize(req.GetTx())
 	log.Println(tx)
 	core.ApplyTx(tx)
 	events := core.GetEvents()
-	if (tx.To == crypto.Address{}) {
-		address = tx.From.Address()
-	} else {
-		address = tx.To
-	}
-
+	fromAddress := tx.From.Address()
 	attributes := []common.KVPair{
 		common.KVPair{
-			Key: []byte("account.address"), Value: []byte(address.String()),
+			Key: []byte("tx.from"), Value: []byte(fromAddress.String()),
+		},
+		common.KVPair{
+			Key: []byte("tx.to"), Value: []byte(tx.To.String()),
+		},
+		common.KVPair{
+			Key: []byte("tx.nonce"), Value: []byte(strconv.FormatUint(tx.From.Nonce, 10)),
 		},
 	}
 	events = append(events, types.Event{

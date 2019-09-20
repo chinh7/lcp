@@ -2,9 +2,11 @@ package resource
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/tendermint/tendermint/cmd/tendermint/commands"
 	"github.com/tendermint/tendermint/libs/common"
@@ -38,7 +40,12 @@ func readChainID(homeDir string) string {
 // NewTendermintAPI returns new instance of TendermintAPI
 func NewTendermintAPI(homeDir, nodeAddress string) TendermintAPI {
 	chainID := readChainID(homeDir)
-	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
+	logFileName := fmt.Sprintf("tendermint-api-%d.log", time.Now().Unix())
+	logFilePath := filepath.Join(homeDir, logFileName)
+	tendermintLoggerFile, _ := os.Create(logFilePath)
+	defer tendermintLoggerFile.Close()
+	logger := log.NewTMLogger(log.NewSyncWriter(tendermintLoggerFile))
+
 	cacheSize := 10
 	nodeAddress, err := commands.EnsureAddrHasSchemeOrDefaultToTCP(nodeAddress)
 	if err != nil {
