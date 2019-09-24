@@ -31,12 +31,20 @@ type State struct {
 var state *State
 var database = db.NewRocksDB("state.db") // TODO: Make this ENV
 
+// GetLatestState return the latest state
+func GetLatestState() *State {
+	if state == nil {
+		panic("state is not set")
+	}
+	return state
+}
+
 // GetState get the singleton state
-func GetState() *State {
+func GetState(rootHash trie.Hash) *State {
 	if state == nil {
 		state = &State{
 			accountStates: make(map[crypto.Address]*AccountState),
-			trie:          trie.New(trie.Hash{}, database),
+			trie:          trie.New(rootHash, database),
 		}
 	}
 	return state

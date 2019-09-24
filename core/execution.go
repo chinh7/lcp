@@ -6,6 +6,7 @@ import (
 
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/storage"
+	"github.com/QuoineFinancial/vertex/trie"
 	"github.com/QuoineFinancial/vertex/vm"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/common"
@@ -14,8 +15,8 @@ import (
 var events []types.Event
 
 // ApplyTx executes a transaction by either deploying the contract code or invoking a contract method call
-func ApplyTx(tx *crypto.Tx) {
-	state := storage.GetState()
+func ApplyTx(appHash trie.Hash, tx *crypto.Tx) {
+	state := storage.GetState(appHash)
 	createContract := tx.To == crypto.Address{}
 	if createContract {
 		contractAddress := tx.From.CreateAddress()

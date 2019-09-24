@@ -8,6 +8,7 @@ import (
 
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/storage"
+	"github.com/QuoineFinancial/vertex/trie"
 
 	"github.com/QuoineFinancial/vertex/vm"
 )
@@ -18,7 +19,7 @@ func TestVM(t *testing.T) {
 		panic(err)
 	}
 	contractAddress := "LB3Z6N6HTFUPQ573QENJ4OCFFUPENY2EW7ZHQZSSIO4AODT3HHE53N52"
-	state := storage.GetState()
+	state := storage.GetState(trie.Hash{})
 	accountState := state.CreateAccountState(crypto.AddressFromString(contractAddress))
 	accountState.SetCode(data)
 	mintAddress := "LCHILMXMODD5DMDMPKVSD5MUODDQMBRU5GZVLGXEFBPG36HV4CLSYM7O"

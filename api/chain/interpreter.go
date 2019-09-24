@@ -42,14 +42,14 @@ func (service *Service) parseTransaction(resultTx *core_types.ResultTx) *models.
 					string(attribute.GetValue()),
 				)
 			}
-		default:
+		case "detail":
 			for _, attribute := range event.GetAttributes() {
 				switch string(attribute.GetKey()) {
-				case "tx.to":
+				case "to":
 					transaction.To = string(attribute.GetValue())
-				case "tx.from":
+				case "from":
 					transaction.From = string(attribute.GetValue())
-				case "tx.nonce":
+				case "nonce":
 					nonce, _ := strconv.Atoi(string(attribute.GetValue()))
 					transaction.Nonce = int64(nonce)
 				}

@@ -8,7 +8,9 @@ import (
 	"github.com/QuoineFinancial/vertex/core"
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/storage"
+	"github.com/QuoineFinancial/vertex/trie"
 
+	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/common"
@@ -25,6 +27,14 @@ func NewApp(nodeInfo string) *App {
 	return &App{
 		nodeInfo: nodeInfo,
 	}
+}
+
+func (app *App) getInfo() types.ResponseInfo {
+	return app.Info(types.RequestInfo{})
+}
+
+func (app *App) getAppHash() trie.Hash {
+	return gethCommon.BytesToHash(app.getInfo().LastBlockAppHash)
 }
 
 // Info returns application chain info
@@ -45,30 +55,29 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 	tx := &crypto.Tx{}
 	tx.Deserialize(req.GetTx())
 	log.Println(tx)
-	core.ApplyTx(tx)
+	core.ApplyTx(app.getAppHash(), tx)
 	events := core.GetEvents()
 	fromAddress := tx.From.Address()
-	attributes := []common.KVPair{
-		common.KVPair{
-			Key: []byte("tx.from"), Value: []byte(fromAddress.String()),
-		},
-		common.KVPair{
-			Key: []byte("tx.to"), Value: []byte(tx.To.String()),
-		},
-		common.KVPair{
-			Key: []byte("tx.nonce"), Value: []byte(strconv.FormatUint(tx.From.Nonce, 10)),
-		},
-	}
 	events = append(events, types.Event{
-		Attributes: attributes,
+		Type: "detail",
+		Attributes: []common.KVPair{
+			common.KVPair{
+				Key: []byte("from"), Value: []byte(fromAddress.String()),
+			},
+			common.KVPair{
+				Key: []byte("to"), Value: []byte(tx.To.String()),
+			},
+			common.KVPair{
+				Key: []byte("nonce"), Value: []byte(strconv.FormatUint(tx.From.Nonce, 10)),
+			},
+		},
 	})
 	return types.ResponseDeliverTx{Code: code.CodeTypeOK, Events: events}
 }
 
 // Commit returns the state root of application storage. Called once all block processing is complete
 func (app *App) Commit() types.ResponseCommit {
-	// Using a memdb - just return the big endian size of the db
-	appHash, _ := storage.GetState().Commit()
+	appHash, _ := storage.GetState(app.getAppHash()).Commit()
 	return types.ResponseCommit{Data: appHash[:]}
 }
 

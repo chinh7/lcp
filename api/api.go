@@ -10,6 +10,7 @@ import (
 
 	"github.com/QuoineFinancial/vertex/api/chain"
 	"github.com/QuoineFinancial/vertex/api/resource"
+	"github.com/QuoineFinancial/vertex/api/storage"
 )
 
 // API contains all info to serve an api server
@@ -68,6 +69,7 @@ func (api *API) registerServices() {
 		panic("api.registerServices call without api.server")
 	}
 	api.server.RegisterService(chain.NewService(api.tAPI), "chain")
+	api.server.RegisterService(storage.NewService(api.tAPI), "storage")
 }
 
 // Serve starts the server to serve request

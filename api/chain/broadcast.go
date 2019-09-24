@@ -1,13 +1,13 @@
 package chain
 
 import (
-	"encoding/hex"
+	"encoding/base64"
 	"net/http"
 )
 
 // BroadcastParams is params to broadcast transaction
 type BroadcastParams struct {
-	Transaction string `json:"transaction"`
+	RawTransaction string `json:"rawTx"`
 }
 
 // BroadcastResult is result of broadcast
@@ -16,12 +16,8 @@ type BroadcastResult struct {
 }
 
 // Broadcast delivers transction to blockchain
-func (service *Service) Broadcast(
-	r *http.Request,
-	params *BroadcastParams,
-	result *BroadcastResult,
-) error {
-	bytes, err := hex.DecodeString(params.Transaction)
+func (service *Service) Broadcast(r *http.Request, params *BroadcastParams, result *BroadcastResult) error {
+	bytes, err := base64.StdEncoding.DecodeString(params.RawTransaction)
 	if err != nil {
 		return err
 	}
