@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/QuoineFinancial/vertex/api"
 	"github.com/QuoineFinancial/vertex/consensus"
 	cmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
 	"github.com/tendermint/tendermint/config"
@@ -45,9 +46,21 @@ func main() {
 	// Create & start node
 	rootCmd.AddCommand(cmd.NewRunNodeCmd(nodeFunc))
 	cmd := cli.PrepareBaseCmd(rootCmd, "TM", os.ExpandEnv(filepath.Join("$HOME", config.DefaultTendermintDir)))
+	// fmt.Println(rootCmd)
+	// if rootCmd.Name() == "node" {
+	go startAPI()
+	// }
 	if err := cmd.Execute(); err != nil {
 		panic(err)
 	}
+}
+
+func startAPI() {
+	apiServer := api.NewAPI(":5555", api.Config{
+		HomeDir:     os.ExpandEnv(filepath.Join("$HOME", config.DefaultTendermintDir)),
+		NodeAddress: "tcp://localhost:26657",
+	})
+	apiServer.Serve()
 }
 
 // Ref: github.com/tendermint/tendermint/node/node.go (func DefaultNewNode)

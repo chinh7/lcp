@@ -26,7 +26,6 @@ type API struct {
 
 // Config to modify the API
 type Config struct {
-	ChainID     string
 	HomeDir     string
 	NodeAddress string
 }

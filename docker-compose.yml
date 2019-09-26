@@ -5,24 +5,8 @@ services:
       - ./data:/root/.tendermint
     ports:
       - 26657:26657
+      - 5555:5555
     build:
       context: .
       dockerfile: ./dockers/vertex.Dockerfile
     command: node
-
-  # TODO
-  # instead of create new instance here
-  # the API could be embed directly in cmd/node.go
-  api:
-    depends_on:
-      - node
-    volumes:
-      - ./data:/root/.tendermint
-    environment:
-      HOME_DIR: /root/.tendermint
-      NODE_ADDRESS: tcp://node:26657
-    ports:
-      - 5555:5555
-    build:
-      context: .
-      dockerfile: ./dockers/api.Dockerfile
