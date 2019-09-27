@@ -8,56 +8,29 @@ import (
 	"github.com/stellar/go/support/log"
 )
 
-// AccountState stores information related to the account
-type AccountState struct {
-	Nonce       uint64
-	CodeHash    []byte
-	StorageHash trie.Hash // merkle root of the storage trie
-
-	dirty   bool
-	address crypto.Address
-	// contract execution storage
-	storage *trie.Trie
-	// contract code
-	code []byte
-}
-
 // State is the global account state consisting of many address->state mapping
 type State struct {
-	trie          *trie.Trie
-	accountStates map[crypto.Address]*AccountState
+	trie     *trie.Trie
+	accounts map[crypto.Address]*Account
 }
 
-var state *State
 var database = db.NewRocksDB("state.db") // TODO: Make this ENV
-
-// GetLatestState return the latest state
-func GetLatestState() *State {
-	if state == nil {
-		panic("state is not set")
-	}
-	return state
-}
 
 // GetState get the singleton state
 func GetState(rootHash trie.Hash) *State {
-	if state == nil {
-		state = &State{
-			accountStates: make(map[crypto.Address]*AccountState),
-			trie:          trie.New(rootHash, database),
-		}
+	return &State{
+		accounts: make(map[crypto.Address]*Account),
+		trie:     trie.New(rootHash, database),
 	}
-	return state
 }
 
-// LoadAccountState load the account from disk
-// TODO: Incomplete
-func (state *State) LoadAccountState(addr crypto.Address) (*AccountState, error) {
+// LoadAccount load the account from disk
+func (state *State) LoadAccount(addr crypto.Address) (*Account, error) {
 	raw, err := state.trie.Get(addr[:])
 	if err != nil {
 		return nil, err
 	}
-	var account AccountState
+	var account Account
 	if rlp.DecodeBytes(raw, &account); err != nil {
 		return nil, err
 	}
@@ -67,94 +40,40 @@ func (state *State) LoadAccountState(addr crypto.Address) (*AccountState, error)
 	return &account, nil
 }
 
-// GetAccountState retrieve the account state at addr
-func (state *State) GetAccountState(addr crypto.Address) *AccountState {
-	if state.accountStates[addr] == nil {
-		loadedAccount, err := state.LoadAccountState(addr)
+// GetAccount retrieve the account state at addr
+func (state *State) GetAccount(addr crypto.Address) *Account {
+	if state.accounts[addr] == nil {
+		loadedAccount, err := state.LoadAccount(addr)
 		if err != nil {
 			log.Fatal(err)
 		}
-		state.accountStates[addr] = loadedAccount
+		state.accounts[addr] = loadedAccount
 	}
-	return state.accountStates[addr]
+	return state.accounts[addr]
 }
 
-// CreateAccountState create a new account state for addr
-func (state *State) CreateAccountState(addr crypto.Address) *AccountState {
-	accountState := newAccountState(addr)
-	accountState.SetNonce(0)
-	state.accountStates[addr] = accountState
-	return accountState
-}
-
-// SetCode store contract code to the account state at addr
-func (state *State) SetCode(addr crypto.Address, code []byte) {
-	accountState := state.GetAccountState(addr)
-	if accountState != nil {
-		accountState.SetCode(code)
-	}
-}
-
-// StorageGet retrieve the data stored at key in addr storage
-func (state *State) StorageGet(addr crypto.Address, key [32]byte) []byte {
-	accountState := state.GetAccountState(addr)
-	if accountState != nil {
-		if result, err := accountState.storage.Get(key[:]); err == nil {
-			// TODO: Handle err
-			return result
-		}
-	}
-	return nil
-}
-
-// StorageSet save the data to addr storage
-func (state *State) StorageSet(addr crypto.Address, key [32]byte, value []byte) {
-	accountState := state.GetAccountState(addr)
-	if accountState != nil {
-		accountState.storage.Update(key[:], value) // TODO: Handle err
-		accountState.dirty = true
-	}
-}
-
-// SetCode store contract code to the account state
-func (state *AccountState) SetCode(code []byte) {
-	state.code = code
-}
-
-// GetAddress returns state address
-func (state *AccountState) GetAddress() crypto.Address {
-	return state.address
-}
-
-// GetCode retrieves contract code for account state
-func (state *AccountState) GetCode() []byte {
-	return state.code
-}
-
-// SetNonce stores the latest nonce to account state
-func (state *AccountState) SetNonce(nonce uint64) {
-	state.Nonce = nonce
-}
-
-func newAccountState(address crypto.Address) *AccountState {
-	return &AccountState{
-		address: address,
-		storage: trie.New(trie.Hash{}, database),
-		dirty:   true,
-	}
+// CreateAccount create a new account state for addr
+func (state *State) CreateAccount(addr crypto.Address, code *[]byte) *Account {
+	Account := newAccount(addr, code)
+	state.accounts[addr] = Account
+	return Account
 }
 
 // Commit stores all dirty Accounts to state.trie
 func (state *State) Commit() (trie.Hash, error) {
-	for _, account := range state.accountStates {
+	var err error
+	for _, account := range state.accounts {
 		if !account.dirty {
 			continue
 		}
-		account.StorageHash = account.storage.Hash()
-		raw, _ := rlp.EncodeToBytes(account)
-		if err := state.trie.Update(account.address[:], raw); err != nil {
+		if account.StorageHash, err = account.storage.Commit(); err != nil {
 			return trie.Hash{}, err
 		}
+		raw, _ := rlp.EncodeToBytes(account)
+		if err = state.trie.Update(account.address[:], raw); err != nil {
+			return trie.Hash{}, err
+		}
+		account.dirty = false
 	}
 	return state.trie.Commit()
 }

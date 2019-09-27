@@ -8,25 +8,42 @@ import (
 	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/go-interpreter/wagon/exec"
 	"github.com/go-interpreter/wagon/wasm"
+	"github.com/tendermint/tendermint/abci/types"
 )
 
-var accountState *storage.AccountState
-var events [][]byte
+// VertexVM is space to execute function
+type VertexVM struct {
+	event   types.Event
+	account *storage.Account
+}
+
+// NewVertexVM return new instance of VertexVM
+func NewVertexVM(account *storage.Account) *VertexVM {
+	return &VertexVM{
+		event:   types.Event{},
+		account: account,
+	}
+}
 
 // Call executes a contract given its code, method, and arguments
-func Call(state *storage.AccountState, method string, methodArgs ...interface{}) (interface{}, [][]byte) {
-	accountState = state
-	events = make([][]byte, 0)
-	programReader := bytes.NewReader(accountState.GetCode())
+func (vertexVM *VertexVM) Call(method string, methodArgs ...interface{}) (interface{}, [][]byte, error) {
+	events := make([][]byte, 0)
+	programReader := bytes.NewReader(vertexVM.account.GetCode())
 
-	m, err := wasm.ReadModule(programReader, func(n string) (*wasm.Module, error) { return resolveImports(n) })
+	m, err := wasm.ReadModule(programReader, func(n string) (*wasm.Module, error) {
+		return vertexVM.resolveImports(n)
+	})
+
 	if err != nil {
-		log.Fatalf("could not read module: %v", err)
+		return nil, [][]byte{}, err
 	}
 	initMemory(m)
 
 	funcID := int64(m.Export.Entries[method].Index)
 	vm, err := exec.NewVM(m)
+	if err != nil {
+		return nil, [][]byte{}, err
+	}
 
 	proc := exec.NewProcess(vm)
 	params := make([]uint64, len(methodArgs))
@@ -48,8 +65,8 @@ func Call(state *storage.AccountState, method string, methodArgs ...interface{})
 
 	ret, err := vm.ExecCode(funcID, params...)
 	if err != nil {
-		log.Fatalf("Error executing the default function: %v", err)
+		return nil, [][]byte{}, err
 	}
 	log.Println("return value = ", ret)
-	return ret, events
+	return ret, events, nil
 }

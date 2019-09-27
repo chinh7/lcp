@@ -2,13 +2,11 @@ package consensus
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/QuoineFinancial/vertex/core"
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/storage"
-	"github.com/QuoineFinancial/vertex/trie"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/tendermint/tendermint/abci/example/code"
@@ -19,6 +17,7 @@ import (
 // App basic Tendermint base app
 type App struct {
 	types.BaseApplication
+	state    *storage.State
 	nodeInfo string
 }
 
@@ -29,12 +28,11 @@ func NewApp(nodeInfo string) *App {
 	}
 }
 
-func (app *App) getInfo() types.ResponseInfo {
-	return app.Info(types.RequestInfo{})
-}
-
-func (app *App) getAppHash() trie.Hash {
-	return gethCommon.BytesToHash(app.getInfo().LastBlockAppHash)
+// BeginBlock begins new block
+func (app *App) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock {
+	appHash := gethCommon.BytesToHash(req.Header.GetAppHash())
+	app.state = storage.GetState(appHash)
+	return types.ResponseBeginBlock{}
 }
 
 // Info returns application chain info
@@ -49,16 +47,17 @@ func (app *App) CheckTx(req types.RequestCheckTx) types.ResponseCheckTx {
 
 //DeliverTx executes the submitted transaction
 func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
-	// timed out after config.TimeoutBroadcastTxCommit
-	// time.Sleep(5 * time.Second)
-	// log.Println("DeliverTx", hex.EncodeToString(txBytes))
+	code := CodeTypeOK
+	info := "ok"
 	tx := &crypto.Tx{}
 	tx.Deserialize(req.GetTx())
-	log.Println(tx)
-	core.ApplyTx(app.getAppHash(), tx)
-	events := core.GetEvents()
+	resultEvent, err := core.ApplyTx(app.state, tx)
+	if err != nil {
+		code = CodeTypeUnknownError
+		info = err.Error()
+	}
 	fromAddress := tx.From.Address()
-	events = append(events, types.Event{
+	events := []types.Event{resultEvent, types.Event{
 		Type: "detail",
 		Attributes: []common.KVPair{
 			common.KVPair{
@@ -71,13 +70,17 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 				Key: []byte("nonce"), Value: []byte(strconv.FormatUint(tx.From.Nonce, 10)),
 			},
 		},
-	})
-	return types.ResponseDeliverTx{Code: code.CodeTypeOK, Events: events}
+	}}
+	return types.ResponseDeliverTx{
+		Code:   code,
+		Events: events,
+		Info:   info,
+	}
 }
 
 // Commit returns the state root of application storage. Called once all block processing is complete
 func (app *App) Commit() types.ResponseCommit {
-	appHash, _ := storage.GetState(app.getAppHash()).Commit()
+	appHash, _ := app.state.Commit()
 	return types.ResponseCommit{Data: appHash[:]}
 }
 

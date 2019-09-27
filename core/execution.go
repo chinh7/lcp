@@ -6,49 +6,52 @@ import (
 
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/storage"
-	"github.com/QuoineFinancial/vertex/trie"
 	"github.com/QuoineFinancial/vertex/vm"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/common"
 )
 
-var events []types.Event
-
 // ApplyTx executes a transaction by either deploying the contract code or invoking a contract method call
-func ApplyTx(appHash trie.Hash, tx *crypto.Tx) {
-	state := storage.GetState(appHash)
+func ApplyTx(state *storage.State, tx *crypto.Tx) (types.Event, error) {
+	event := types.Event{}
 	createContract := tx.To == crypto.Address{}
 	if createContract {
 		contractAddress := tx.From.CreateAddress()
 		log.Println("Deploy contract", contractAddress)
-		accountState := state.CreateAccountState(contractAddress)
-		accountState.SetCode(tx.Data)
+		log.Println(tx.Data)
+		state.CreateAccount(contractAddress, &tx.Data)
+		event = types.Event{
+			Type: "result",
+			Attributes: []common.KVPair{
+				common.KVPair{
+					Key:   []byte("address"),
+					Value: []byte(contractAddress.String()),
+				},
+			},
+		}
 	} else {
 		log.Println("Invoke contract", tx.To)
-		accountState := state.GetAccountState(tx.To)
 		data := &crypto.TxData{}
 		data.Deserialize(tx.Data)
-		_, results := vm.Call(accountState, data.Method, data.Params...)
-		parseEvents(results)
+		vertexVM := vm.NewVertexVM(state.GetAccount(tx.To))
+		_, results, err := vertexVM.Call(data.Method, data.Params...)
+		event := parseEvent(results)
+		if err != nil {
+			return event, err
+		}
 	}
+	return event, nil
 }
 
-// GetEvents returns events for the last VM execution
-func GetEvents() []types.Event {
-	return events
-}
-
-func parseEvents(results [][]byte) {
+func parseEvent(results [][]byte) types.Event {
 	attributes := []common.KVPair{}
 	for index, result := range results {
 		attributes = append(attributes, common.KVPair{
 			Key: []byte(strconv.Itoa(index)), Value: result,
 		})
 	}
-	event := types.Event{
+	return types.Event{
 		Type:       "result",
 		Attributes: attributes,
 	}
-	// events = make([]types.Event, 0)
-	events = append(events, event)
 }

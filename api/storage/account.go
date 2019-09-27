@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/hex"
+	"fmt"
 	"net/http"
 
 	"github.com/QuoineFinancial/vertex/crypto"
@@ -25,8 +26,8 @@ func (service *Service) GetAccount(r *http.Request, params *GetAccountParams, re
 	status, _ := service.tAPI.Status()
 	appHash := common.BytesToHash(status.SyncInfo.LatestAppHash)
 	state := storage.GetState(appHash)
-
-	account := state.GetAccountState(crypto.AddressFromString(params.Address))
+	account := state.GetAccount(crypto.AddressFromString(params.Address))
+	fmt.Println("ACCOUNT", account)
 	result = &GetAccountResult{
 		Nonce:    account.Nonce,
 		CodeHash: hex.EncodeToString(account.CodeHash),

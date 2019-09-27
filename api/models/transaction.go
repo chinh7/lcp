@@ -8,6 +8,7 @@ type Transaction struct {
 	Nonce int64  `json:"nonce"`
 	Code  uint32 `json:"code"`
 	Data  string `json:"data"`
+	Info  string `json:"info"`
 
 	From string `json:"from"`
 	To   string `json:"to"`
@@ -16,5 +17,5 @@ type Transaction struct {
 	GasLimit int64  `json:"gasLimit"`
 	GasPrice string `json:"-"`
 
-	Results []string `json:"results"`
+	Result map[string]string `json:"result"`
 }
