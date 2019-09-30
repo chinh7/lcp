@@ -1,8 +1,6 @@
 package storage
 
 import (
-	"log"
-
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/trie"
 	"golang.org/x/crypto/sha3"
@@ -48,7 +46,7 @@ func (account *Account) SetNonce(nonce uint64) {
 func (account *Account) setCode(code []byte) {
 	account.code = code
 	codeHash := sha3.Sum256(code)
-	log.Println(codeHash)
+	database.Put(codeHash[:], code)
 	account.CodeHash = codeHash[:]
 }
 
