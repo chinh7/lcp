@@ -25,6 +25,7 @@ func (account *Account) GetStorage(key []byte) ([]byte, error) {
 
 // SetStorage set the account storage
 func (account *Account) SetStorage(key, value []byte) error {
+	account.dirty = true
 	return account.storage.Update(key, value)
 }
 
