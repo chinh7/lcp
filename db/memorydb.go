@@ -25,7 +25,6 @@ func (db *MemoryDB) Get(key []byte) []byte {
 
 // Put inserts an key-value pair to database
 func (db *MemoryDB) Put(key []byte, value []byte) {
-	fmt.Printf("PUT: %x with %x\n", key, value)
 	db.cache[hex.EncodeToString(key)] = value
 }
 

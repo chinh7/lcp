@@ -25,7 +25,6 @@ func New(rootHash Hash, db db.Database) *Trie {
 		panic("Could not run trie.New without db.")
 	}
 	trie := &Trie{db: db}
-	log.Println("RootHash", rootHash)
 	if (rootHash != Hash{}) {
 		rootNode, err := trie.loadNode(rootHash[:])
 		if err != nil {
