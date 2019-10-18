@@ -21,7 +21,7 @@ jobs:
           name: Test
           command: |
             go test ./... -coverprofile=coverage.out
-            go tool cover ./... -html=coverage.out -o coverage.html
+            go tool cover -html=coverage.out -o coverage.html
             mv coverage.html /tmp/artifacts
 
       - store_artifacts:
