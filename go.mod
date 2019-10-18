@@ -12,6 +12,7 @@ require (
 	github.com/go-interpreter/wagon v0.5.0
 	github.com/go-kit/kit v0.9.0 // indirect
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
+	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/rpc v1.2.0
 	github.com/gorilla/websocket v1.4.0 // indirect

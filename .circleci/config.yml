@@ -1,7 +1,7 @@
 version: 2.1
 jobs:
   test:
-    working_directory: ~/qws
+    working_directory: ~/vertex
     docker:
       - image: quoine/rocksdb:latest
         environment:
@@ -24,7 +24,7 @@ jobs:
             go tool cover ./... -html=coverage.out -o coverage.html
             mv coverage.html /tmp/artifacts
 
-     - store_artifacts:
+      - store_artifacts:
           path: /tmp/artifacts
 
 workflows:
