@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc/v2"
 	"github.com/gorilla/rpc/v2/json2"
+	"github.com/rs/cors"
 
 	"github.com/QuoineFinancial/vertex/api/chain"
 	"github.com/QuoineFinancial/vertex/api/resource"
@@ -15,24 +16,24 @@ import (
 
 // API contains all info to serve an api server
 type API struct {
-	address string
-	config  Config
-	server  *rpc.Server
-	router  *mux.Router
+	url    string
+	config Config
+	server *rpc.Server
+	router *mux.Router
 
-	// tAPI is client to interact with Tendermint RPC
-	tAPI resource.TendermintAPI
+	// tmAPI is client to interact with Tendermint RPC
+	tmAPI resource.TendermintAPI
 }
 
 // Config to modify the API
 type Config struct {
-	HomeDir     string
-	NodeAddress string
+	HomeDir string
+	NodeURL string
 }
 
 // NewAPI return an new instance of API
-func NewAPI(address string, config Config) *API {
-	api := &API{address: address, config: config}
+func NewAPI(url string, config Config) *API {
+	api := &API{url: url, config: config}
 	api.setupExternalAPIs()
 	api.setupServer()
 	api.registerServices()
@@ -43,9 +44,9 @@ func NewAPI(address string, config Config) *API {
 func (api *API) setupExternalAPIs() {
 	tAPI := resource.NewTendermintAPI(
 		api.config.HomeDir,
-		api.config.NodeAddress,
+		api.config.NodeURL,
 	)
-	api.tAPI = tAPI
+	api.tmAPI = tAPI
 }
 
 func (api *API) setupServer() {
@@ -67,14 +68,23 @@ func (api *API) registerServices() {
 	if api.server == nil {
 		panic("api.registerServices call without api.server")
 	}
-	api.server.RegisterService(chain.NewService(api.tAPI), "chain")
-	api.server.RegisterService(storage.NewService(api.tAPI), "storage")
+	api.server.RegisterService(chain.NewService(api.tmAPI), "chain")
+	api.server.RegisterService(storage.NewService(api.tmAPI), "storage")
 }
 
 // Serve starts the server to serve request
 func (api *API) Serve() {
-	fmt.Println("Server is ready at", api.address)
-	err := http.ListenAndServe(api.address, api.router)
+	fmt.Println("Server is ready at", api.url)
+
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowCredentials: true,
+		AllowedMethods:   []string{"POST", "DELETE", "PUT", "GET", "HEAD", "OPTIONS"},
+	})
+	handler := c.Handler(api.router)
+	http.ListenAndServe(api.url, handler)
+
+	err := http.ListenAndServe(api.url, api.router)
 	if err != nil {
 		panic(err)
 	}

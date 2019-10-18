@@ -42,14 +42,17 @@ func main() {
 	//	* Provide their own DB implementation
 	// can copy this file and use something other than the
 	// DefaultNewNode function
-	nodeFunc := newNode
 	// Create & start node
-	rootCmd.AddCommand(cmd.NewRunNodeCmd(nodeFunc))
+	nodeFunc := newNode
+	var api bool
+	runNodeCmd := cmd.NewRunNodeCmd(nodeFunc)
+	runNodeCmd.PersistentFlags().BoolVarP(&api, "api", "a", false, "start api")
+	rootCmd.AddCommand(runNodeCmd)
+	if api == true {
+		go startAPI()
+	}
+
 	cmd := cli.PrepareBaseCmd(rootCmd, "TM", os.ExpandEnv(filepath.Join("$HOME", config.DefaultTendermintDir)))
-	// fmt.Println(rootCmd)
-	// if rootCmd.Name() == "node" {
-	go startAPI()
-	// }
 	if err := cmd.Execute(); err != nil {
 		panic(err)
 	}
@@ -57,8 +60,8 @@ func main() {
 
 func startAPI() {
 	apiServer := api.NewAPI(":5555", api.Config{
-		HomeDir:     os.ExpandEnv(filepath.Join("$HOME", config.DefaultTendermintDir)),
-		NodeAddress: "tcp://localhost:26657",
+		HomeDir: os.ExpandEnv(filepath.Join("$HOME", config.DefaultTendermintDir)),
+		NodeURL: "tcp://localhost:26657",
 	})
 	apiServer.Serve()
 }
@@ -78,7 +81,7 @@ func newNode(config *config.Config, logger log.Logger) (*node.Node, error) {
 	if _, err := os.Stat(oldPrivVal); !os.IsNotExist(err) {
 		oldPV, err := privval.LoadOldFilePV(oldPrivVal)
 		if err != nil {
-			return nil, fmt.Errorf("Error reading OldPrivValidator from %v: %v\n", oldPrivVal, err)
+			return nil, fmt.Errorf("Error reading OldPrivValidator from %v: %v", oldPrivVal, err)
 		}
 		logger.Info("Upgrading PrivValidator file",
 			"old", oldPrivVal,

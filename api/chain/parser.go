@@ -6,18 +6,22 @@ import (
 
 	"github.com/QuoineFinancial/vertex/api/models"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/tendermint/tendermint/types"
 )
 
-func (service *Service) parseBlock(resultBlock *core_types.ResultBlock) *models.Block {
-	block := &models.Block{
-		Hash:      resultBlock.BlockMeta.BlockID.Hash.String(),
-		Height:    resultBlock.BlockMeta.Header.Height,
-		Timestamp: resultBlock.BlockMeta.Header.Time,
-
-		AppHash:           resultBlock.BlockMeta.Header.AppHash.String(),
-		ConsensusHash:     resultBlock.BlockMeta.Header.ConsensusHash.String(),
-		PreviousBlockHash: resultBlock.BlockMeta.Header.LastBlockID.Hash.String(),
+func (service *Service) parseBlockMeta(resultBlockMeta *types.BlockMeta) *models.Block {
+	return &models.Block{
+		Hash:              resultBlockMeta.BlockID.Hash.String(),
+		Time:              resultBlockMeta.Header.Time,
+		Height:            resultBlockMeta.Header.Height,
+		AppHash:           resultBlockMeta.Header.AppHash.String(),
+		ConsensusHash:     resultBlockMeta.Header.ConsensusHash.String(),
+		PreviousBlockHash: resultBlockMeta.Header.LastBlockID.Hash.String(),
 	}
+}
+
+func (service *Service) parseBlock(resultBlock *core_types.ResultBlock) *models.Block {
+	block := service.parseBlockMeta(resultBlock.BlockMeta)
 	for _, tx := range resultBlock.Block.Data.Txs {
 		block.TxHashes = append(block.TxHashes, hex.EncodeToString(tx.Hash()))
 	}

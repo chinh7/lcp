@@ -18,6 +18,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.0.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20190706150252-9beb055b7962 // indirect
+	github.com/rs/cors v1.6.0
 	github.com/segmentio/go-loggly v0.5.0 // indirect
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/spf13/afero v1.2.2 // indirect
