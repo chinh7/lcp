@@ -8,8 +8,8 @@ import (
 
 func main() {
 	apiServer := api.NewAPI(":5555", api.Config{
-		HomeDir:     os.Getenv("HOME_DIR"),
-		NodeAddress: os.Getenv("NODE_ADDRESS"),
+		HomeDir: os.Getenv("HOME_DIR"),
+		NodeURL: os.Getenv("NODE_ADDRESS"),
 	})
 	apiServer.Serve()
 }

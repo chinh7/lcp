@@ -38,7 +38,7 @@ func readChainID(homeDir string) string {
 }
 
 // NewTendermintAPI returns new instance of TendermintAPI
-func NewTendermintAPI(homeDir, nodeAddress string) TendermintAPI {
+func NewTendermintAPI(homeDir, nodeURL string) TendermintAPI {
 	chainID := readChainID(homeDir)
 	logFileName := fmt.Sprintf("tendermint-api-%d.log", time.Now().Unix())
 	logFilePath := filepath.Join(homeDir, logFileName)
@@ -47,11 +47,11 @@ func NewTendermintAPI(homeDir, nodeAddress string) TendermintAPI {
 	logger := log.NewTMLogger(log.NewSyncWriter(tendermintLoggerFile))
 
 	cacheSize := 10
-	nodeAddress, err := commands.EnsureAddrHasSchemeOrDefaultToTCP(nodeAddress)
+	nodeURL, err := commands.EnsureAddrHasSchemeOrDefaultToTCP(nodeURL)
 	if err != nil {
 		common.Exit(err.Error())
 	}
-	node := client.NewHTTP(nodeAddress, "/websocket")
+	node := client.NewHTTP(nodeURL, "/websocket")
 	cert, err := proxy.NewVerifier(chainID, homeDir, node, logger, cacheSize)
 	if err != nil {
 		common.Exit(err.Error())
