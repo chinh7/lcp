@@ -31,6 +31,10 @@ func broadcast(serializedTx string) {
 	msg, err := hex.DecodeString(serializedTx)
 	serializedTx = base64.StdEncoding.EncodeToString(msg)
 	log.Println("Params Len:", len(serializedTx))
+	// log.Println(serializedTx)
+	// if len(serializedTx) > 0 {
+	// 	return
+	// }
 	message := map[string]interface{}{
 		"method":  "broadcast_tx_async",
 		"id":      123,

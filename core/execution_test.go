@@ -4,11 +4,11 @@ import (
 	"testing"
 )
 
-func TestParseEvents(t *testing.T) {
-	event := []byte("AB")
-	eventBytes := append(make([][]byte, 0), event)
-	parseEvents(eventBytes)
-	if string(events[0].Attributes[0].Value) != string(event) {
-		t.Errorf("Expect event to be %s, got %s", string(event), events[0].Attributes[0].Value)
+func TestParseEvent(t *testing.T) {
+	attribute := []byte("AB")
+	attributeBytes := append(make([][]byte, 0), attribute)
+	event := parseEvent(attributeBytes)
+	if string(event.Attributes[0].Value) != string(attribute) {
+		t.Errorf("Expect event to be %s, got %s", string(attribute), event.Attributes[0].Value)
 	}
 }

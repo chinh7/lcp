@@ -4,10 +4,9 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/go-interpreter/wagon/exec"
 	"github.com/go-interpreter/wagon/wasm"
-	"golang.org/x/crypto/sha3"
+	"github.com/tendermint/tendermint/libs/common"
 )
 
 const wasmPageSize = 65536 // 64Kb
@@ -68,15 +67,18 @@ func printBytes(proc *exec.Process, size int32, ptr int32) {
 	log.Println("printBytes", string(key))
 }
 
-func emitEvent(proc *exec.Process, ptr int32) {
+func (vertexVM *VertexVM) emitEvent(proc *exec.Process, ptr int32) {
 	data := readAt(proc, ptr)
-	events = append(events, data)
+	vertexVM.event.Attributes = append(vertexVM.event.Attributes, common.KVPair{
+		Key:   []byte(""), // TODO: Decide the key of event
+		Value: data,
+	})
 }
 
-func getStorage(proc *exec.Process, keyPtr int32) (valuePtr int32) {
+func (vertexVM *VertexVM) getStorage(proc *exec.Process, keyPtr int32) (valuePtr int32) {
 	key := readAt(proc, keyPtr)
-	value := storage.GetState().StorageGet(accountState.GetAddress(), sha3.Sum256(key))
-	if len(value) > 0 {
+	value, err := vertexVM.account.GetStorage(key)
+	if err == nil && len(value) > 0 {
 		valuePtr = malloc(int32(len(value)))
 		proc.WriteAt(value, int64(valuePtr))
 	} else {
@@ -85,14 +87,13 @@ func getStorage(proc *exec.Process, keyPtr int32) (valuePtr int32) {
 	return
 }
 
-func setStorage(proc *exec.Process, keyPtr int32, valuePtr int32) {
+func (vertexVM *VertexVM) setStorage(proc *exec.Process, keyPtr int32, valuePtr int32) {
 	key := readAt(proc, keyPtr)
 	value := readAt(proc, valuePtr)
-	// log.Println("setStorage", keyPtr, string(key), valuePtr, string(value))
-	storage.GetState().StorageSet(accountState.GetAddress(), sha3.Sum256(key), value)
+	vertexVM.account.SetStorage(key, value)
 }
 
-func resolveImports(name string) (*wasm.Module, error) {
+func (vertexVM *VertexVM) resolveImports(name string) (*wasm.Module, error) {
 	m := wasm.NewModule()
 
 	m.Types = &wasm.SectionTypes{
@@ -183,12 +184,12 @@ func resolveImports(name string) (*wasm.Module, error) {
 		},
 		{
 			Sig:  &m.Types.Entries[0],
-			Host: reflect.ValueOf(getStorage),
+			Host: reflect.ValueOf(vertexVM.getStorage),
 			Body: &wasm.FunctionBody{},
 		},
 		{
 			Sig:  &m.Types.Entries[7],
-			Host: reflect.ValueOf(setStorage),
+			Host: reflect.ValueOf(vertexVM.setStorage),
 			Body: &wasm.FunctionBody{},
 		},
 		{
@@ -198,7 +199,7 @@ func resolveImports(name string) (*wasm.Module, error) {
 		},
 		{
 			Sig:  &m.Types.Entries[8],
-			Host: reflect.ValueOf(emitEvent),
+			Host: reflect.ValueOf(vertexVM.emitEvent),
 			Body: &wasm.FunctionBody{},
 		},
 	}
