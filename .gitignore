@@ -15,7 +15,7 @@
 *.out
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
 local/
 data/
 
@@ -23,3 +23,6 @@ data/
 .vscode/
 .idea/
 *.iml
+
+#local DBs
+*.db

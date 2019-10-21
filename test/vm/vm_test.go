@@ -10,7 +10,7 @@ import (
 	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/QuoineFinancial/vertex/trie"
 
-	"github.com/QuoineFinancial/vertex/vm"
+	"github.com/QuoineFinancial/vertex/engine"
 )
 
 func TestVM(t *testing.T) {
@@ -21,7 +21,7 @@ func TestVM(t *testing.T) {
 	contractAddress := "LB3Z6N6HTFUPQ573QENJ4OCFFUPENY2EW7ZHQZSSIO4AODT3HHE53N52"
 	state := storage.GetState(trie.Hash{})
 	accountState := state.CreateAccount(crypto.AddressFromString(contractAddress), &data)
-	vertexVM := vm.NewVertexVM(accountState)
+	engine := engine.NewEngine(accountState)
 	mintAddress := "LCHILMXMODD5DMDMPKVSD5MUODDQMBRU5GZVLGXEFBPG36HV4CLSYM7O"
 	toAddress := "LA7OPN4A3JNHLPHPEWM4PJDOYYDYNZOM7ES6YL3O7NC3PRY3V3UX6ANM"
 	var mintAmount uint64 = 500
@@ -31,18 +31,18 @@ func TestVM(t *testing.T) {
 	transferAmountBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(mintAmountBytes, mintAmount)
 	binary.BigEndian.PutUint64(transferAmountBytes, transferAmount)
-	vertexVM.Call("mint", []byte(mintAddress), mintAmountBytes)
-	vertexVM.Call("transfer", []byte(mintAddress), []byte(toAddress), transferAmountBytes)
-	ret, _, _ := vertexVM.Call("get_balance", []byte(toAddress))
-	value, ok := ret.(uint32)
+	engine.Ignite("mint", []byte(mintAddress), mintAmountBytes)
+	engine.Ignite("transfer", []byte(mintAddress), []byte(toAddress), transferAmountBytes)
+	ret, _, _ := engine.Ignite("get_balance", []byte(toAddress))
+	value, ok := ret.(uint64)
 	if !ok {
-		t.Error("Expect return value to be uint32, got {}", reflect.TypeOf(ret))
+		t.Error("Expect return value to be uint64, got {}", reflect.TypeOf(ret))
 	}
-	if uint64(value) != transferAmount {
-		t.Error("Expect return value to be {}, got {}", mintAmount, value)
+	if value != transferAmount {
+		t.Errorf("Expect return value to be %d, got %d", transferAmount, value)
 	}
-	ret, _, _ = vertexVM.Call("get_balance", []byte(mintAddress))
-	value, ok = ret.(uint32)
+	ret, _, _ = engine.Ignite("get_balance", []byte(mintAddress))
+	value, ok = ret.(uint64)
 	if uint64(value) != mintAmount-transferAmount {
 		t.Error("Expect return value to be {}, got {}", mintAmount-transferAmount, value)
 	}

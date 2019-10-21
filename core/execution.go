@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/vertex/engine"
 	"github.com/QuoineFinancial/vertex/storage"
-	"github.com/QuoineFinancial/vertex/vm"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/common"
 )
@@ -17,7 +17,7 @@ func ApplyTx(state *storage.State, tx *crypto.Tx) (types.Event, error) {
 	createContract := tx.To == crypto.Address{}
 	if createContract {
 		contractAddress := tx.From.CreateAddress()
-		log.Println("Deploy contract", contractAddress)
+		log.Println("Deploy contract", contractAddress.String())
 		log.Println(tx.Data)
 		state.CreateAccount(contractAddress, &tx.Data)
 		event = types.Event{
@@ -33,8 +33,8 @@ func ApplyTx(state *storage.State, tx *crypto.Tx) (types.Event, error) {
 		log.Println("Invoke contract", tx.To)
 		data := &crypto.TxData{}
 		data.Deserialize(tx.Data)
-		vertexVM := vm.NewVertexVM(state.GetAccount(tx.To))
-		_, results, err := vertexVM.Call(data.Method, data.Params...)
+		engine := engine.NewEngine(state.GetAccount(tx.To))
+		_, results, err := engine.Ignite(data.Method, data.Params...)
 		event := parseEvent(results)
 		if err != nil {
 			return event, err
