@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/QuoineFinancial/vertex/api"
 	"github.com/QuoineFinancial/vertex/consensus"
-	cmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
+	"github.com/spf13/cobra"
+	"github.com/tendermint/tendermint/cmd/tendermint/commands"
 	"github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/log"
@@ -19,21 +21,21 @@ import (
 
 // Ref: github.com/tendermint/tendermint/cmd/tendermint/main.go
 func main() {
-	rootCmd := cmd.RootCmd
+	rootCmd := commands.RootCmd
 	rootCmd.AddCommand(
-		cmd.GenValidatorCmd,
-		cmd.InitFilesCmd,
-		cmd.ProbeUpnpCmd,
-		cmd.LiteCmd,
-		cmd.ReplayCmd,
-		cmd.ReplayConsoleCmd,
-		cmd.ResetAllCmd,
-		cmd.ResetPrivValidatorCmd,
-		cmd.ShowValidatorCmd,
-		cmd.TestnetFilesCmd,
-		cmd.ShowNodeIDCmd,
-		cmd.GenNodeKeyCmd,
-		cmd.VersionCmd)
+		commands.GenValidatorCmd,
+		commands.InitFilesCmd,
+		commands.ProbeUpnpCmd,
+		commands.LiteCmd,
+		commands.ReplayCmd,
+		commands.ReplayConsoleCmd,
+		commands.ResetAllCmd,
+		commands.ResetPrivValidatorCmd,
+		commands.ShowValidatorCmd,
+		commands.TestnetFilesCmd,
+		commands.ShowNodeIDCmd,
+		commands.GenNodeKeyCmd,
+		commands.VersionCmd)
 	// NOTE:
 	// Users wishing to:
 	//	* Use an external signer for their validators
@@ -43,27 +45,35 @@ func main() {
 	// can copy this file and use something other than the
 	// DefaultNewNode function
 	// Create & start node
-	nodeFunc := newNode
-	var api bool
-	runNodeCmd := cmd.NewRunNodeCmd(nodeFunc)
-	runNodeCmd.PersistentFlags().BoolVarP(&api, "api", "a", false, "start api")
-	rootCmd.AddCommand(runNodeCmd)
-	if api == true {
-		go startAPI()
-	}
-
-	cmd := cli.PrepareBaseCmd(rootCmd, "TM", os.ExpandEnv(filepath.Join("$HOME", config.DefaultTendermintDir)))
-	if err := cmd.Execute(); err != nil {
+	runNodeCmd := commands.NewRunNodeCmd(newNode)
+	rootCmd.AddCommand(addAPI(runNodeCmd))
+	command := cli.PrepareBaseCmd(rootCmd, "TM", os.ExpandEnv(filepath.Join("$HOME", config.DefaultTendermintDir)))
+	if err := command.Execute(); err != nil {
 		panic(err)
 	}
 }
 
-func startAPI() {
-	apiServer := api.NewAPI(":5555", api.Config{
-		HomeDir: os.ExpandEnv(filepath.Join("$HOME", config.DefaultTendermintDir)),
-		NodeURL: "tcp://localhost:26657",
-	})
-	apiServer.Serve()
+func addAPI(command *cobra.Command) *cobra.Command {
+	var apiFlag bool
+	newCommand := &cobra.Command{
+		Use:   "start [--api]",
+		Short: "Start the tendermint node",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if apiFlag == true {
+				go (func() {
+					time.Sleep(time.Second)
+					apiServer := api.NewAPI(":5555", api.Config{
+						HomeDir: os.ExpandEnv(filepath.Join("$HOME", config.DefaultTendermintDir)),
+						NodeURL: "tcp://localhost:26657",
+					})
+					apiServer.Serve()
+				})()
+			}
+			return command.RunE(cmd, args)
+		},
+	}
+	newCommand.PersistentFlags().BoolVarP(&apiFlag, "api", "a", false, "start api")
+	return newCommand
 }
 
 // Ref: github.com/tendermint/tendermint/node/node.go (func DefaultNewNode)

@@ -30,6 +30,5 @@ require (
 	github.com/tendermint/tendermint v0.32.2
 	github.com/vertexdlt/vertexvm v0.0.0-20191010095903-499a4b01d30d
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
-	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20190327125643-d831d65fe17d // indirect
 )
