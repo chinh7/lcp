@@ -8,7 +8,8 @@ import (
 )
 
 func readAt(vm *vm.VM, ptr, size int) []byte {
-	data := vm.GetMemory()[ptr : ptr+size]
+	data := make([]byte, size)
+	copy(data, vm.GetMemory()[ptr:ptr+size])
 	return data
 }
 
@@ -64,6 +65,20 @@ func (engine *Engine) chainEventEmit(vm *vm.VM, args ...uint64) uint64 {
 	return 0
 }
 
+func (engine *Engine) chainGetCaller(vm *vm.VM, args ...uint64) uint64 {
+	ptr := int(uint32(args[0]))
+	copy(vm.GetMemory()[ptr:], engine.caller[:])
+	return 0
+}
+
+func (engine *Engine) chainGetCreator(vm *vm.VM, args ...uint64) uint64 {
+	ptr := int(uint32(args[0]))
+	creator := engine.account.Creator
+	copy(vm.GetMemory()[ptr:], creator[:])
+	return 0
+}
+
+// GetFunction get host function for WebAssembly
 func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 	switch module {
 	case "env":
@@ -78,6 +93,10 @@ func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 			return engine.chainStorageSizeGet
 		case "chain_event_emit":
 			return engine.chainEventEmit
+		case "chain_get_caller":
+			return engine.chainGetCaller
+		case "chain_get_creator":
+			return engine.chainGetCreator
 		default:
 			panic(fmt.Errorf("unknown import resolved: %s", name))
 		}

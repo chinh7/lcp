@@ -19,7 +19,7 @@ func ApplyTx(state *storage.State, tx *crypto.Tx) (types.Event, error) {
 		contractAddress := tx.From.CreateAddress()
 		log.Println("Deploy contract", contractAddress.String())
 		log.Println(tx.Data)
-		state.CreateAccount(contractAddress, &tx.Data)
+		state.CreateAccount(tx.From.Address(), contractAddress, &tx.Data)
 		event = types.Event{
 			Type: "result",
 			Attributes: []common.KVPair{
@@ -33,8 +33,8 @@ func ApplyTx(state *storage.State, tx *crypto.Tx) (types.Event, error) {
 		log.Println("Invoke contract", tx.To)
 		data := &crypto.TxData{}
 		data.Deserialize(tx.Data)
-		engine := engine.NewEngine(state.GetAccount(tx.To))
-		_, results, err := engine.Ignite(data.Method, data.Params...)
+		execEngine := engine.NewEngine(state.GetAccount(tx.To), tx.From.Address())
+		_, results, err := execEngine.Ignite(data.Method, data.Params)
 		event := parseEvent(results)
 		if err != nil {
 			return event, err

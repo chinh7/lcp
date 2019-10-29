@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestTransaction(t *testing.T) {
@@ -18,20 +19,13 @@ func TestTransaction(t *testing.T) {
 }
 
 func TestTxData(t *testing.T) {
-	var params []interface{}
-	params = append(params, "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ1")
-	params = append(params, "100")
+	params := []byte{0, 0, 1, 1, 0, 1, 1}
 	var txDataRecouped crypto.TxData
 
-	txData := &crypto.TxData{Method: "method", Params: params}
+	txData := crypto.TxData{Method: "method", Params: params}
 	txDataRecouped.Deserialize(txData.Serialize())
-	if txData.Method != txDataRecouped.Method {
-		t.Errorf("Expect deserialization to produce the same value, expected: %s, got %s", txData.Method, txDataRecouped.Method)
-	}
-	for i, v := range txDataRecouped.Params {
-		if string(v.([]byte)) != txData.Params[i] {
-			t.Errorf("Expect deserialization to produce the same value, expected: %s, got %s", txData.Params[0], string(v.([]byte)))
-		}
+	if diff := cmp.Diff(txData, txDataRecouped); diff != "" {
+		t.Errorf("Decoding of %v is incorrect, expected: %v, got: %v, diff: %v", txData, txData, txDataRecouped, diff)
 	}
 }
 

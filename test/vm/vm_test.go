@@ -1,11 +1,13 @@
 package test
 
 import (
-	"encoding/binary"
+	"encoding/json"
 	"io/ioutil"
 	"reflect"
+	"strconv"
 	"testing"
 
+	"github.com/QuoineFinancial/vertex/abi"
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/QuoineFinancial/vertex/trie"
@@ -14,36 +16,75 @@ import (
 )
 
 func TestVM(t *testing.T) {
+	var header abi.Header
+	headerFile, err := ioutil.ReadFile("../fixtures/header2.json")
+	if err != nil {
+		panic(err)
+	}
+	json.Unmarshal(headerFile, &header)
+
 	data, err := ioutil.ReadFile("../data/token.wasm")
 	if err != nil {
 		panic(err)
 	}
-	contractAddress := "LB3Z6N6HTFUPQ573QENJ4OCFFUPENY2EW7ZHQZSSIO4AODT3HHE53N52"
+	encodedHeader, _ := header.Encode()
+	contract := append(encodedHeader, data...)
+	caller := "LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R"
+	contractAddress := "LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53"
 	state := storage.GetState(trie.Hash{})
-	accountState := state.CreateAccount(crypto.AddressFromString(contractAddress), &data)
-	engine := engine.NewEngine(accountState)
-	mintAddress := "LCHILMXMODD5DMDMPKVSD5MUODDQMBRU5GZVLGXEFBPG36HV4CLSYM7O"
-	toAddress := "LA7OPN4A3JNHLPHPEWM4PJDOYYDYNZOM7ES6YL3O7NC3PRY3V3UX6ANM"
-	var mintAmount uint64 = 500
-	var transferAmount uint64 = 321
+	accountState := state.CreateAccount(crypto.AddressFromString(caller), crypto.AddressFromString(contractAddress), &contract)
+	execEngine := engine.NewEngine(accountState, crypto.AddressFromString(caller))
+	toAddress := "LB3EICIUKOUYCY4D7T2O6RKL7ISEPISNKUXNILDTJ76V2PDZVT5ZDP3U"
+	var mint = 100
+	mintAmount := strconv.Itoa(mint)
+	var transfer = 30
+	transferAmount := strconv.Itoa(transfer)
 
-	mintAmountBytes := make([]byte, 8)
-	transferAmountBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(mintAmountBytes, mintAmount)
-	binary.BigEndian.PutUint64(transferAmountBytes, transferAmount)
-	engine.Ignite("mint", []byte(mintAddress), mintAmountBytes)
-	engine.Ignite("transfer", []byte(mintAddress), []byte(toAddress), transferAmountBytes)
-	ret, _, _ := engine.Ignite("get_balance", []byte(toAddress))
+	mintFunction, err := header.GetFunction("mint")
+	if err != nil {
+		panic(err)
+	}
+	mintArgs, err := abi.EncodeFromString(mintFunction.Parameters, []string{mintAmount})
+	if err != nil {
+		panic(err)
+	}
+	execEngine.Ignite("mint", mintArgs)
+
+	transferFunction, err := header.GetFunction("transfer")
+	if err != nil {
+		panic(err)
+	}
+	transferArgs, err := abi.EncodeFromString(transferFunction.Parameters, []string{toAddress, transferAmount})
+	if err != nil {
+		panic(err)
+	}
+	execEngine.Ignite("transfer", transferArgs)
+
+	getBalanceFunction, err := header.GetFunction("get_balance")
+	if err != nil {
+		panic(err)
+	}
+	getBalanceMint, _ := abi.EncodeFromString(getBalanceFunction.Parameters, []string{caller})
+	if err != nil {
+		panic(err)
+	}
+
+	getBalanceTo, err := abi.EncodeFromString(getBalanceFunction.Parameters, []string{toAddress})
+	if err != nil {
+		panic(err)
+	}
+	ret, _, _ := execEngine.Ignite("get_balance", getBalanceTo)
 	value, ok := ret.(uint64)
 	if !ok {
-		t.Error("Expect return value to be uint64, got {}", reflect.TypeOf(ret))
+		t.Errorf("Expect return value to be uint32, got %s", reflect.TypeOf(ret))
 	}
-	if value != transferAmount {
-		t.Errorf("Expect return value to be %d, got %d", transferAmount, value)
+	if int(value) != transfer {
+		t.Errorf("Expect return value to be %v, got %v", transfer, value)
 	}
-	ret, _, _ = engine.Ignite("get_balance", []byte(mintAddress))
+	ret, _, _ = execEngine.Ignite("get_balance", getBalanceMint)
+
 	value, ok = ret.(uint64)
-	if uint64(value) != mintAmount-transferAmount {
-		t.Error("Expect return value to be {}, got {}", mintAmount-transferAmount, value)
+	if int(value) != mint-transfer {
+		t.Errorf("Expect return value to be %v, got %v", mint-transfer, value)
 	}
 }

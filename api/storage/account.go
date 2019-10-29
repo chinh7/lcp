@@ -27,11 +27,11 @@ func (service *Service) GetAccount(r *http.Request, params *GetAccountParams, re
 	appHash := common.BytesToHash(status.SyncInfo.LatestAppHash)
 	state := storage.GetState(appHash)
 	account := state.GetAccount(crypto.AddressFromString(params.Address))
-	fmt.Println("ACCOUNT", hex.EncodeToString(account.CodeHash))
+	fmt.Println("ACCOUNT", hex.EncodeToString(account.ContractHash))
 	result.Account = &models.Account{
-		Nonce:    account.Nonce,
-		CodeHash: hex.EncodeToString(account.CodeHash),
-		Code:     hex.EncodeToString(account.GetCode()),
+		Nonce:        account.Nonce,
+		ContractHash: hex.EncodeToString(account.ContractHash),
+		Contract:     hex.EncodeToString(account.GetContract()),
 	}
 	return nil
 }

@@ -8,14 +8,15 @@ import (
 
 // Account stores information related to the account
 type Account struct {
-	Nonce       uint64
-	CodeHash    []byte
-	StorageHash trie.Hash // merkle root of the storage trie
+	Nonce        uint64
+	ContractHash []byte
+	StorageHash  trie.Hash // merkle root of the storage trie
+	Creator      crypto.Address
 
-	dirty   bool
-	address crypto.Address
-	storage *trie.Trie
-	code    []byte
+	dirty    bool
+	address  crypto.Address
+	storage  *trie.Trie
+	contract []byte
 }
 
 // GetStorage get the value at key of storage
@@ -34,9 +35,9 @@ func (account *Account) GetAddress() crypto.Address {
 	return account.address
 }
 
-// GetCode retrieves contract code for account state
-func (account *Account) GetCode() []byte {
-	return account.code
+// GetContract retrieves contract code for account state
+func (account *Account) GetContract() []byte {
+	return account.contract
 }
 
 // SetNonce stores the latest nonce to account state
@@ -44,23 +45,24 @@ func (account *Account) SetNonce(nonce uint64) {
 	account.Nonce = nonce
 }
 
-func (account *Account) setCode(code []byte) {
-	account.code = code
-	codeHash := sha3.Sum256(code)
-	database.Put(codeHash[:], code)
-	account.CodeHash = codeHash[:]
+func (account *Account) setContract(contract []byte) {
+	account.contract = contract
+	contractHash := sha3.Sum256(contract)
+	database.Put(contractHash[:], contract)
+	account.ContractHash = contractHash[:]
 }
 
-func newAccount(address crypto.Address, code *[]byte) *Account {
+func newAccount(creator crypto.Address, address crypto.Address, contract *[]byte) *Account {
 	account := &Account{
-		Nonce:   0,
-		address: address,
-		storage: trie.New(trie.Hash{}, database),
-		dirty:   true,
-		code:    []byte{},
+		Nonce:    0,
+		Creator:  creator,
+		address:  address,
+		storage:  trie.New(trie.Hash{}, database),
+		dirty:    true,
+		contract: []byte{},
 	}
-	if code != nil {
-		account.setCode(*code)
+	if contract != nil {
+		account.setContract(*contract)
 	}
 	return account
 }

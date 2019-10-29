@@ -11,14 +11,14 @@ require (
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-kit/kit v0.9.0 // indirect
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
+	github.com/google/go-cmp v0.2.0
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/rpc v1.2.0
-	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.0.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20190706150252-9beb055b7962 // indirect
-	github.com/rs/cors v1.6.0
+	github.com/rs/cors v1.7.0
 	github.com/segmentio/go-loggly v0.5.0 // indirect
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/spf13/afero v1.2.2 // indirect
@@ -30,5 +30,6 @@ require (
 	github.com/tendermint/tendermint v0.32.2
 	github.com/vertexdlt/vertexvm v0.0.0-20191010095903-499a4b01d30d
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
+	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20190327125643-d831d65fe17d // indirect
 )

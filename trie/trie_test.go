@@ -33,7 +33,27 @@ func TestNull(t *testing.T) {
 	trie.Update(key, value)
 	storedValue, _ := trie.Get(key)
 	if !bytes.Equal(storedValue, value) {
-		t.Fatal("wrong value")
+		t.Error("wrong value")
+	}
+}
+
+func TestMutable(t *testing.T) {
+	trie := newEmpty()
+	key := []byte{1, 2}
+	value := []byte{1, 2}
+	trie.Update(key, value)
+
+	// Mutable key and value
+	key[0] = 2
+	value[0] = 2
+
+	v, err := trie.Get([]byte{1, 2})
+	if err != nil {
+		t.Error(err.Error())
+	}
+	expectedValue := []byte{1, 2}
+	if !bytes.Equal(v, expectedValue) {
+		t.Errorf("Expected value: %v, actual value: %v", expectedValue, v)
 	}
 }
 

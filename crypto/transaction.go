@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -10,10 +11,15 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+const (
+	// MethodNameByteLength is number of bytes preservered for method name
+	MethodNameByteLength = 64
+)
+
 // TxData data for contract deploy/invoke
 type TxData struct {
 	Method string
-	Params []interface{}
+	Params []byte
 }
 
 // TxSigner information about transaction signer
@@ -75,7 +81,11 @@ func (tx *Tx) Serialize() []byte {
 
 // Serialize a TxData to bytes
 func (txData *TxData) Serialize() []byte {
-	bytes, _ := cdc.EncodeToBytes(txData)
+	var bytes []byte
+	nameBytes := make([]byte, MethodNameByteLength)
+	copy(nameBytes[:], txData.Method)
+	bytes = append(bytes, nameBytes...)
+	bytes = append(bytes, txData.Params...)
 	return bytes
 }
 
@@ -92,7 +102,8 @@ func (tx *Tx) Deserialize(bz []byte) {
 
 // Deserialize converts bytes to TxData
 func (txData *TxData) Deserialize(bz []byte) {
-	cdc.DecodeBytes(bz, &txData)
+	txData.Method = string(bytes.Trim(bz[0:64], "\x00"))
+	txData.Params = bz[64:]
 }
 
 // Deserialize converts bytes to txSigner

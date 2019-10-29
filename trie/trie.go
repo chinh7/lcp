@@ -150,7 +150,9 @@ func (tree *Trie) insert(node Node, key []byte, value Node) (bool, Node, error) 
 func (tree *Trie) Update(key, value []byte) error {
 	hexKey := keybytesToHex(key)
 	if len(value) > 0 {
-		_, newRoot, err := tree.insert(tree.root, hexKey, valueNode(value))
+		v := make([]byte, len(value))
+		copy(v, value)
+		_, newRoot, err := tree.insert(tree.root, hexKey, valueNode(v))
 		if err != nil {
 			return err
 		}

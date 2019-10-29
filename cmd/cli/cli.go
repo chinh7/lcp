@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/QuoineFinancial/vertex/abi"
 	"github.com/QuoineFinancial/vertex/crypto"
 )
 
@@ -84,10 +85,15 @@ func deploy(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
+	encodedHeader, err := abi.EncodeHeaderFromFile(args[2])
+	if err != nil {
+		panic(err)
+	}
 	nonce, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
 		panic(err)
 	}
+	data = append(encodedHeader, data...)
 	signer := crypto.TxSigner{Nonce: uint64(nonce)}
 	tx := &crypto.Tx{Data: data, From: signer}
 	sign(tx)
@@ -95,26 +101,31 @@ func deploy(cmd *cobra.Command, args []string) {
 }
 
 func invoke(cmd *cobra.Command, args []string) {
+	var header abi.Header
+
 	nonce, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
 		panic(err)
 	}
 	signer := crypto.TxSigner{Nonce: uint64(nonce)}
 	to := crypto.AddressFromString(args[1])
-	params := make([]interface{}, 0)
-	method := args[2]
-	for i := 3; i < len(args); i++ {
-		param, err := strconv.ParseUint(args[i], 10, 64)
-		if err == nil {
-			params = append(params, param)
-		} else {
-			params = append(params, args[i])
-		}
-	}
+
+	headerFile, err := ioutil.ReadFile(args[2])
 	if err != nil {
 		panic(err)
 	}
-	txData := crypto.TxData{Method: method, Params: params}
+	json.Unmarshal(headerFile, &header)
+
+	function, err := header.GetFunction(args[3])
+	if err != nil {
+		panic(err)
+	}
+	encodedArgs, err := abi.EncodeFromString(function.Parameters, args[4:])
+	if err != nil {
+		panic(err)
+	}
+
+	txData := crypto.TxData{Method: args[3], Params: encodedArgs}
 	tx := &crypto.Tx{Data: txData.Serialize(), From: signer, To: to}
 
 	sign(tx)
@@ -123,16 +134,16 @@ func invoke(cmd *cobra.Command, args []string) {
 
 func main() {
 	var cmdDeploy = &cobra.Command{
-		Use:   "deploy [nonce] [path to wasm]",
+		Use:   "deploy [nonce] [path to wasm] [path to contract abi json file]",
 		Short: "Deploy a wasm contract",
-		Args:  cobra.MinimumNArgs(2),
+		Args:  cobra.MinimumNArgs(3),
 		Run:   deploy,
 	}
 
 	var cmdInvoke = &cobra.Command{
-		Use:   "invoke [nonce] [address] [param to invoke]",
+		Use:   "invoke [nonce] [address] [path to contract abi json file] [param to invoke]",
 		Short: "invoke a smart contract",
-		Args:  cobra.MinimumNArgs(3),
+		Args:  cobra.MinimumNArgs(4),
 		Run:   invoke,
 	}
 

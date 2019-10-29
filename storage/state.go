@@ -36,7 +36,7 @@ func (state *State) LoadAccount(addr crypto.Address) (*Account, error) {
 	}
 	account.address = addr
 	account.storage = trie.New(account.StorageHash, database)
-	account.code = database.Get(account.CodeHash)
+	account.contract = database.Get(account.ContractHash)
 	return &account, nil
 }
 
@@ -53,8 +53,8 @@ func (state *State) GetAccount(addr crypto.Address) *Account {
 }
 
 // CreateAccount create a new account state for addr
-func (state *State) CreateAccount(addr crypto.Address, code *[]byte) *Account {
-	Account := newAccount(addr, code)
+func (state *State) CreateAccount(creator crypto.Address, addr crypto.Address, contract *[]byte) *Account {
+	Account := newAccount(creator, addr, contract)
 	state.accounts[addr] = Account
 	return Account
 }
