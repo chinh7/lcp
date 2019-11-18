@@ -51,13 +51,13 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 	info := "ok"
 	tx := &crypto.Tx{}
 	tx.Deserialize(req.GetTx())
-	resultEvent, err := core.ApplyTx(app.state, tx)
+	applyEvents, err := core.ApplyTx(app.state, tx)
 	if err != nil {
 		code = CodeTypeUnknownError
 		info = err.Error()
 	}
 	fromAddress := tx.From.Address()
-	events := []types.Event{resultEvent, types.Event{
+	events := append(applyEvents, types.Event{
 		Type: "detail",
 		Attributes: []common.KVPair{
 			common.KVPair{
@@ -70,7 +70,7 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 				Key: []byte("nonce"), Value: []byte(strconv.FormatUint(tx.From.Nonce, 10)),
 			},
 		},
-	}}
+	})
 	return types.ResponseDeliverTx{
 		Code:   code,
 		Events: events,

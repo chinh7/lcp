@@ -1,5 +1,14 @@
 package models
 
+// Event is emitting from contract execution
+type Event struct {
+	Name       string `json:"name"`
+	Attributes []struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	} `json:"attributes"`
+}
+
 // Transaction cointans all transactions info
 type Transaction struct {
 	Block *Block `json:"block,omitempty"`
@@ -18,4 +27,5 @@ type Transaction struct {
 	GasPrice string `json:"-"`
 
 	Result map[string]string `json:"result"`
+	Events []*Event          `json:"events"`
 }

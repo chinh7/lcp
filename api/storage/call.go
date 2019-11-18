@@ -39,14 +39,12 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 	}
 	state := storage.GetState(appHash)
 	account := state.GetAccount(crypto.AddressFromString(params.Address))
-	contract := account.GetContract()
-
-	header, _, err := abi.DecodeHeader(contract)
+	contract, err := account.GetContract()
 	if err != nil {
 		return fmt.Errorf("Contract not found for address %s", params.Address)
 	}
 
-	function, err := header.GetFunction(params.Method)
+	function, err := contract.Header.GetFunction(params.Method)
 	if err != nil {
 		return fmt.Errorf("Function for method %s not found", params.Method)
 	}
@@ -57,7 +55,7 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 	}
 
 	engine := engine.NewEngine(account, crypto.AddressFromString(params.Address))
-	ret, _, err := engine.Ignite(params.Method, data)
+	ret, err := engine.Ignite(params.Method, data)
 	if err != nil {
 		return err
 	}

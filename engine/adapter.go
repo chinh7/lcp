@@ -1,8 +1,11 @@
 package engine
 
 import (
+	"encoding/binary"
 	"fmt"
 
+	"github.com/QuoineFinancial/vertex/abi"
+	"github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/common"
 	"github.com/vertexdlt/vertexvm/vm"
 )
@@ -54,17 +57,6 @@ func (engine *Engine) chainStorageSizeGet(vm *vm.VM, args ...uint64) uint64 {
 	return uint64(len(value))
 }
 
-func (engine *Engine) chainEventEmit(vm *vm.VM, args ...uint64) uint64 {
-	ptr := int(uint32(args[0]))
-	size := int(uint32(args[0]))
-	data := readAt(vm, ptr, size)
-	engine.event.Attributes = append(engine.event.Attributes, common.KVPair{
-		Key:   []byte(""), // TODO: Decide the key of event
-		Value: data,
-	})
-	return 0
-}
-
 func (engine *Engine) chainGetCaller(vm *vm.VM, args ...uint64) uint64 {
 	ptr := int(uint32(args[0]))
 	copy(vm.GetMemory()[ptr:], engine.caller[:])
@@ -75,6 +67,31 @@ func (engine *Engine) chainGetCreator(vm *vm.VM, args ...uint64) uint64 {
 	ptr := int(uint32(args[0]))
 	creator := engine.account.Creator
 	copy(vm.GetMemory()[ptr:], creator[:])
+	return 0
+}
+
+func (engine *Engine) handleEmitEvent(event *abi.Event, vm *vm.VM, args ...uint64) uint64 {
+	attributes := common.KVPairs{}
+	for i, param := range event.Parameters {
+		var value []byte
+		if param.Type.IsPointer() {
+			paramPtr := int(uint32(args[i]))
+			size, _ := param.Type.GetMemorySize()
+			value = readAt(vm, paramPtr, size)
+		} else {
+			size, _ := abi.Uint64.GetMemorySize()
+			value = make([]byte, size)
+			binary.BigEndian.PutUint64(value, args[i])
+		}
+		attributes = append(attributes, common.KVPair{
+			Key:   []byte(param.Name),
+			Value: value,
+		})
+	}
+	engine.events = append(engine.events, types.Event{
+		Type:       EventPrefix + event.Name,
+		Attributes: attributes,
+	})
 	return 0
 }
 
@@ -91,13 +108,17 @@ func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 			return engine.chainStorageGet
 		case "chain_storage_size_get":
 			return engine.chainStorageSizeGet
-		case "chain_event_emit":
-			return engine.chainEventEmit
 		case "chain_get_caller":
 			return engine.chainGetCaller
 		case "chain_get_creator":
 			return engine.chainGetCreator
 		default:
+			contract, _ := engine.account.GetContract()
+			if event, err := contract.Header.GetEvent(name); err == nil {
+				return func(vm *vm.VM, args ...uint64) uint64 {
+					return engine.handleEmitEvent(event, vm, args...)
+				}
+			}
 			panic(fmt.Errorf("unknown import resolved: %s", name))
 		}
 	case "wasi_unstable":

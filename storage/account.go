@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"github.com/QuoineFinancial/vertex/abi"
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/trie"
 	"golang.org/x/crypto/sha3"
@@ -36,8 +37,8 @@ func (account *Account) GetAddress() crypto.Address {
 }
 
 // GetContract retrieves contract code for account state
-func (account *Account) GetContract() []byte {
-	return account.contract
+func (account *Account) GetContract() (*abi.Contract, error) {
+	return abi.DecodeContract(account.contract)
 }
 
 // SetNonce stores the latest nonce to account state

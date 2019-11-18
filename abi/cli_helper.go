@@ -10,6 +10,25 @@ import (
 	"github.com/QuoineFinancial/vertex/crypto"
 )
 
+// HeaderFile representation of Header file
+type HeaderFile struct {
+	Version string `json:"version"`
+	Events  []struct {
+		Name       string `json:"name"`
+		Parameters []struct {
+			Name string `json:"name"`
+			Type string `json:"type"`
+		} `json:"parameters"`
+	} `json:"events"`
+	Functions []struct {
+		Name       string `json:"name"`
+		Parameters []struct {
+			IsArray bool   `json:"is_array"`
+			Type    string `json:"type"`
+		} `json:"parameters"`
+	}
+}
+
 func parsePrimitiveTypeFromString(t string) (PrimitiveType, error) {
 	var primitiveType PrimitiveType
 	switch t {
@@ -238,7 +257,7 @@ func parseArgFromString(t PrimitiveType, value string) (interface{}, error) {
 }
 
 // EncodeFromString return []byte from an inputted types and values type of string slices
-func EncodeFromString(params []Parameter, values []string) ([]byte, error) {
+func EncodeFromString(params []*Parameter, values []string) ([]byte, error) {
 	var interfaces []interface{}
 	if len(params) != len(values) {
 		return []byte{0}, fmt.Errorf("Argument count mismatch, expecting: %d, got: %d", len(params), len(values))
@@ -266,58 +285,69 @@ func EncodeFromString(params []Parameter, values []string) ([]byte, error) {
 	return encoded, nil
 }
 
-// UnmarshalJSON supports custom unmarshalling header.json from string type to int
-func (param *Parameter) UnmarshalJSON(data []byte) error {
-	type Alias Parameter
-	aux := &struct {
-		Type string `json:"type"`
-		*Alias
-	}{
-		Alias: (*Alias)(param),
-	}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
-	}
-	t, err := parsePrimitiveTypeFromString(aux.Type)
+// EncodeHeaderToBytes encode a header file into byte array
+func EncodeHeaderToBytes(path string) ([]byte, error) {
+	header, err := LoadHeaderFromFile(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	param.Type = t
-	return nil
-}
-
-// UnmarshalJSON supports custom unmarshalling header.json from string type to int
-func (header *Header) UnmarshalJSON(data []byte) error {
-	type Alias Header
-	header.Functions = make(map[string]Function)
-	aux := &struct {
-		Functions []Function `json:"functions"`
-		*Alias
-	}{
-		Alias: (*Alias)(header),
-	}
-
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
-	}
-
-	for _, fc := range aux.Functions {
-		header.Functions[fc.Name] = fc
-	}
-	return nil
-}
-
-// EncodeHeaderFromFile encode a header file into byte array
-func EncodeHeaderFromFile(path string) ([]byte, error) {
-	var h Header
-	headerFile, err := ioutil.ReadFile(path)
+	encodedBytes, err := header.Encode()
 	if err != nil {
-		return []byte{0}, err
-	}
-	json.Unmarshal(headerFile, &h)
-	encodedBytes, err := h.Encode()
-	if err != nil {
-		return []byte{0}, err
+		return nil, err
 	}
 	return encodedBytes, nil
+}
+
+// LoadHeaderFromFile load a header file into Header
+func LoadHeaderFromFile(path string) (*Header, error) {
+	var headerFile HeaderFile
+	headerFileContent, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	json.Unmarshal(headerFileContent, &headerFile)
+	header := Header{
+		Version:   headerFile.Version,
+		Functions: make(map[string]*Function),
+		Events:    make(map[string]*Event),
+	}
+
+	for _, hFunction := range headerFile.Functions {
+		function := Function{
+			Name:       hFunction.Name,
+			Parameters: []*Parameter{},
+		}
+		for _, hParam := range hFunction.Parameters {
+			paramType, err := parsePrimitiveTypeFromString(hParam.Type)
+			if err != nil {
+				return nil, err
+			}
+			function.Parameters = append(function.Parameters, &Parameter{
+				IsArray: hParam.IsArray,
+				Type:    paramType,
+			})
+		}
+		header.Functions[function.Name] = &function
+	}
+
+	for _, hEvent := range headerFile.Events {
+		event := Event{
+			Name:       hEvent.Name,
+			Parameters: []*Parameter{},
+		}
+		for _, hParam := range hEvent.Parameters {
+			paramType, err := parsePrimitiveTypeFromString(hParam.Type)
+			if err != nil {
+				return nil, err
+			}
+			event.Parameters = append(event.Parameters, &Parameter{
+				Name:    hParam.Name,
+				IsArray: false,
+				Type:    paramType,
+			})
+		}
+		header.Events[event.Name] = &event
+	}
+
+	return &header, nil
 }

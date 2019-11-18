@@ -14,7 +14,7 @@ type State struct {
 	accounts map[crypto.Address]*Account
 }
 
-var database = db.NewRocksDB("state.db") // TODO: Make this ENV
+var database = db.NewRocksDB("state.db")
 
 // GetState get the singleton state
 func GetState(rootHash trie.Hash) *State {

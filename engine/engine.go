@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/QuoineFinancial/vertex/abi"
 	"github.com/QuoineFinancial/vertex/crypto"
@@ -16,11 +15,14 @@ import (
 const (
 	// ExportSecDataEnd is wasm export section key for __data_end
 	ExportSecDataEnd = "__data_end"
+
+	// EventPrefix is prefix of Type for all events emitting by engine
+	EventPrefix = "engine."
 )
 
 // Engine is space to execute function
 type Engine struct {
-	event   types.Event
+	events  []types.Event
 	account *storage.Account
 	caller  crypto.Address
 }
@@ -28,50 +30,55 @@ type Engine struct {
 // NewEngine return new instance of Engine
 func NewEngine(account *storage.Account, caller crypto.Address) *Engine {
 	return &Engine{
-		event:   types.Event{},
+		events:  []types.Event{},
 		account: account,
 		caller:  caller,
 	}
 }
 
+// GetEvents return the event of engine
+func (engine *Engine) GetEvents() []types.Event {
+	return engine.events
+}
+
 // Ignite executes a contract given its code, method, and arguments
-func (engine *Engine) Ignite(method string, methodArgs []byte) (interface{}, [][]byte, error) {
-	events := make([][]byte, 0)
-	contract := engine.account.GetContract()
-	header, dataIndex, err := abi.DecodeHeader(contract)
-	vm, err := vm.NewVM(contract[dataIndex:], engine)
+func (engine *Engine) Ignite(method string, methodArgs []byte) (*uint64, error) {
+	contract, err := engine.account.GetContract()
 	if err != nil {
-		return nil, [][]byte{}, err
+		return nil, err
+	}
+	vm, err := vm.NewVM(contract.Code, engine)
+	if err != nil {
+		return nil, err
 	}
 	funcID, ok := vm.GetFunctionIndex(method)
 	if !ok {
-		return nil, [][]byte{}, errors.New("Cannot find invoke function")
+		return nil, errors.New("Cannot find invoke function")
 	}
 
 	val, _ := vm.Module.ExecInitExpr(vm.Module.GetGlobal(int(vm.Module.Export.Entries[ExportSecDataEnd].Desc.Idx)).Init)
 	offset := int(val.(int32))
 
-	function, err := header.GetFunction(method)
+	function, err := contract.Header.GetFunction(method)
 	if err != nil {
-		return nil, [][]byte{}, err
+		return nil, err
 	}
 
 	decodedBytes, err := abi.DecodeToBytes(function.Parameters, methodArgs)
 	if err != nil {
-		return nil, [][]byte{}, err
+		return nil, err
 	}
 
 	arguments, err := loadArguments(vm, decodedBytes, function.Parameters, offset)
 	if err != nil {
-		return nil, [][]byte{}, err
+		return nil, err
 	}
 
 	ret := vm.Invoke(funcID, arguments...)
-	log.Println("return value = ", ret)
-	return ret, events, nil
+	return &ret, nil
 }
 
-func loadArguments(vm *vm.VM, byteArgs [][]byte, params []abi.Parameter, offset int) ([]uint64, error) {
+func loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.Parameter, offset int) ([]uint64, error) {
 	var args = make([]uint64, len(byteArgs))
 	byteSize := 0
 	for _, bytes := range byteArgs {
