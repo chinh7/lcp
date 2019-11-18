@@ -3,6 +3,7 @@ package abi
 import (
 	"fmt"
 	"io"
+	"sort"
 
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -97,16 +98,26 @@ func (h *Header) Encode() ([]byte, error) {
 
 func (h *Header) getEvents() []*Event {
 	events := []*Event{}
-	for _, event := range h.Events {
-		events = append(events, event)
+	var keys []string
+	for key := range h.Events {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		events = append(events, h.Events[key])
 	}
 	return events
 }
 
 func (h *Header) getFunctions() []*Function {
 	functions := []*Function{}
-	for _, function := range h.Functions {
-		functions = append(functions, function)
+	var keys []string
+	for key := range h.Functions {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		functions = append(functions, h.Functions[key])
 	}
 	return functions
 }
