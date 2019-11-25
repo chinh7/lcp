@@ -21,17 +21,21 @@ type GetAccountResult struct {
 	Account *models.Account `json:"account"`
 }
 
-// GetAccount delivers transction to blockchain
+// GetAccount delivers transaction to blockchain
 func (service *Service) GetAccount(r *http.Request, params *GetAccountParams, result *GetAccountResult) error {
 	status, _ := service.tAPI.Status()
 	appHash := common.BytesToHash(status.SyncInfo.LatestAppHash)
 	state := storage.GetState(appHash)
 	account := state.GetAccount(crypto.AddressFromString(params.Address))
 	fmt.Println("ACCOUNT", hex.EncodeToString(account.ContractHash))
+	contract, err := account.GetContract()
+	if err != nil {
+		return err
+	}
 	result.Account = &models.Account{
 		Nonce:        account.Nonce,
 		ContractHash: hex.EncodeToString(account.ContractHash),
-		Contract:     hex.EncodeToString(account.GetContract()),
+		Contract:     hex.EncodeToString(contract.Code),
 	}
 	return nil
 }

@@ -37,6 +37,7 @@ func (service *Service) parseTransaction(resultTx *core_types.ResultTx) *models.
 		Code:     resultTx.TxResult.GetCode(),
 		Data:     string(resultTx.TxResult.GetData()),
 		Result:   make(map[string]string),
+		Events:   []*models.Event{},
 	}
 
 	for _, event := range resultTx.TxResult.GetEvents() {
@@ -57,6 +58,19 @@ func (service *Service) parseTransaction(resultTx *core_types.ResultTx) *models.
 					transaction.Nonce = int64(nonce)
 				}
 			}
+		default:
+			vEvent := models.Event{Name: event.GetType()}
+			for _, attribute := range event.GetAttributes() {
+				vEvent.Attributes = append(vEvent.Attributes, struct {
+					Key   string `json:"key"`
+					Value string `json:"value"`
+				}{
+					Key:   string(attribute.Key),
+					Value: hex.EncodeToString(attribute.Value),
+				})
+			}
+			transaction.Events = append(transaction.Events, &vEvent)
+
 		}
 	}
 

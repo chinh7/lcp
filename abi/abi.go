@@ -9,21 +9,21 @@ import (
 )
 
 // PrimitiveType PrimitiveType
-type PrimitiveType int
+type PrimitiveType uint
 
 // enum for types
 const (
-	Uint8   PrimitiveType = 0
-	Uint16  PrimitiveType = 1
-	Uint32  PrimitiveType = 2
-	Uint64  PrimitiveType = 3
-	Int8    PrimitiveType = 4
-	Int16   PrimitiveType = 5
-	Int32   PrimitiveType = 6
-	Int64   PrimitiveType = 7
-	Float32 PrimitiveType = 8
-	Float64 PrimitiveType = 9
-	Address PrimitiveType = 10
+	Uint8   PrimitiveType = 0x0
+	Uint16  PrimitiveType = 0x1
+	Uint32  PrimitiveType = 0x2
+	Uint64  PrimitiveType = 0x3
+	Int8    PrimitiveType = 0x4
+	Int16   PrimitiveType = 0x5
+	Int32   PrimitiveType = 0x6
+	Int64   PrimitiveType = 0x7
+	Float32 PrimitiveType = 0x8
+	Float64 PrimitiveType = 0x9
+	Address PrimitiveType = 0xa
 )
 
 const (
@@ -39,6 +39,16 @@ type PrimitiveArg struct {
 
 // ArrayArg is model for dynamic array of primitive type
 type ArrayArg []PrimitiveArg
+
+// IsPointer return whether p is pointer or not
+func (p PrimitiveType) IsPointer() bool {
+	switch p {
+	case Address:
+		return true
+	default:
+		return false
+	}
+}
 
 func (p PrimitiveType) String() string {
 	return []string{"uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64", "float32", "float64", "address"}[p]
@@ -290,7 +300,7 @@ func arrayDecode(t PrimitiveType, length int, buf []byte) (interface{}, error) {
 }
 
 // Encode return []byte from an inputted params and values pair
-func Encode(params []Parameter, values []interface{}) ([]byte, error) {
+func Encode(params []*Parameter, values []interface{}) ([]byte, error) {
 	if len(params) != len(values) {
 		return []byte{0}, fmt.Errorf("Parameter count mismatch, expecting: %d, got: %d", len(params), len(values))
 	}
@@ -322,7 +332,7 @@ func Encode(params []Parameter, values []interface{}) ([]byte, error) {
 }
 
 // Decode return []interface from an inputted params and []byte
-func Decode(params []Parameter, bytes []byte) ([]interface{}, error) {
+func Decode(params []*Parameter, bytes []byte) ([]interface{}, error) {
 	var results []interface{}
 	var offset int
 	for _, param := range params {
@@ -359,7 +369,7 @@ func Decode(params []Parameter, bytes []byte) ([]interface{}, error) {
 }
 
 // DecodeToBytes returns uint64 array compatible with VM
-func DecodeToBytes(params []Parameter, bytes []byte) ([][]byte, error) {
+func DecodeToBytes(params []*Parameter, bytes []byte) ([][]byte, error) {
 	var decoded [][]byte
 	var offset int
 	var err error

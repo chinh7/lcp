@@ -1,17 +1,16 @@
 package main
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ed25519"
 
@@ -28,32 +27,10 @@ import (
 
 func broadcast(serializedTx string) {
 	log.Println("Signed Transaction Len:", len(serializedTx))
-	url := "http://localhost:26657/"
-	msg, err := hex.DecodeString(serializedTx)
+	msg, _ := hex.DecodeString(serializedTx)
 	serializedTx = base64.StdEncoding.EncodeToString(msg)
 	log.Println("Params Len:", len(serializedTx))
-	// log.Println(serializedTx)
-	// if len(serializedTx) > 0 {
-	// 	return
-	// }
-	message := map[string]interface{}{
-		"method":  "broadcast_tx_async",
-		"id":      123,
-		"jsonrpc": "2.0",
-		"params":  []string{serializedTx},
-	}
-	bytesRepresentation, err := json.Marshal(message)
-
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(bytesRepresentation))
-	if err != nil {
-		panic(err)
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	log.Println(string(body))
-	defer resp.Body.Close()
+	fmt.Println(serializedTx)
 }
 
 func loadPrivateKey() ed25519.PrivateKey {
@@ -81,19 +58,30 @@ func sign(tx *crypto.Tx) {
 }
 
 func deploy(cmd *cobra.Command, args []string) {
-	data, err := ioutil.ReadFile(args[1])
+	code, err := ioutil.ReadFile(args[1])
 	if err != nil {
 		panic(err)
 	}
-	encodedHeader, err := abi.EncodeHeaderFromFile(args[2])
+	encodedHeader, err := abi.EncodeHeaderToBytes(args[2])
 	if err != nil {
 		panic(err)
 	}
+
+	header, err := abi.DecodeHeader(encodedHeader)
+	if err != nil {
+		panic(err)
+	}
+
 	nonce, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
 		panic(err)
 	}
-	data = append(encodedHeader, data...)
+
+	data, err := rlp.EncodeToBytes(&abi.Contract{Header: header, Code: code})
+	if err != nil {
+		panic(err)
+	}
+
 	signer := crypto.TxSigner{Nonce: uint64(nonce)}
 	tx := &crypto.Tx{Data: data, From: signer}
 	sign(tx)
@@ -101,8 +89,6 @@ func deploy(cmd *cobra.Command, args []string) {
 }
 
 func invoke(cmd *cobra.Command, args []string) {
-	var header abi.Header
-
 	nonce, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
 		panic(err)
@@ -110,11 +96,10 @@ func invoke(cmd *cobra.Command, args []string) {
 	signer := crypto.TxSigner{Nonce: uint64(nonce)}
 	to := crypto.AddressFromString(args[1])
 
-	headerFile, err := ioutil.ReadFile(args[2])
+	header, err := abi.LoadHeaderFromFile(args[2])
 	if err != nil {
 		panic(err)
 	}
-	json.Unmarshal(headerFile, &header)
 
 	function, err := header.GetFunction(args[3])
 	if err != nil {

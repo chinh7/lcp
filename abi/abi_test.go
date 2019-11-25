@@ -34,8 +34,8 @@ func TestEncode(t *testing.T) {
 	address := crypto.AddressFromString("LCHILMXMODD5DMDMPKVSD5MUODDQMBRU5GZVLGXEFBPG36HV4CLSYM7O")
 	address2 := crypto.AddressFromString("LCHILMXMODD5DMDMPKVSD5MUODDQMBRU5GZVLGXEFBPG36HV4CLSYM7O")
 	addresses := []crypto.Address{address, address2}
-	var parameters1 []Parameter
-	var parameters2 []Parameter
+	var parameters1 []*Parameter
+	var parameters2 []*Parameter
 	paramsString1 := []string{"address", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64", "float32", "float64"}
 	paramsString2 := []string{"address[]", "uint8[]", "uint16[]", "uint32[]", "uint64[]", "int8[]", "int16[]", "int32[]", "int64[]", "float32[]", "float64[]"}
 
@@ -44,18 +44,18 @@ func TestEncode(t *testing.T) {
 		if err != nil {
 			t.Errorf("error: %s", err)
 		}
-		parameters1 = append(parameters1, param)
+		parameters1 = append(parameters1, &param)
 	}
 	for _, p := range paramsString2 {
 		param, err := parseParameterFromString(p)
 		if err != nil {
 			t.Errorf("error: %s", err)
 		}
-		parameters2 = append(parameters2, param)
+		parameters2 = append(parameters2, &param)
 	}
 
 	testTables := []struct {
-		types  []Parameter
+		types  []*Parameter
 		values []interface{}
 		result []byte
 	}{
@@ -83,8 +83,8 @@ func TestEncode(t *testing.T) {
 }
 
 func TestEncodeFromString(t *testing.T) {
-	var parameters1 []Parameter
-	var parameters2 []Parameter
+	var parameters1 []*Parameter
+	var parameters2 []*Parameter
 	paramsString1 := []string{"address", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64", "float32", "float64"}
 	paramsString2 := []string{"address[]", "uint8[]", "uint16[]", "uint32[]", "uint64[]", "int8[]", "int16[]", "int32[]", "int64[]", "float32[]", "float64[]"}
 
@@ -93,18 +93,18 @@ func TestEncodeFromString(t *testing.T) {
 		if err != nil {
 			t.Errorf("error: %s", err)
 		}
-		parameters1 = append(parameters1, param)
+		parameters1 = append(parameters1, &param)
 	}
 	for _, p := range paramsString2 {
 		param, err := parseParameterFromString(p)
 		if err != nil {
 			t.Errorf("error: %s", err)
 		}
-		parameters2 = append(parameters2, param)
+		parameters2 = append(parameters2, &param)
 	}
 
 	testTables := []struct {
-		types  []Parameter
+		types  []*Parameter
 		values []string
 		result []byte
 	}{
@@ -135,8 +135,8 @@ func TestDecode(t *testing.T) {
 	address := crypto.AddressFromString("LCHILMXMODD5DMDMPKVSD5MUODDQMBRU5GZVLGXEFBPG36HV4CLSYM7O")
 	address2 := crypto.AddressFromString("LCHILMXMODD5DMDMPKVSD5MUODDQMBRU5GZVLGXEFBPG36HV4CLSYM7O")
 	addresses := []interface{}{address, address2}
-	var parameters1 []Parameter
-	var parameters2 []Parameter
+	var parameters1 []*Parameter
+	var parameters2 []*Parameter
 	paramsString1 := []string{"address", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64", "float32", "float64"}
 	paramsString2 := []string{"address[]", "uint8[]", "uint16[]", "uint32[]", "uint64[]", "int8[]", "int16[]", "int32[]", "int64[]", "float32[]", "float64[]"}
 
@@ -145,18 +145,18 @@ func TestDecode(t *testing.T) {
 		if err != nil {
 			t.Errorf("error: %s", err)
 		}
-		parameters1 = append(parameters1, param)
+		parameters1 = append(parameters1, &param)
 	}
 	for _, p := range paramsString2 {
 		param, err := parseParameterFromString(p)
 		if err != nil {
 			t.Errorf("error: %s", err)
 		}
-		parameters2 = append(parameters2, param)
+		parameters2 = append(parameters2, &param)
 	}
 
 	testTables := []struct {
-		types  []Parameter
+		types  []*Parameter
 		values []byte
 		result []interface{}
 	}{
@@ -184,8 +184,8 @@ func TestDecode(t *testing.T) {
 }
 
 func TestDecodeToBytes(t *testing.T) {
-	var parameters1 []Parameter
-	var parameters2 []Parameter
+	var parameters1 []*Parameter
+	var parameters2 []*Parameter
 	paramsString1 := []string{"address", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64", "float32", "float64"}
 	paramsString2 := []string{"address[]", "uint8[]", "uint16[]", "uint32[]", "uint64[]", "int8[]", "int16[]", "int32[]", "int64[]", "float32[]", "float64[]"}
 
@@ -194,18 +194,18 @@ func TestDecodeToBytes(t *testing.T) {
 		if err != nil {
 			t.Errorf("error: %s", err)
 		}
-		parameters1 = append(parameters1, param)
+		parameters1 = append(parameters1, &param)
 	}
 	for _, p := range paramsString2 {
 		param, err := parseParameterFromString(p)
 		if err != nil {
 			t.Errorf("error: %s", err)
 		}
-		parameters2 = append(parameters2, param)
+		parameters2 = append(parameters2, &param)
 	}
 
 	testTables := []struct {
-		types  []Parameter
+		types  []*Parameter
 		values []byte
 		result [][]byte
 	}{

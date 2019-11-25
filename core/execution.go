@@ -1,7 +1,6 @@
 package core
 
 import (
-	"log"
 	"strconv"
 
 	"github.com/QuoineFinancial/vertex/crypto"
@@ -12,16 +11,12 @@ import (
 )
 
 // ApplyTx executes a transaction by either deploying the contract code or invoking a contract method call
-func ApplyTx(state *storage.State, tx *crypto.Tx) (types.Event, error) {
-	event := types.Event{}
-	createContract := tx.To == crypto.Address{}
-	if createContract {
+func ApplyTx(state *storage.State, tx *crypto.Tx) ([]types.Event, error) {
+	if (tx.To == crypto.Address{}) {
 		contractAddress := tx.From.CreateAddress()
-		log.Println("Deploy contract", contractAddress.String())
-		log.Println(tx.Data)
 		state.CreateAccount(tx.From.Address(), contractAddress, &tx.Data)
-		event = types.Event{
-			Type: "result",
+		event := types.Event{
+			Type: "deploy",
 			Attributes: []common.KVPair{
 				common.KVPair{
 					Key:   []byte("address"),
@@ -29,18 +24,16 @@ func ApplyTx(state *storage.State, tx *crypto.Tx) (types.Event, error) {
 				},
 			},
 		}
-	} else {
-		log.Println("Invoke contract", tx.To)
-		data := &crypto.TxData{}
-		data.Deserialize(tx.Data)
-		execEngine := engine.NewEngine(state.GetAccount(tx.To), tx.From.Address())
-		_, results, err := execEngine.Ignite(data.Method, data.Params)
-		event := parseEvent(results)
-		if err != nil {
-			return event, err
-		}
+		return []types.Event{event}, nil
 	}
-	return event, nil
+	data := &crypto.TxData{}
+	data.Deserialize(tx.Data)
+	execEngine := engine.NewEngine(state.GetAccount(tx.To), tx.From.Address())
+	_, err := execEngine.Ignite(data.Method, data.Params)
+	if err != nil {
+		return nil, err
+	}
+	return execEngine.GetEvents(), nil
 }
 
 func parseEvent(results [][]byte) types.Event {
