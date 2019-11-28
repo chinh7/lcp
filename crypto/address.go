@@ -68,6 +68,13 @@ func AddressFromString(address string) Address {
 	return AddressFromPubKey(pubkey)
 }
 
+// AddressFromBytes return an address given its bytes
+func AddressFromBytes(b []byte) Address {
+	var a Address
+	a.setBytes(b)
+	return a
+}
+
 func decodeString(src string) ([]byte, error) {
 	raw, err := base32.StdEncoding.DecodeString(src)
 	if err != nil {

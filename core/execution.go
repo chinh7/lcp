@@ -28,7 +28,7 @@ func ApplyTx(state *storage.State, tx *crypto.Tx) ([]types.Event, error) {
 	}
 	data := &crypto.TxData{}
 	data.Deserialize(tx.Data)
-	execEngine := engine.NewEngine(state.GetAccount(tx.To), tx.From.Address())
+	execEngine := engine.NewEngine(state, state.GetAccount(tx.To), tx.From.Address())
 	_, err := execEngine.Ignite(data.Method, data.Params)
 	if err != nil {
 		return nil, err

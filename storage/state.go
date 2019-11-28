@@ -1,11 +1,12 @@
 package storage
 
 import (
+	"log"
+
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/db"
 	"github.com/QuoineFinancial/vertex/trie"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/stellar/go/support/log"
 )
 
 // State is the global account state consisting of many address->state mapping

@@ -80,6 +80,33 @@ func newPrimitiveArg(t PrimitiveType, value interface{}) PrimitiveArg {
 	return res
 }
 
+func PrimitiveArgFromUint64(t PrimitiveType, value uint64) *PrimitiveArg {
+	var v interface{}
+	switch t {
+	case Uint8:
+		v = uint8(value)
+	case Uint16:
+		v = uint16(value)
+	case Uint32:
+		v = uint32(value)
+	case Uint64:
+		v = value
+	case Int8:
+		v = int8(value)
+	case Int16:
+		v = int16(value)
+	case Int32:
+		v = int32(value)
+	case Int64:
+		v = int64(value)
+	case Float32:
+		v = math.Float32frombits(uint32(value))
+	case Float64:
+		v = math.Float64frombits(value)
+	}
+	return &PrimitiveArg{t, v}
+}
+
 // parseArrayArg parse type and values into ArrayArg
 func parseArrayArg(t PrimitiveType, value interface{}) (ArrayArg, error) {
 	var elements ArrayArg

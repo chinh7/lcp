@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/QuoineFinancial/vertex/abi"
 	"github.com/QuoineFinancial/vertex/crypto"
@@ -20,19 +21,33 @@ const (
 	EventPrefix = "engine."
 )
 
+type foreignMethod struct {
+	contractAddress crypto.Address
+	method          string
+}
+
 // Engine is space to execute function
 type Engine struct {
-	events  []types.Event
-	account *storage.Account
-	caller  crypto.Address
+	state        *storage.State
+	account      *storage.Account
+	event        types.Event
+	caller       crypto.Address
+	callDepth    int
+	memAggr      int
+	vm           *vm.VM
+	methodLookup map[string]*foreignMethod
+	events       []types.Event
 }
 
 // NewEngine return new instance of Engine
-func NewEngine(account *storage.Account, caller crypto.Address) *Engine {
+func NewEngine(state *storage.State, account *storage.Account, caller crypto.Address) *Engine {
 	return &Engine{
-		events:  []types.Event{},
-		account: account,
-		caller:  caller,
+		state:        state,
+		account:      account,
+		event:        types.Event{},
+		caller:       caller,
+		methodLookup: make(map[string]*foreignMethod),
+		events:       []types.Event{},
 	}
 }
 
@@ -42,40 +57,47 @@ func (engine *Engine) GetEvents() []types.Event {
 }
 
 // Ignite executes a contract given its code, method, and arguments
-func (engine *Engine) Ignite(method string, methodArgs []byte) (*uint64, error) {
+func (engine *Engine) Ignite(method string, methodArgs []byte) (uint64, error) {
 	contract, err := engine.account.GetContract()
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	vm, err := vm.NewVM(contract.Code, engine)
+	engine.vm = vm
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	funcID, ok := vm.GetFunctionIndex(method)
 	if !ok {
-		return nil, errors.New("Cannot find invoke function")
+		return 0, errors.New("Cannot find invoke function")
 	}
 
-	val, _ := vm.Module.ExecInitExpr(vm.Module.GetGlobal(int(vm.Module.Export.Entries[ExportSecDataEnd].Desc.Idx)).Init)
+	val, _ := vm.Module.ExecInitExpr(vm.Module.GetGlobal(int(vm.Module.ExportSec.ExportMap[ExportSecDataEnd].Desc.Idx)).Init)
 	offset := int(val.(int32))
 
 	function, err := contract.Header.GetFunction(method)
 	if err != nil {
-		return nil, err
+		log.Println(3)
+		return 0, err
 	}
 
 	decodedBytes, err := abi.DecodeToBytes(function.Parameters, methodArgs)
 	if err != nil {
-		return nil, err
+		log.Println(4)
+		return 0, err
 	}
 
 	arguments, err := loadArguments(vm, decodedBytes, function.Parameters, offset)
 	if err != nil {
-		return nil, err
+		log.Println(5)
+		return 0, err
 	}
+	return vm.Invoke(funcID, arguments...)
+}
 
-	ret := vm.Invoke(funcID, arguments...)
-	return &ret, nil
+func (engine *Engine) setStats(callDepth, memAggr int) {
+	engine.callDepth = callDepth
+	engine.memAggr = memAggr
 }
 
 func loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.Parameter, offset int) ([]uint64, error) {
@@ -90,7 +112,7 @@ func loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.Parameter, offset
 	for i, bytes := range byteArgs {
 		isArray := params[i].IsArray || params[i].Type.String() == "address"
 		if isArray {
-			copy(vm.GetMemory()[offset:], bytes)
+			vm.MemWrite(bytes, offset)
 			args[i] = uint64(offset)
 			offset += len(bytes)
 		} else {

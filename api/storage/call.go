@@ -54,7 +54,7 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 		return fmt.Errorf("Invalid params for method %s", params.Method)
 	}
 
-	engine := engine.NewEngine(account, crypto.AddressFromString(params.Address))
+	engine := engine.NewEngine(state, account, crypto.AddressFromString(params.Address))
 	ret, err := engine.Ignite(params.Method, data)
 	if err != nil {
 		return err

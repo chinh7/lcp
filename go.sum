@@ -192,6 +192,12 @@ github.com/twitchyliquid64/golang-asm v0.0.0-20190315094337-365674df15fc/go.mod 
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
 github.com/vertexdlt/vertexvm v0.0.0-20191010095903-499a4b01d30d h1:lY6bGnwcwFbJCGpRIC2wNMN7sl952vIqlM7FapxQulA=
 github.com/vertexdlt/vertexvm v0.0.0-20191010095903-499a4b01d30d/go.mod h1:6qK6Xtkr0DlgQaW5mqM2Zdk6/EZEfSAIgPsCq5TzRnU=
+github.com/vertexdlt/vertexvm v0.0.0-20191114084513-81ebe7bb55bd h1:s17rGU5OTdUoumuxGfwOed90vXI8qZoynucKR7LEimk=
+github.com/vertexdlt/vertexvm v0.0.0-20191114084513-81ebe7bb55bd/go.mod h1:6qK6Xtkr0DlgQaW5mqM2Zdk6/EZEfSAIgPsCq5TzRnU=
+github.com/vertexdlt/vertexvm v0.0.0-20191122101732-c5e7e09f959a h1:pCHT23sDhwD6Oi+biV/T0gLtLwbAf6ep76RxPqIiP4A=
+github.com/vertexdlt/vertexvm v0.0.0-20191122101732-c5e7e09f959a/go.mod h1:6qK6Xtkr0DlgQaW5mqM2Zdk6/EZEfSAIgPsCq5TzRnU=
+github.com/vertexdlt/vertexvm v0.0.0-20191128034211-41859d78a319 h1:0djx/DsoWZFE10spNZyKFkkG898oXZxCS9aD5g2fU2o=
+github.com/vertexdlt/vertexvm v0.0.0-20191128034211-41859d78a319/go.mod h1:6qK6Xtkr0DlgQaW5mqM2Zdk6/EZEfSAIgPsCq5TzRnU=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
 go.etcd.io/bbolt v1.3.3 h1:MUGmc65QhB3pIlaQ5bB4LwqSj6GIonVJXpZiaKNyaKk=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
