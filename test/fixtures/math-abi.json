@@ -1,1 +1,1 @@
-{"version":1,"events":[],"functions":[{"name":"hypotenuse","parameters":[{"is_array":false,"type":"int32"},{"is_array":false,"type":"int32"}]}]}
+{"version":1,"events":[],"functions":[{"name":"mean","parameters":[{"is_array":true,"type":"int32"}]},{"name":"sum_of_squares","parameters":[{"is_array":true,"type":"int32"}]}]}

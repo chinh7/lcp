@@ -2,6 +2,7 @@ package abi
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 
@@ -55,20 +56,20 @@ func (p PrimitiveType) String() string {
 }
 
 // GetMemorySize returns memory size for a primitive type
-func (p PrimitiveType) GetMemorySize() (int, error) {
+func (p PrimitiveType) GetMemorySize() int {
 	switch p {
 	case Address:
-		return crypto.AddressLength, nil
+		return crypto.AddressLength
 	case Uint8, Int8:
-		return 1, nil
+		return 1
 	case Uint16, Int16:
-		return 2, nil
+		return 2
 	case Uint32, Int32, Float32:
-		return 4, nil
+		return 4
 	case Uint64, Int64, Float64:
-		return 8, nil
+		return 8
 	default:
-		return 0, fmt.Errorf("Not supported type")
+		panic("primitive type not found")
 	}
 }
 
@@ -80,7 +81,69 @@ func newPrimitiveArg(t PrimitiveType, value interface{}) PrimitiveArg {
 	return res
 }
 
-func PrimitiveArgFromUint64(t PrimitiveType, value uint64) *PrimitiveArg {
+func ArrayFromUint64(t PrimitiveType, values []uint64) interface{} {
+	switch t {
+	case Uint8:
+		var v []uint8
+		for _, value := range values {
+			v = append(v, uint8(value))
+		}
+		return v
+	case Uint16:
+		var v []uint16
+		for _, value := range values {
+			v = append(v, uint16(value))
+		}
+		return v
+	case Uint32:
+		var v []uint32
+		for _, value := range values {
+			v = append(v, uint32(value))
+		}
+		return v
+	case Uint64:
+		return values
+	case Int8:
+		var v []int8
+		for _, value := range values {
+			v = append(v, int8(value))
+		}
+		return v
+	case Int16:
+		var v []int16
+		for _, value := range values {
+			v = append(v, int16(value))
+		}
+		return v
+	case Int32:
+		var v []int32
+		for _, value := range values {
+			v = append(v, int32(value))
+		}
+		return v
+	case Int64:
+		var v []int64
+		for _, value := range values {
+			v = append(v, int64(value))
+		}
+		return v
+	case Float32:
+		var v []uint8
+		for _, value := range values {
+			v = append(v, uint8(value))
+		}
+		return v
+	case Float64:
+		var v []float64
+		for _, value := range values {
+			v = append(v, math.Float64frombits(value))
+		}
+		return v
+	}
+	return nil
+}
+
+func PrimitiveFromUint64(t PrimitiveType, value uint64) interface{} {
 	var v interface{}
 	switch t {
 	case Uint8:
@@ -104,7 +167,7 @@ func PrimitiveArgFromUint64(t PrimitiveType, value uint64) *PrimitiveArg {
 	case Float64:
 		v = math.Float64frombits(value)
 	}
-	return &PrimitiveArg{t, v}
+	return v
 }
 
 // parseArrayArg parse type and values into ArrayArg
@@ -218,10 +281,7 @@ func parseArrayArg(t PrimitiveType, value interface{}) (ArrayArg, error) {
 
 // Encode is common interface method for encoding a PrimitiveArg into byte array
 func (p PrimitiveArg) encode() ([]byte, error) {
-	memorySize, err := p.Type.GetMemorySize()
-	if err != nil {
-		return []byte{0}, err
-	}
+	memorySize := p.Type.GetMemorySize()
 	buf := make([]byte, memorySize)
 	switch p.Type {
 	case Address:
@@ -312,10 +372,7 @@ func arrayDecode(t PrimitiveType, length int, buf []byte) (interface{}, error) {
 	results := []interface{}{}
 	var offset int
 	for index := 0; index < length; index++ {
-		memorySize, err := t.GetMemorySize()
-		if err != nil {
-			return []interface{}{}, err
-		}
+		memorySize := t.GetMemorySize()
 		result, err := singleDecode(t, buf[offset:offset+memorySize])
 		if err != nil {
 			return []interface{}{}, err
@@ -367,10 +424,7 @@ func Decode(params []*Parameter, bytes []byte) ([]interface{}, error) {
 			length := int(binary.LittleEndian.Uint16(bytes[offset : offset+ArrayLengthByte]))
 			offset += ArrayLengthByte
 
-			elementSize, err := param.Type.GetMemorySize()
-			if err != nil {
-				return []interface{}{}, err
-			}
+			elementSize := param.Type.GetMemorySize()
 			memorySize := elementSize * length
 			result, err := arrayDecode(param.Type, length, bytes[offset:offset+memorySize])
 			if err != nil {
@@ -379,11 +433,7 @@ func Decode(params []*Parameter, bytes []byte) ([]interface{}, error) {
 			offset += memorySize
 			results = append(results, result)
 		} else {
-			memorySize, err := param.Type.GetMemorySize()
-			if err != nil {
-				return []interface{}{}, err
-			}
-
+			memorySize := param.Type.GetMemorySize()
 			result, err := singleDecode(param.Type, bytes[offset:offset+memorySize])
 			if err != nil {
 				return []interface{}{}, err
@@ -399,27 +449,47 @@ func Decode(params []*Parameter, bytes []byte) ([]interface{}, error) {
 func DecodeToBytes(params []*Parameter, bytes []byte) ([][]byte, error) {
 	var decoded [][]byte
 	var offset int
-	var err error
 	for _, param := range params {
 		var arg []byte
 		var memorySize int
 		if param.IsArray {
 			length := int(binary.LittleEndian.Uint16(bytes[offset : offset+ArrayLengthByte]))
 			offset += ArrayLengthByte
-			elementSize, err := param.Type.GetMemorySize()
-			if err != nil {
-				return [][]byte{}, err
-			}
+			elementSize := param.Type.GetMemorySize()
 			memorySize = elementSize * length
 		} else {
-			memorySize, err = param.Type.GetMemorySize()
-			if err != nil {
-				return [][]byte{}, err
-			}
+			memorySize = param.Type.GetMemorySize()
 		}
 		arg = bytes[offset : offset+memorySize]
 		offset += memorySize
 		decoded = append(decoded, arg)
 	}
 	return decoded, nil
+}
+
+// EncodeFromBytes encodes arguments in byte format - an inverse of DecodeToBytes
+func EncodeFromBytes(params []*Parameter, bytes [][]byte) ([]byte, error) {
+	var encoded []byte
+	for i, param := range params {
+		var memorySize int
+		if param.IsArray {
+			elementSize := param.Type.GetMemorySize()
+			length := len(bytes[i])
+			if length%elementSize != 0 {
+				return nil, errors.New("misaligned array byte size")
+			}
+			length = length / elementSize
+			lengthBytes := make([]byte, ArrayLengthByte)
+			binary.LittleEndian.PutUint16(lengthBytes, uint16(length))
+			encoded = append(encoded, lengthBytes...)
+
+		} else {
+			memorySize = param.Type.GetMemorySize()
+			if memorySize != len(bytes[i]) {
+				return nil, errors.New("mismatched primitive byte size")
+			}
+		}
+		encoded = append(encoded, bytes[i]...)
+	}
+	return encoded, nil
 }

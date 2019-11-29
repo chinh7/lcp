@@ -11,6 +11,7 @@ import (
 	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/vertexdlt/vertexvm/vm"
+	vertexvm "github.com/vertexdlt/vertexvm/vm"
 )
 
 const (
@@ -34,9 +35,9 @@ type Engine struct {
 	caller       crypto.Address
 	callDepth    int
 	memAggr      int
-	vm           *vm.VM
-	methodLookup map[string]*foreignMethod
 	events       []types.Event
+	methodLookup map[string]*foreignMethod
+	argSizeMap   map[int]int
 }
 
 // NewEngine return new instance of Engine
@@ -46,8 +47,9 @@ func NewEngine(state *storage.State, account *storage.Account, caller crypto.Add
 		account:      account,
 		event:        types.Event{},
 		caller:       caller,
-		methodLookup: make(map[string]*foreignMethod),
 		events:       []types.Event{},
+		methodLookup: make(map[string]*foreignMethod),
+		argSizeMap:   make(map[int]int),
 	}
 }
 
@@ -62,8 +64,7 @@ func (engine *Engine) Ignite(method string, methodArgs []byte) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	vm, err := vm.NewVM(contract.Code, engine)
-	engine.vm = vm
+	vm, err := vertexvm.NewVM(contract.Code, engine)
 	if err != nil {
 		return 0, err
 	}
@@ -87,9 +88,9 @@ func (engine *Engine) Ignite(method string, methodArgs []byte) (uint64, error) {
 		return 0, err
 	}
 
-	arguments, err := loadArguments(vm, decodedBytes, function.Parameters, offset)
+	log.Println("calling method", method)
+	arguments, err := engine.loadArguments(vm, decodedBytes, function.Parameters, offset)
 	if err != nil {
-		log.Println(5)
 		return 0, err
 	}
 	return vm.Invoke(funcID, arguments...)
@@ -100,7 +101,7 @@ func (engine *Engine) setStats(callDepth, memAggr int) {
 	engine.memAggr = memAggr
 }
 
-func loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.Parameter, offset int) ([]uint64, error) {
+func (engine *Engine) loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.Parameter, offset int) ([]uint64, error) {
 	var args = make([]uint64, len(byteArgs))
 	byteSize := 0
 	for _, bytes := range byteArgs {
@@ -109,11 +110,13 @@ func loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.Parameter, offset
 	if byteSize > 1024 {
 		return []uint64{}, fmt.Errorf("arguments byte size exceeds limit")
 	}
+	log.Println(byteArgs)
 	for i, bytes := range byteArgs {
 		isArray := params[i].IsArray || params[i].Type.String() == "address"
 		if isArray {
 			vm.MemWrite(bytes, offset)
 			args[i] = uint64(offset)
+			engine.argSizeMap[offset] = len(bytes)
 			offset += len(bytes)
 		} else {
 			buffer := make([]byte, 8)
@@ -122,4 +125,12 @@ func loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.Parameter, offset
 		}
 	}
 	return args, nil
+}
+
+func (engine *Engine) argSizeGet(ptr int) (int, error) {
+	size, ok := engine.argSizeMap[ptr]
+	if !ok {
+		return 0, errors.New("pointer size not found")
+	}
+	return size, nil
 }

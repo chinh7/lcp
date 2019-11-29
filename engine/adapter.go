@@ -82,6 +82,16 @@ func (engine *Engine) chainGetCreator(vm *vm.VM, args ...uint64) (uint64, error)
 	return 0, err
 }
 
+func (engine *Engine) chainArgSizeGet(vm *vm.VM, args ...uint64) (uint64, error) {
+	size, err := engine.argSizeGet(int(args[0]))
+	return uint64(size), err
+}
+
+func (engine *Engine) chainArgSizeSet(vm *vm.VM, args ...uint64) (uint64, error) {
+	engine.argSizeMap[int(args[0])] = int(args[1])
+	return 0, nil
+}
+
 func (engine *Engine) chainMethodBind(vm *vm.VM, args ...uint64) (uint64, error) {
 	contractAddrBytes, err := readAt(vm, int(args[0]), crypto.AddressLength)
 	if err != nil {
@@ -95,19 +105,6 @@ func (engine *Engine) chainMethodBind(vm *vm.VM, args ...uint64) (uint64, error)
 	}
 
 	invokedMethod := string(invokedMethodBytes[:len(invokedMethodBytes)-1])
-	// check invoked method existence
-
-	// account := engine.state.GetAccount(contractAddr)
-	// contract, err := account.GetContract()
-	// if err != nil {
-	// 	return 0, err
-	// }
-
-	// if _, err = contract.Header.GetFunction(invokedMethod); err != nil {
-	// 	log.Println(err)
-	// 	return 0, err
-	// }
-
 	aliasMethodBytes, err := readAt(vm, int(args[3]), int(args[4]))
 	aliasMethod := string(aliasMethodBytes[:len(aliasMethodBytes)-1])
 	if err != nil {
@@ -127,25 +124,43 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 	if err != nil {
 		return 0, err
 	}
-
-	var values []interface{}
+	var values [][]byte
+	var bytes []byte
 	for i, param := range function.Parameters {
-		var value []byte
-		var err error
-		if param.Type.IsPointer() {
-			paramPtr := int(args[i])
-			size, _ := param.Type.GetMemorySize()
-			value, err = readAt(vm, paramPtr, size)
+		if param.IsArray {
+			argPtr := int(args[i])
+			size, _ := engine.argSizeGet(int(args[i]))
+			bytes, err = readAt(vm, argPtr, size)
 			if err != nil {
 				return 0, err
 			}
-			values = append(values, value)
 		} else {
-			primitive := abi.PrimitiveArgFromUint64(param.Type, args[i])
-			values = append(values, primitive.Value)
+			if param.Type.IsPointer() {
+				argPtr := int(args[i])
+				size := param.Type.GetMemorySize()
+				bytes, err = readAt(vm, argPtr, size)
+				if err != nil {
+					return 0, err
+				}
+			} else {
+				size := param.Type.GetMemorySize()
+				bytes := make([]byte, size)
+				switch size {
+				case 1:
+					bytes = append(bytes, byte(args[i]))
+				case 2:
+					binary.LittleEndian.PutUint16(bytes, uint16(args[i]))
+				case 4:
+					binary.LittleEndian.PutUint32(bytes, uint32(args[i]))
+				case 8:
+					binary.LittleEndian.PutUint64(bytes, args[i])
+				}
+			}
 		}
+		values = append(values, bytes)
+
 	}
-	methodArgs, err := abi.Encode(function.Parameters, values)
+	methodArgs, err := abi.EncodeFromBytes(function.Parameters, values)
 	if err != nil {
 		return 0, err
 	}
@@ -156,7 +171,7 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 	}
 	// TODO memcheck
 	newEngine := NewEngine(engine.state, account, engine.account.GetAddress())
-	newEngine.setStats(engine.callDepth+1, engine.memAggr+engine.vm.MemSize())
+	newEngine.setStats(engine.callDepth+1, engine.memAggr+vm.MemSize())
 	ret, err := newEngine.Ignite(foreignMethod.method, methodArgs)
 	engine.events = append(engine.events, newEngine.events...)
 	return ret, err
@@ -169,13 +184,13 @@ func (engine *Engine) handleEmitEvent(event *abi.Event, vm *vm.VM, args ...uint6
 		var err error
 		if param.Type.IsPointer() {
 			paramPtr := int(uint32(args[i]))
-			size, _ := param.Type.GetMemorySize()
+			size := param.Type.GetMemorySize()
 			value, err = readAt(vm, paramPtr, size)
 			if err != nil {
 				return 0, err
 			}
 		} else {
-			size, _ := abi.Uint64.GetMemorySize()
+			size := abi.Uint64.GetMemorySize()
 			value = make([]byte, size)
 			binary.BigEndian.PutUint64(value, args[i])
 		}
@@ -208,8 +223,12 @@ func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 			return engine.chainGetCaller
 		case "chain_get_creator":
 			return engine.chainGetCreator
-		case "chain_invoke":
+		case "chain_method_bind":
 			return engine.chainMethodBind
+		case "chain_arg_size_get":
+			return engine.chainArgSizeGet
+		case "chain_arg_size_set":
+			return engine.chainArgSizeSet
 		default:
 			contract, _ := engine.account.GetContract()
 			if event, err := contract.Header.GetEvent(name); err == nil {
