@@ -114,7 +114,10 @@ func (engine *Engine) loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.
 	for i, bytes := range byteArgs {
 		isArray := params[i].IsArray || params[i].Type.String() == "address"
 		if isArray {
-			vm.MemWrite(bytes, offset)
+			_, err := vm.MemWrite(bytes, offset)
+			if err != nil {
+				return nil, err
+			}
 			args[i] = uint64(offset)
 			engine.argSizeMap[offset] = len(bytes)
 			offset += len(bytes)

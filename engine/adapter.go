@@ -144,7 +144,7 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 				}
 			} else {
 				size := param.Type.GetMemorySize()
-				bytes := make([]byte, size)
+				bytes = make([]byte, size)
 				switch size {
 				case 1:
 					bytes = append(bytes, byte(args[i]))

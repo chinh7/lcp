@@ -1,1 +1,1 @@
-{"version":1,"events":[],"functions":[{"name":"init","parameters":[{"is_array":false,"type":"address"}]},{"name":"variance","parameters":[{"is_array":true,"type":"int32"}]}]}
+{"version":1,"events":[],"functions":[{"name":"init","parameters":[{"is_array":false,"type":"address"}]},{"name":"variance","parameters":[{"is_array":true,"type":"int32"}]},{"name":"mean","parameters":[{"is_array":true,"type":"int32"}]}]}

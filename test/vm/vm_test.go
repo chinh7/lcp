@@ -37,7 +37,10 @@ func TestVM(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	execEngine.Ignite("mint", mintArgs)
+	_, err = execEngine.Ignite("mint", mintArgs)
+	if err != nil {
+		panic(err)
+	}
 
 	transferFunction, err := header.GetFunction("transfer")
 	if err != nil {
@@ -47,7 +50,10 @@ func TestVM(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	execEngine.Ignite("transfer", transferArgs)
+	_, err = execEngine.Ignite("transfer", transferArgs)
+	if err != nil {
+		panic(err)
+	}
 
 	getBalanceFunction, err := header.GetFunction("get_balance")
 	if err != nil {
@@ -125,45 +131,45 @@ func TestChainedInvoke(t *testing.T) {
 	}
 }
 
-// func TestChainedInvokeOverflow(t *testing.T) {
-// 	caller := crypto.AddressFromString("LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R")
-// 	state := storage.GetState(trie.Hash{})
+func TestChainedInvokeOverflow(t *testing.T) {
+	caller := crypto.AddressFromString("LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R")
+	state := storage.GetState(trie.Hash{})
 
-// 	utilContract := loadContract("../fixtures/demo-abi.json", "../data/demo.wasm")
-// 	utilBytes, _ := rlp.EncodeToBytes(&utilContract)
-// 	utilAddress := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
-// 	utilAccount := state.CreateAccount(caller, utilAddress, &utilBytes)
+	utilContract := loadContract("../fixtures/util-abi.json", "../data/util.wasm")
+	utilBytes, _ := rlp.EncodeToBytes(&utilContract)
+	utilAddress := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
+	utilAccount := state.CreateAccount(caller, utilAddress, &utilBytes)
 
-// 	execEngine := engine.NewEngine(state, utilAccount, caller)
+	execEngine := engine.NewEngine(state, utilAccount, caller)
 
-// 	funcName := "init"
-// 	function, err := utilContract.Header.GetFunction(funcName)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	args, err := abi.EncodeFromString(function.Parameters, []string{utilAddress.String()})
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	_, err = execEngine.Ignite(funcName, args)
-// 	if err != nil {
-// 		panic(err)
-// 	}
+	funcName := "init"
+	function, err := utilContract.Header.GetFunction(funcName)
+	if err != nil {
+		panic(err)
+	}
+	args, err := abi.EncodeFromString(function.Parameters, []string{utilAddress.String()})
+	if err != nil {
+		panic(err)
+	}
+	_, err = execEngine.Ignite(funcName, args)
+	if err != nil {
+		panic(err)
+	}
 
-// 	funcName = "hypotenuse"
-// 	function, err = utilContract.Header.GetFunction(funcName)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	args, err = abi.EncodeFromString(function.Parameters, []string{"3", "4"})
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	_, err = execEngine.Ignite(funcName, args)
-// 	if err == nil || err.Error() != "call depth limit reached" {
-// 		t.Errorf("Unexpected error %v", err)
-// 	}
-// }
+	funcName = "mean"
+	function, err = utilContract.Header.GetFunction(funcName)
+	if err != nil {
+		panic(err)
+	}
+	args, err = abi.EncodeFromString(function.Parameters, []string{"[1,2,3,4,5]"})
+	if err != nil {
+		panic(err)
+	}
+	_, err = execEngine.Ignite(funcName, args)
+	if err == nil || err.Error() != "call depth limit reached" {
+		t.Errorf("Unexpected error %v", err)
+	}
+}
 
 func loadContract(abiPath, wasmPath string) *abi.Contract {
 	header, err := abi.LoadHeaderFromFile(abiPath)
