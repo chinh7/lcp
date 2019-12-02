@@ -1,11 +1,11 @@
 package abi
 
 import (
-	"encoding/binary"
 	"fmt"
 	"math"
 
 	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // PrimitiveType PrimitiveType
@@ -25,20 +25,6 @@ const (
 	Float64 PrimitiveType = 0x9
 	Address PrimitiveType = 0xa
 )
-
-const (
-	// ArrayLengthByte is number of bytes preservered to indicate an array's length
-	ArrayLengthByte = 2
-)
-
-// PrimitiveArg is model for a primitive type
-type PrimitiveArg struct {
-	Type  PrimitiveType
-	Value interface{}
-}
-
-// ArrayArg is model for dynamic array of primitive type
-type ArrayArg []PrimitiveArg
 
 // IsPointer return whether p is pointer or not
 func (p PrimitiveType) IsPointer() bool {
@@ -73,230 +59,201 @@ func (p PrimitiveType) GetMemorySize() (int, error) {
 }
 
 // newPrimitiveArg parse type string and value into PrimitiveArg
-func newPrimitiveArg(t PrimitiveType, value interface{}) PrimitiveArg {
-	var res PrimitiveArg
-	res.Type = t
-	res.Value = value
-	return res
+func newPrimitiveArg(t PrimitiveType, value interface{}) (interface{}, error) {
+	var parsedValue interface{}
+	switch t {
+	case Address, Uint8, Uint16, Uint32, Uint64:
+		parsedValue = value
+	case Int8:
+		parsedValue = uint8(value.(int8))
+	case Int16:
+		parsedValue = uint16(value.(int16))
+	case Int32:
+		parsedValue = uint32(value.(int32))
+	case Int64:
+		parsedValue = uint64(value.(int64))
+	case Float32:
+		parsedValue = math.Float32bits(value.(float32))
+	case Float64:
+		parsedValue = math.Float64bits(value.(float64))
+	default:
+		return nil, fmt.Errorf("not supported type: %s", t)
+	}
+	return parsedValue, nil
 }
 
 // parseArrayArg parse type and values into ArrayArg
-func parseArrayArg(t PrimitiveType, value interface{}) (ArrayArg, error) {
-	var elements ArrayArg
+func parseArrayArg(t PrimitiveType, value interface{}) ([]interface{}, error) {
+	var parsedArgs []interface{}
+
 	switch t {
 	case Address:
 		parsed, ok := value.([]crypto.Address)
 		if !ok {
-			return ArrayArg{}, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t)
 		}
 		for _, p := range parsed {
-			e := newPrimitiveArg(t, p)
-			elements = append(elements, e)
+			arg, err := newPrimitiveArg(t, p)
+			if err != nil {
+				return nil, err
+			}
+			parsedArgs = append(parsedArgs, arg)
 		}
 	case Uint8:
 		parsed, ok := value.([]uint8)
 		if !ok {
-			return ArrayArg{}, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t)
 		}
 		for _, p := range parsed {
-			e := newPrimitiveArg(t, p)
-			elements = append(elements, e)
+			arg, err := newPrimitiveArg(t, p)
+			if err != nil {
+				return nil, err
+			}
+			parsedArgs = append(parsedArgs, arg)
 		}
 	case Uint16:
 		parsed, ok := value.([]uint16)
 		if !ok {
-			return ArrayArg{}, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t)
 		}
 		for _, p := range parsed {
-			e := newPrimitiveArg(t, p)
-			elements = append(elements, e)
+			arg, err := newPrimitiveArg(t, p)
+			if err != nil {
+				return nil, err
+			}
+			parsedArgs = append(parsedArgs, arg)
 		}
 	case Uint32:
 		parsed, ok := value.([]uint32)
 		if !ok {
-			return ArrayArg{}, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t)
 		}
 		for _, p := range parsed {
-			e := newPrimitiveArg(t, p)
-			elements = append(elements, e)
+			arg, err := newPrimitiveArg(t, p)
+			if err != nil {
+				return nil, err
+			}
+			parsedArgs = append(parsedArgs, arg)
 		}
 	case Uint64:
 		parsed, ok := value.([]uint64)
 		if !ok {
-			return ArrayArg{}, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t)
 		}
 		for _, p := range parsed {
-			e := newPrimitiveArg(t, p)
-			elements = append(elements, e)
+			arg, err := newPrimitiveArg(t, p)
+			if err != nil {
+				return nil, err
+			}
+			parsedArgs = append(parsedArgs, arg)
 		}
 	case Int8:
 		parsed, ok := value.([]int8)
 		if !ok {
-			return ArrayArg{}, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t)
 		}
 		for _, p := range parsed {
-			e := newPrimitiveArg(t, p)
-			elements = append(elements, e)
+			arg, err := newPrimitiveArg(t, p)
+			if err != nil {
+				return nil, err
+			}
+			parsedArgs = append(parsedArgs, arg)
 		}
 	case Int16:
 		parsed, ok := value.([]int16)
 		if !ok {
-			return ArrayArg{}, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t)
 		}
 		for _, p := range parsed {
-			e := newPrimitiveArg(t, p)
-			elements = append(elements, e)
+			arg, err := newPrimitiveArg(t, p)
+			if err != nil {
+				return nil, err
+			}
+			parsedArgs = append(parsedArgs, arg)
 		}
 	case Int32:
 		parsed, ok := value.([]int32)
 		if !ok {
-			return ArrayArg{}, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t)
 		}
 		for _, p := range parsed {
-			e := newPrimitiveArg(t, p)
-			elements = append(elements, e)
+			arg, err := newPrimitiveArg(t, p)
+			if err != nil {
+				return nil, err
+			}
+			parsedArgs = append(parsedArgs, arg)
 		}
 	case Int64:
 		parsed, ok := value.([]int64)
 		if !ok {
-			return ArrayArg{}, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t)
 		}
 		for _, p := range parsed {
-			e := newPrimitiveArg(t, p)
-			elements = append(elements, e)
+			arg, err := newPrimitiveArg(t, p)
+			if err != nil {
+				return nil, err
+			}
+			parsedArgs = append(parsedArgs, arg)
 		}
 	case Float32:
 		parsed, ok := value.([]float32)
 		if !ok {
-			return ArrayArg{}, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t)
 		}
 		for _, p := range parsed {
-			e := newPrimitiveArg(t, p)
-			elements = append(elements, e)
+			arg, err := newPrimitiveArg(t, p)
+			if err != nil {
+				return nil, err
+			}
+			parsedArgs = append(parsedArgs, arg)
 		}
 	case Float64:
 		parsed, ok := value.([]float64)
 		if !ok {
-			return ArrayArg{}, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t)
 		}
 		for _, p := range parsed {
-			e := newPrimitiveArg(t, p)
-			elements = append(elements, e)
+			arg, err := newPrimitiveArg(t, p)
+			if err != nil {
+				return nil, err
+			}
+			parsedArgs = append(parsedArgs, arg)
 		}
-	default:
-		return ArrayArg{}, fmt.Errorf("not supported type: %s", t)
-	}
-	return elements, nil
-}
-
-// Encode is common interface method for encoding a PrimitiveArg into byte array
-func (p PrimitiveArg) encode() ([]byte, error) {
-	memorySize, err := p.Type.GetMemorySize()
-	if err != nil {
-		return []byte{0}, err
-	}
-	buf := make([]byte, memorySize)
-	switch p.Type {
-	case Address:
-		address := p.Value.(crypto.Address)
-		copy(buf, address[:])
-	case Uint8:
-		buf[0] = byte(p.Value.(uint8))
-	case Uint16:
-		binary.LittleEndian.PutUint16(buf, p.Value.(uint16))
-	case Uint32:
-		binary.LittleEndian.PutUint32(buf, p.Value.(uint32))
-	case Uint64:
-		binary.LittleEndian.PutUint64(buf, p.Value.(uint64))
-	case Int8:
-		buf[0] = byte(p.Value.(int8))
-	case Int16:
-		binary.LittleEndian.PutUint16(buf, uint16(p.Value.(int16)))
-	case Int32:
-		binary.LittleEndian.PutUint32(buf, uint32(p.Value.(int32)))
-	case Int64:
-		binary.LittleEndian.PutUint64(buf, uint64(p.Value.(int64)))
-	case Float32:
-		binary.LittleEndian.PutUint32(buf, math.Float32bits(p.Value.(float32)))
-	case Float64:
-		binary.LittleEndian.PutUint64(buf, math.Float64bits(p.Value.(float64)))
-	default:
-		return nil, fmt.Errorf("not supported type: %s", p.Type)
-	}
-	return buf, nil
-}
-
-// Encode is common interface method for encoding a ArrayArg into byte array
-func (arrayArg ArrayArg) encode() ([]byte, error) {
-	result := []byte{}
-	encodedLength := make([]byte, ArrayLengthByte)
-	binary.LittleEndian.PutUint16(encodedLength, uint16(len(arrayArg)))
-	result = append(result, encodedLength...)
-
-	for _, e := range arrayArg {
-		encodedBytes, err := e.encode()
-		if err != nil {
-			return []byte{0}, err
-		}
-		result = append(result, encodedBytes...)
-	}
-
-	return result, nil
-}
-
-// singleDecode decode byte array into interface based on its type
-func singleDecode(t PrimitiveType, buf []byte) (interface{}, error) {
-	var result interface{}
-	switch t {
-	case Address:
-		var address crypto.Address
-		copy(address[:], buf)
-		result = address
-	case Uint8:
-		result = uint8(buf[0])
-	case Uint16:
-		result = binary.LittleEndian.Uint16(buf)
-	case Uint32:
-		result = binary.LittleEndian.Uint32(buf)
-	case Uint64:
-		result = binary.LittleEndian.Uint64(buf)
-	case Int8:
-		result = int8(buf[0])
-	case Int16:
-		result = int16(binary.LittleEndian.Uint16(buf))
-	case Int32:
-		result = int32(binary.LittleEndian.Uint32(buf))
-	case Int64:
-		result = int64(binary.LittleEndian.Uint64(buf))
-	case Float32:
-		bits := binary.LittleEndian.Uint32(buf)
-		result = math.Float32frombits(bits)
-	case Float64:
-		bits := binary.LittleEndian.Uint64(buf)
-		result = math.Float64frombits(bits)
 	default:
 		return nil, fmt.Errorf("not supported type: %s", t)
 	}
-	return result, nil
+
+	return parsedArgs, nil
 }
 
-// arrayDecode decode encoded dynamic array based on type and length
-func arrayDecode(t PrimitiveType, length int, buf []byte) (interface{}, error) {
-	results := []interface{}{}
-	var offset int
-	for index := 0; index < length; index++ {
-		memorySize, err := t.GetMemorySize()
-		if err != nil {
-			return []interface{}{}, err
-		}
-		result, err := singleDecode(t, buf[offset:offset+memorySize])
-		if err != nil {
-			return []interface{}{}, err
-		}
-		offset += memorySize
-		results = append(results, result)
+func reverseByte(input []byte) []byte {
+	reversed := []byte{}
+	for index := len(input) - 1; index >= 0; index-- {
+		reversed = append(reversed, input[index])
 	}
-	return results, nil
+	return reversed
+}
+
+func convertToLittleEndian(t PrimitiveType, bytes []byte) []byte {
+	var buffer []byte
+	switch t.String() {
+	case "address":
+		buffer = make([]byte, 35)
+		copy(buffer, bytes)
+	case "uint8", "int8":
+		buffer = make([]byte, 1)
+		copy(buffer, reverseByte(bytes))
+	case "uint16", "int16":
+		buffer = make([]byte, 2)
+		copy(buffer, reverseByte(bytes))
+	case "uint32", "int32", "float32":
+		buffer = make([]byte, 4)
+		copy(buffer, reverseByte(bytes))
+	case "uint64", "int64", "float64":
+		buffer = make([]byte, 8)
+		copy(buffer, reverseByte(bytes))
+	}
+	return buffer
 }
 
 // Encode return []byte from an inputted params and values pair
@@ -306,93 +263,52 @@ func Encode(params []*Parameter, values []interface{}) ([]byte, error) {
 	}
 	result := []byte{}
 
+	var rlpCompatibleArgs []interface{}
+
 	for index, param := range params {
-		var encodedBytes []byte
 		if param.IsArray {
 			arrayArg, err := parseArrayArg(param.Type, values[index])
 			if err != nil {
 				return nil, err
 			}
-			bytes, err := arrayArg.encode()
-			if err != nil {
-				return nil, err
-			}
-			encodedBytes = append(encodedBytes, bytes...)
+			rlpCompatibleArgs = append(rlpCompatibleArgs, arrayArg)
 		} else {
-			arg := newPrimitiveArg(param.Type, values[index])
-			bytes, err := arg.encode()
+			arrayArg, err := newPrimitiveArg(param.Type, values[index])
 			if err != nil {
 				return nil, err
 			}
-			encodedBytes = append(encodedBytes, bytes...)
+			rlpCompatibleArgs = append(rlpCompatibleArgs, arrayArg)
 		}
-		result = append(result, encodedBytes...)
+	}
+	result, err := rlp.EncodeToBytes(rlpCompatibleArgs)
+	if err != nil {
+		return nil, err
 	}
 	return result, nil
 }
 
-// Decode return []interface from an inputted params and []byte
-func Decode(params []*Parameter, bytes []byte) ([]interface{}, error) {
-	var results []interface{}
-	var offset int
-	for _, param := range params {
-		if param.IsArray {
-			length := int(binary.LittleEndian.Uint16(bytes[offset : offset+ArrayLengthByte]))
-			offset += ArrayLengthByte
-
-			elementSize, err := param.Type.GetMemorySize()
-			if err != nil {
-				return []interface{}{}, err
-			}
-			memorySize := elementSize * length
-			result, err := arrayDecode(param.Type, length, bytes[offset:offset+memorySize])
-			if err != nil {
-				return []interface{}{}, err
-			}
-			offset += memorySize
-			results = append(results, result)
-		} else {
-			memorySize, err := param.Type.GetMemorySize()
-			if err != nil {
-				return []interface{}{}, err
-			}
-
-			result, err := singleDecode(param.Type, bytes[offset:offset+memorySize])
-			if err != nil {
-				return []interface{}{}, err
-			}
-			offset += memorySize
-			results = append(results, result)
-		}
-	}
-	return results, nil
-}
-
 // DecodeToBytes returns uint64 array compatible with VM
 func DecodeToBytes(params []*Parameter, bytes []byte) ([][]byte, error) {
-	var decoded [][]byte
-	var offset int
-	var err error
-	for _, param := range params {
-		var arg []byte
-		var memorySize int
-		if param.IsArray {
-			length := int(binary.LittleEndian.Uint16(bytes[offset : offset+ArrayLengthByte]))
-			offset += ArrayLengthByte
-			elementSize, err := param.Type.GetMemorySize()
-			if err != nil {
-				return [][]byte{}, err
-			}
-			memorySize = elementSize * length
-		} else {
-			memorySize, err = param.Type.GetMemorySize()
-			if err != nil {
-				return [][]byte{}, err
-			}
-		}
-		arg = bytes[offset : offset+memorySize]
-		offset += memorySize
-		decoded = append(decoded, arg)
+	var decoded []interface{}
+	err := rlp.DecodeBytes(bytes, &decoded)
+	if err != nil {
+		return nil, err
 	}
-	return decoded, nil
+
+	var result [][]byte
+	for i, in := range decoded {
+		var buffer []byte
+		if params[i].IsArray {
+			arrArgs := in.([]interface{})
+			for _, arg := range arrArgs {
+				argByte := convertToLittleEndian(params[i].Type, arg.([]byte))
+				buffer = append(buffer, argByte...)
+			}
+		} else {
+			buffer = convertToLittleEndian(params[i].Type, in.([]byte))
+		}
+		result = append(result, buffer)
+	}
+
+	return result, nil
 }
