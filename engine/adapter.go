@@ -76,10 +76,10 @@ func (engine *Engine) handleEmitEvent(event *abi.Event, vm *vm.VM, args ...uint6
 		var value []byte
 		if param.Type.IsPointer() {
 			paramPtr := int(uint32(args[i]))
-			size, _ := param.Type.GetMemorySize()
+			size := param.Type.GetMemorySize()
 			value = readAt(vm, paramPtr, size)
 		} else {
-			size, _ := abi.Uint64.GetMemorySize()
+			size := abi.Uint64.GetMemorySize()
 			value = make([]byte, size)
 			binary.BigEndian.PutUint64(value, args[i])
 		}
