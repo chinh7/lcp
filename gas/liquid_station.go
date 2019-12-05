@@ -8,13 +8,13 @@ import (
 type LiquidStation struct {
 	app       App
 	policy    Policy
-	token     Token
 	collector crypto.Address
 }
 
 // Sufficient gas of an address is enough for burn
 func (station *LiquidStation) Sufficient(addr crypto.Address, gas int64) bool {
-	balance, err := station.token.GetBalance(addr)
+	token := station.app.GetGasContractToken()
+	balance, err := token.GetBalance(addr)
 	if err != nil {
 		panic(err)
 	}
@@ -23,9 +23,10 @@ func (station *LiquidStation) Sufficient(addr crypto.Address, gas int64) bool {
 
 // Burn gas
 func (station *LiquidStation) Burn(addr crypto.Address, gas int64) {
+	token := station.app.GetGasContractToken()
 	// Move to gas owner
 	if gas > 0 {
-		station.token.Transfer(addr, station.collector, uint64(gas))
+		token.Transfer(addr, station.collector, uint64(gas))
 	}
 }
 
@@ -44,7 +45,6 @@ func NewLiquidStation(app App, collector crypto.Address) Station {
 	return &LiquidStation{
 		app:       app,
 		policy:    &AlphaPolicy{},
-		token:     app.GetGasContractToken(),
 		collector: collector,
 	}
 }

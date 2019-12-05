@@ -26,6 +26,13 @@ func (address *Address) setBytes(b []byte) {
 	copy(address[AddressLength-len(b):], b)
 }
 
+// AddressFromBytes create address from byte
+func AddressFromBytes(b []byte) Address {
+	var a Address
+	a.setBytes(b)
+	return a
+}
+
 // String Address string presentation
 func (address *Address) String() string {
 	return base32.StdEncoding.EncodeToString(address[:])

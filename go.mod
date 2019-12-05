@@ -28,5 +28,6 @@ require (
 	github.com/vertexdlt/vertexvm v0.0.0-20191107060312-f78c379fc707
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/sys v0.0.0-20190422165155-953cdadca894 // indirect
+	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20190327125643-d831d65fe17d // indirect
 )
