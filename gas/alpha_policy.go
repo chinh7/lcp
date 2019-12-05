@@ -205,11 +205,11 @@ func (p *AlphaPolicy) GetCostForOp(op opcode.Opcode) int64 {
 }
 
 // GetCostForStorage size of data
-func (p *AlphaPolicy) GetCostForStorage(size int) int64 {
-	return int64(size)
+func (p *AlphaPolicy) GetCostForStorage(size int) uint64 {
+	return uint64(size)
 }
 
 // GetCostForContract creation
-func (p *AlphaPolicy) GetCostForContract(size int) int64 {
-	return int64(size)
+func (p *AlphaPolicy) GetCostForContract(size int) uint64 {
+	return uint64(size)
 }

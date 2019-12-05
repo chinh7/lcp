@@ -7,8 +7,8 @@ import (
 
 // Station interface for check and burn gas
 type Station interface {
-	Sufficient(addr crypto.Address, gas int64) bool
-	Burn(addr crypto.Address, gas int64)
+	Sufficient(addr crypto.Address, gas uint64) bool
+	Burn(addr crypto.Address, gas uint64)
 	Switch() bool
 	GetPolicy() Policy
 }

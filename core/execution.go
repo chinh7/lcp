@@ -12,7 +12,7 @@ import (
 )
 
 // ApplyTx executes a transaction by either deploying the contract code or invoking a contract method call
-func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]types.Event, int64, error) {
+func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]types.Event, uint64, error) {
 	policy := gasStation.GetPolicy()
 	gasLimit := int64(tx.GasLimit)
 	if (tx.To == crypto.Address{}) {
@@ -42,9 +42,10 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 		return nil, 0, err
 	}
 	execEngine := engine.NewEngine(contractAccount, tx.From.Address(), policy, gasLimit)
-	_, vmGasUsed, err := execEngine.Ignite(data.Method, data.Params)
+	_, gasUsed, err := execEngine.Ignite(data.Method, data.Params)
 	if err != nil {
-		return nil, vmGasUsed, err
+		return nil, gasUsed, err
 	}
-	return execEngine.GetEvents(), vmGasUsed, nil
+	gasStation.Burn(tx.From.Address(), gasUsed)
+	return execEngine.GetEvents(), gasUsed, nil
 }

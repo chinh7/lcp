@@ -7,6 +7,6 @@ import (
 // Policy for gas cost
 type Policy interface {
 	vm.GasPolicy
-	GetCostForStorage(size int) int64
-	GetCostForContract(size int) int64
+	GetCostForStorage(size int) uint64
+	GetCostForContract(size int) uint64
 }

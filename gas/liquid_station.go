@@ -12,21 +12,21 @@ type LiquidStation struct {
 }
 
 // Sufficient gas of an address is enough for burn
-func (station *LiquidStation) Sufficient(addr crypto.Address, gas int64) bool {
+func (station *LiquidStation) Sufficient(addr crypto.Address, gas uint64) bool {
 	token := station.app.GetGasContractToken()
 	balance, err := token.GetBalance(addr)
 	if err != nil {
 		panic(err)
 	}
-	return uint64(gas) <= balance
+	return gas <= balance
 }
 
 // Burn gas
-func (station *LiquidStation) Burn(addr crypto.Address, gas int64) {
+func (station *LiquidStation) Burn(addr crypto.Address, gas uint64) {
 	token := station.app.GetGasContractToken()
 	// Move to gas owner
 	if gas > 0 {
-		token.Transfer(addr, station.collector, uint64(gas))
+		token.Transfer(addr, station.collector, gas)
 	}
 }
 
