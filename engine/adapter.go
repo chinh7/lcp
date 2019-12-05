@@ -82,13 +82,13 @@ func (engine *Engine) chainGetCreator(vm *vm.VM, args ...uint64) (uint64, error)
 	return 0, err
 }
 
-func (engine *Engine) chainArgSizeGet(vm *vm.VM, args ...uint64) (uint64, error) {
-	size, err := engine.argSizeGet(int(args[0]))
+func (engine *Engine) chainPtrArgSizeGet(vm *vm.VM, args ...uint64) (uint64, error) {
+	size, err := engine.ptrArgSizeGet(int(args[0]))
 	return uint64(size), err
 }
 
-func (engine *Engine) chainArgSizeSet(vm *vm.VM, args ...uint64) (uint64, error) {
-	engine.argSizeMap[int(args[0])] = int(args[1])
+func (engine *Engine) chainPtrArgSizeSet(vm *vm.VM, args ...uint64) (uint64, error) {
+	engine.ptrArgSizeMap[int(args[0])] = int(args[1])
 	return 0, nil
 }
 
@@ -106,21 +106,25 @@ func (engine *Engine) chainMethodBind(vm *vm.VM, args ...uint64) (uint64, error)
 
 	invokedMethod := string(invokedMethodBytes[:len(invokedMethodBytes)-1])
 	aliasMethodBytes, err := readAt(vm, int(args[3]), int(args[4]))
-	aliasMethod := string(aliasMethodBytes[:len(aliasMethodBytes)-1])
 	if err != nil {
 		return 0, err
 	}
+	aliasMethod := string(aliasMethodBytes[:len(aliasMethodBytes)-1])
 	engine.methodLookup[aliasMethod] = &foreignMethod{contractAddr, invokedMethod}
 	return 0, nil
 }
 
 func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM, args ...uint64) (uint64, error) {
+	if engine.callDepth+1 > maxEngineCallDepth {
+		return 0, errors.New("call depth limit reached")
+	}
+
 	foreignAccount := engine.state.GetAccount(foreignMethod.contractAddress)
 	contract, err := foreignAccount.GetContract()
 	if err != nil {
 		return 0, err
 	}
-	function, err := contract.Header.GetFunction(foreignMethod.method)
+	function, err := contract.Header.GetFunction(foreignMethod.name)
 	if err != nil {
 		return 0, err
 	}
@@ -129,7 +133,7 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 	for i, param := range function.Parameters {
 		if param.IsArray {
 			argPtr := int(args[i])
-			size, _ := engine.argSizeGet(int(args[i]))
+			size, _ := engine.ptrArgSizeGet(int(args[i]))
 			bytes, err = readAt(vm, argPtr, size)
 			if err != nil {
 				return 0, err
@@ -143,18 +147,9 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 					return 0, err
 				}
 			} else {
+				binary.LittleEndian.PutUint64(bytes, args[i])
 				size := param.Type.GetMemorySize()
-				bytes = make([]byte, size)
-				switch size {
-				case 1:
-					bytes = append(bytes, byte(args[i]))
-				case 2:
-					binary.LittleEndian.PutUint16(bytes, uint16(args[i]))
-				case 4:
-					binary.LittleEndian.PutUint32(bytes, uint32(args[i]))
-				case 8:
-					binary.LittleEndian.PutUint64(bytes, args[i])
-				}
+				bytes = bytes[:size]
 			}
 		}
 		values = append(values, bytes)
@@ -166,13 +161,10 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 	}
 
 	account := engine.state.GetAccount(foreignMethod.contractAddress)
-	if engine.callDepth+1 > maxEngineCallDepth {
-		return 0, errors.New("call depth limit reached")
-	}
 	// TODO memcheck
 	newEngine := NewEngine(engine.state, account, engine.account.GetAddress())
 	newEngine.setStats(engine.callDepth+1, engine.memAggr+vm.MemSize())
-	ret, err := newEngine.Ignite(foreignMethod.method, methodArgs)
+	ret, err := newEngine.Ignite(foreignMethod.name, methodArgs)
 	engine.events = append(engine.events, newEngine.events...)
 	return ret, err
 }
@@ -226,9 +218,9 @@ func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 		case "chain_method_bind":
 			return engine.chainMethodBind
 		case "chain_arg_size_get":
-			return engine.chainArgSizeGet
+			return engine.chainPtrArgSizeGet
 		case "chain_arg_size_set":
-			return engine.chainArgSizeSet
+			return engine.chainPtrArgSizeSet
 		default:
 			contract, _ := engine.account.GetContract()
 			if event, err := contract.Header.GetEvent(name); err == nil {

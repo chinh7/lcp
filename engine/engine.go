@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/QuoineFinancial/vertex/abi"
 	"github.com/QuoineFinancial/vertex/crypto"
@@ -24,32 +23,32 @@ const (
 
 type foreignMethod struct {
 	contractAddress crypto.Address
-	method          string
+	name            string
 }
 
 // Engine is space to execute function
 type Engine struct {
-	state        *storage.State
-	account      *storage.Account
-	event        types.Event
-	caller       crypto.Address
-	callDepth    int
-	memAggr      int
-	events       []types.Event
-	methodLookup map[string]*foreignMethod
-	argSizeMap   map[int]int
+	state         *storage.State
+	account       *storage.Account
+	event         types.Event
+	caller        crypto.Address
+	callDepth     int
+	memAggr       int
+	events        []types.Event
+	methodLookup  map[string]*foreignMethod
+	ptrArgSizeMap map[int]int
 }
 
 // NewEngine return new instance of Engine
 func NewEngine(state *storage.State, account *storage.Account, caller crypto.Address) *Engine {
 	return &Engine{
-		state:        state,
-		account:      account,
-		event:        types.Event{},
-		caller:       caller,
-		events:       []types.Event{},
-		methodLookup: make(map[string]*foreignMethod),
-		argSizeMap:   make(map[int]int),
+		state:         state,
+		account:       account,
+		event:         types.Event{},
+		caller:        caller,
+		events:        []types.Event{},
+		methodLookup:  make(map[string]*foreignMethod),
+		ptrArgSizeMap: make(map[int]int),
 	}
 }
 
@@ -78,17 +77,14 @@ func (engine *Engine) Ignite(method string, methodArgs []byte) (uint64, error) {
 
 	function, err := contract.Header.GetFunction(method)
 	if err != nil {
-		log.Println(3)
 		return 0, err
 	}
 
 	decodedBytes, err := abi.DecodeToBytes(function.Parameters, methodArgs)
 	if err != nil {
-		log.Println(4)
 		return 0, err
 	}
 
-	log.Println("calling method", method)
 	arguments, err := engine.loadArguments(vm, decodedBytes, function.Parameters, offset)
 	if err != nil {
 		return 0, err
@@ -110,7 +106,6 @@ func (engine *Engine) loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.
 	if byteSize > 1024 {
 		return []uint64{}, fmt.Errorf("arguments byte size exceeds limit")
 	}
-	log.Println(byteArgs)
 	for i, bytes := range byteArgs {
 		isArray := params[i].IsArray || params[i].Type.String() == "address"
 		if isArray {
@@ -119,7 +114,7 @@ func (engine *Engine) loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.
 				return nil, err
 			}
 			args[i] = uint64(offset)
-			engine.argSizeMap[offset] = len(bytes)
+			engine.ptrArgSizeMap[offset] = len(bytes)
 			offset += len(bytes)
 		} else {
 			buffer := make([]byte, 8)
@@ -130,8 +125,8 @@ func (engine *Engine) loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.
 	return args, nil
 }
 
-func (engine *Engine) argSizeGet(ptr int) (int, error) {
-	size, ok := engine.argSizeMap[ptr]
+func (engine *Engine) ptrArgSizeGet(ptr int) (int, error) {
+	size, ok := engine.ptrArgSizeMap[ptr]
 	if !ok {
 		return 0, errors.New("pointer size not found")
 	}
