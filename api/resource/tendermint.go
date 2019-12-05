@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -20,7 +19,7 @@ import (
 type TendermintAPI = client.Client
 
 const maxConnectionAttempt = 3
-const delay = 3 * time.Second
+const delay = 2 * time.Second
 
 func readChainID(homeDir string) string {
 	genesisPath := filepath.Join(homeDir, "/config/genesis.json")
@@ -44,7 +43,6 @@ func readChainID(homeDir string) string {
 // NewTendermintAPI returns new instance of TendermintAPI
 func NewTendermintAPI(homeDir, nodeURL string, attempt int) TendermintAPI {
 	time.Sleep(delay)
-
 	chainID := readChainID(homeDir)
 	logFileName := fmt.Sprintf("tendermint-api-%d.log", time.Now().Unix())
 	logFilePath := filepath.Join(homeDir, logFileName)
@@ -62,7 +60,6 @@ func NewTendermintAPI(homeDir, nodeURL string, attempt int) TendermintAPI {
 		if attempt >= maxConnectionAttempt {
 			common.Exit(err.Error())
 		} else {
-			log.Printf("Connect to node failed, retry in %v seconds", delay)
 			return NewTendermintAPI(homeDir, nodeURL, attempt+1)
 		}
 	}
