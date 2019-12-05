@@ -73,7 +73,6 @@ func (node *VertexNode) addStartNodeCommand() {
 		Short: "Start the vertex node",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-
 			config, err := parseConfig()
 			if err != nil {
 				return fmt.Errorf("Failed to parse config: %v", err)
