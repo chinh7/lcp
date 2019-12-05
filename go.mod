@@ -11,9 +11,11 @@ require (
 	github.com/go-kit/kit v0.9.0 // indirect
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/google/go-cmp v0.2.0
+	github.com/google/pprof v0.0.0-20191105193234-27840fff0d09 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/rpc v1.2.0
+	github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.0.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20190706150252-9beb055b7962 // indirect
@@ -26,7 +28,9 @@ require (
 	github.com/tendermint/go-amino v0.15.0 // indirect
 	github.com/tendermint/tendermint v0.32.2
 	github.com/vertexdlt/vertexvm v0.0.0-20191107060312-f78c379fc707
+	golang.org/x/arch v0.0.0-20191126211547-368ea8f32fff // indirect
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/sys v0.0.0-20190422165155-953cdadca894 // indirect
+	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20190327125643-d831d65fe17d // indirect
 )
