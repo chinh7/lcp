@@ -19,3 +19,18 @@ This repo is the official Golang implementation.
     ```bash
     go run main.go
     ```
+
+
+
+## Docker
+
+```
+docker-compose build
+docker-compose run node init
+docker-compose run --service-ports node start --api
+```
+
+```
+docker-compose run node unsafe_reset_all
+```
+

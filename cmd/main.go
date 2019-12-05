@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -11,6 +12,7 @@ import (
 func main() {
 	rootDir := os.ExpandEnv(filepath.Join("$HOME", ".vertex"))
 	config := config.DefaultConfig()
+	fmt.Println(rootDir)
 	config.SetRoot(rootDir)
 
 	// TODO: Get gasContractAddress from genesis file

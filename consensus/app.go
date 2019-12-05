@@ -25,7 +25,7 @@ type App struct {
 	state    *storage.State
 	nodeInfo string
 
-	TempDB  db.Database
+	InfoDB  db.Database
 	StateDB db.Database
 
 	gasStation         gas.Station
@@ -37,19 +37,20 @@ type App struct {
 
 // NewApp initializes a new app
 func NewApp(nodeInfo string, dbDir string, gasContractAddress string) *App {
-	tempDB := db.NewRocksDB(filepath.Join(dbDir, "tmp.db"))
-	stateDB := db.NewRocksDB(filepath.Join(dbDir, "state.db"))
+	infoDB := db.NewRocksDB(filepath.Join(dbDir, "info.db"))
+	stateDB := db.NewRocksDB(filepath.Join(dbDir, "storage.db"))
 
 	app := &App{
 		nodeInfo:           nodeInfo,
 		StateDB:            stateDB,
+		InfoDB:             infoDB,
 		gasContractAddress: gasContractAddress,
 		lastBlockHeight:    0,
 	}
 
-	if b := tempDB.Get([]byte("lastBlockHeight")); len(b) > 0 {
+	if b := app.InfoDB.Get([]byte("lastBlockHeight")); len(b) > 0 {
 		app.lastBlockHeight = int64(binary.LittleEndian.Uint64(b))
-		app.lastBlockAppHash = tempDB.Get([]byte("lastBlockAppHash"))
+		app.lastBlockAppHash = app.InfoDB.Get([]byte("lastBlockAppHash"))
 	}
 
 	app.SetGasStation(gas.NewFreeGasStation(app))
@@ -74,8 +75,8 @@ func (app *App) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock
 
 // Info returns application chain info
 func (app *App) Info(req types.RequestInfo) (resInfo types.ResponseInfo) {
-	b := app.TempDB.Get([]byte("lastBlockHeight"))
-	lastBlockAppHash := app.TempDB.Get([]byte("lastBlockAppHash"))
+	b := app.InfoDB.Get([]byte("lastBlockHeight"))
+	lastBlockAppHash := app.InfoDB.Get([]byte("lastBlockAppHash"))
 	if app.lastBlockHeight == -1 && len(b) > 0 && len(lastBlockAppHash) > 0 {
 		height := int64(binary.LittleEndian.Uint64(b))
 		return types.ResponseInfo{
@@ -135,8 +136,8 @@ func (app *App) Commit() types.ResponseCommit {
 	appHash, _ := app.state.Commit()
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(app.lastBlockHeight))
-	app.TempDB.Put([]byte("lastBlockHeight"), b)
-	app.TempDB.Put([]byte("lastBlockAppHash"), app.lastBlockAppHash)
+	app.InfoDB.Put([]byte("lastBlockHeight"), b)
+	app.InfoDB.Put([]byte("lastBlockAppHash"), app.lastBlockAppHash)
 	return types.ResponseCommit{Data: appHash[:]}
 }
 
