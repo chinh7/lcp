@@ -1,7 +1,9 @@
 package consensus
 
 import (
+	"encoding/binary"
 	"fmt"
+	"path/filepath"
 	"strconv"
 
 	"github.com/QuoineFinancial/vertex/core"
@@ -20,21 +22,37 @@ import (
 // App basic Tendermint base app
 type App struct {
 	types.BaseApplication
-	state              *storage.State
-	nodeInfo           string
-	Database           db.Database
+	state    *storage.State
+	nodeInfo string
+
+	InfoDB  db.Database
+	StateDB db.Database
+
 	gasStation         gas.Station
 	gasContractAddress string
+
+	lastBlockHeight  int64
+	lastBlockAppHash []byte
 }
 
 // NewApp initializes a new app
-func NewApp(nodeInfo string, dbPath string, gasContractAddress string) *App {
-	database := db.NewRocksDB(dbPath)
+func NewApp(nodeInfo string, dbDir string, gasContractAddress string) *App {
+	infoDB := db.NewRocksDB(filepath.Join(dbDir, "info.db"))
+	stateDB := db.NewRocksDB(filepath.Join(dbDir, "storage.db"))
+
 	app := &App{
 		nodeInfo:           nodeInfo,
-		Database:           database,
+		StateDB:            stateDB,
+		InfoDB:             infoDB,
 		gasContractAddress: gasContractAddress,
+		lastBlockHeight:    0,
 	}
+
+	if b := app.InfoDB.Get([]byte("lastBlockHeight")); len(b) > 0 {
+		app.lastBlockHeight = int64(binary.LittleEndian.Uint64(b))
+		app.lastBlockAppHash = app.InfoDB.Get([]byte("lastBlockAppHash"))
+	}
+
 	app.SetGasStation(gas.NewFreeGasStation(app))
 	return app
 }
@@ -43,7 +61,9 @@ func NewApp(nodeInfo string, dbPath string, gasContractAddress string) *App {
 func (app *App) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock {
 	var err error
 	appHash := gethCommon.BytesToHash(req.Header.GetAppHash())
-	if app.state, err = storage.New(appHash, app.Database); err != nil {
+	app.lastBlockHeight = req.Header.Height
+	app.lastBlockAppHash = req.Header.AppHash
+	if app.state, err = storage.New(appHash, app.StateDB); err != nil {
 		panic(err)
 	}
 
@@ -55,6 +75,16 @@ func (app *App) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock
 
 // Info returns application chain info
 func (app *App) Info(req types.RequestInfo) (resInfo types.ResponseInfo) {
+	b := app.InfoDB.Get([]byte("lastBlockHeight"))
+	lastBlockAppHash := app.InfoDB.Get([]byte("lastBlockAppHash"))
+	if app.lastBlockHeight == -1 && len(b) > 0 && len(lastBlockAppHash) > 0 {
+		height := int64(binary.LittleEndian.Uint64(b))
+		return types.ResponseInfo{
+			Data:             fmt.Sprintf("{\"version\":%s}", app.nodeInfo),
+			LastBlockHeight:  height,
+			LastBlockAppHash: lastBlockAppHash,
+		}
+	}
 	return types.ResponseInfo{Data: fmt.Sprintf("{\"version\":%s}", app.nodeInfo)}
 }
 
@@ -104,6 +134,10 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 // Commit returns the state root of application storage. Called once all block processing is complete
 func (app *App) Commit() types.ResponseCommit {
 	appHash, _ := app.state.Commit()
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(app.lastBlockHeight))
+	app.InfoDB.Put([]byte("lastBlockHeight"), b)
+	app.InfoDB.Put([]byte("lastBlockAppHash"), app.lastBlockAppHash)
 	return types.ResponseCommit{Data: appHash[:]}
 }
 
