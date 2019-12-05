@@ -99,7 +99,7 @@ func (node *VertexNode) addStartNodeCommand() {
 				apiServer := api.NewAPI(":5555", api.Config{
 					HomeDir: node.rootDir,
 					NodeURL: "tcp://localhost:26657",
-					DB:      node.app.Database,
+					DB:      node.app.StateDB,
 				})
 				apiServer.Serve()
 			}
