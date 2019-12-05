@@ -13,12 +13,12 @@ type FreeStation struct {
 }
 
 // Sufficient gas of an address is enough for burn
-func (station *FreeStation) Sufficient(addr crypto.Address, gas int64) bool {
+func (station *FreeStation) Sufficient(addr crypto.Address, gas uint64) bool {
 	return true
 }
 
 // Burn gas, do nothing
-func (station *FreeStation) Burn(addr crypto.Address, gas int64) {}
+func (station *FreeStation) Burn(addr crypto.Address, gas uint64) {}
 
 // Switch on fee
 func (station *FreeStation) Switch() bool {

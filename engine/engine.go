@@ -48,7 +48,7 @@ func (engine *Engine) GetEvents() []types.Event {
 }
 
 // Ignite executes a contract given its code, method, and arguments
-func (engine *Engine) Ignite(method string, methodArgs []byte) (ret *uint64, gasUsed int64, err error) {
+func (engine *Engine) Ignite(method string, methodArgs []byte) (ret *uint64, gasUsed uint64, err error) {
 	contract, err := engine.account.GetContract()
 	if err != nil {
 		return nil, gasUsed, err
@@ -79,7 +79,7 @@ func (engine *Engine) Ignite(method string, methodArgs []byte) (ret *uint64, gas
 
 	defer func() {
 		if r := recover(); r != nil {
-			gasUsed = vm.GetGasUsed()
+			gasUsed = uint64(vm.GetGasUsed())
 			// TODO: Change VM error string to error
 			err = errors.New(r.(string))
 			log.Println("VM panic:", r)
@@ -87,7 +87,7 @@ func (engine *Engine) Ignite(method string, methodArgs []byte) (ret *uint64, gas
 		}
 	}()
 	retVal := vm.Invoke(funcID, arguments...)
-	gasUsed = vm.GetGasUsed()
+	gasUsed = uint64(vm.GetGasUsed())
 	log.Println("return value =", retVal)
 	log.Println("gas used =", gasUsed)
 	return &retVal, gasUsed, nil

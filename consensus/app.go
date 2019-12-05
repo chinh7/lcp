@@ -127,7 +127,7 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 		Events:    events,
 		Info:      info,
 		GasWanted: int64(tx.GasLimit),
-		GasUsed:   gasUsed,
+		GasUsed:   int64(gasUsed),
 	}
 }
 

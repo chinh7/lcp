@@ -15,11 +15,11 @@ func (p *FreePolicy) GetCostForOp(op opcode.Opcode) int64 {
 }
 
 // GetCostForStorage size of data
-func (p *FreePolicy) GetCostForStorage(size int) int64 {
+func (p *FreePolicy) GetCostForStorage(size int) uint64 {
 	return 0
 }
 
 // GetCostForContract creation
-func (p *FreePolicy) GetCostForContract(size int) int64 {
+func (p *FreePolicy) GetCostForContract(size int) uint64 {
 	return 0
 }
