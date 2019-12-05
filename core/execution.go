@@ -17,7 +17,6 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 	gasLimit := int64(tx.GasLimit)
 	if (tx.To == crypto.Address{}) {
 		contractSize := len(tx.Data)
-
 		gasUsed := policy.GetCostForContract(contractSize)
 		if !gasStation.Sufficient(tx.From.Address(), gasUsed) {
 			return nil, 0, errors.New("out of gas")
@@ -33,6 +32,8 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 				},
 			},
 		}
+		gasStation.Burn(tx.From.Address(), gasUsed)
+		state.Commit()
 		return []types.Event{event}, gasUsed, nil
 	}
 	data := &crypto.TxData{}
@@ -45,7 +46,12 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 	_, gasUsed, err := execEngine.Ignite(data.Method, data.Params)
 	gasStation.Burn(tx.From.Address(), gasUsed)
 	if err != nil {
+		state.Revert()
+		gasStation.Burn(tx.From.Address(), gasUsed)
+		state.Commit()
 		return nil, gasUsed, err
 	}
+	gasStation.Burn(tx.From.Address(), gasUsed)
+	state.Commit()
 	return execEngine.GetEvents(), gasUsed, nil
 }

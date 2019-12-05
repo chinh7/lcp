@@ -9,9 +9,10 @@ import (
 
 // State is the global account state consisting of many address->state mapping
 type State struct {
-	db       db.Database
-	trie     *trie.Trie
-	accounts map[crypto.Address]*Account
+	db         db.Database
+	trie       *trie.Trie
+	checkpoint trie.Hash
+	accounts   map[crypto.Address]*Account
 }
 
 // New returns a state database
@@ -21,9 +22,10 @@ func New(root trie.Hash, db db.Database) (*State, error) {
 		return nil, err
 	}
 	return &State{
-		db:       db,
-		trie:     t,
-		accounts: make(map[crypto.Address]*Account),
+		db:         db,
+		trie:       t,
+		checkpoint: root,
+		accounts:   make(map[crypto.Address]*Account),
 	}, nil
 }
 
@@ -104,5 +106,17 @@ func (state *State) Commit() (trie.Hash, error) {
 		}
 		account.dirty = false
 	}
-	return state.trie.Commit()
+	state.checkpoint, err = state.trie.Commit()
+	return state.checkpoint, err
+}
+
+// Revert state to last checkpoint
+func (state *State) Revert() error {
+	t, err := trie.New(state.checkpoint, state.db)
+	if err != nil {
+		return err
+	}
+	state.trie = t
+	state.accounts = make(map[crypto.Address]*Account)
+	return nil
 }
