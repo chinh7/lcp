@@ -7,7 +7,9 @@ import (
 	"github.com/QuoineFinancial/vertex/core"
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/db"
+	"github.com/QuoineFinancial/vertex/gas"
 	"github.com/QuoineFinancial/vertex/storage"
+	"github.com/QuoineFinancial/vertex/token"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/tendermint/tendermint/abci/example/code"
@@ -18,27 +20,35 @@ import (
 // App basic Tendermint base app
 type App struct {
 	types.BaseApplication
-	state    *storage.State
-	Database db.Database
-	nodeInfo string
+	state              *storage.State
+	nodeInfo           string
+	Database           db.Database
+	gasStation         gas.Station
+	gasContractAddress string
 }
 
 // NewApp initializes a new app
-func NewApp(nodeInfo string, dbPath string) *App {
+func NewApp(nodeInfo string, dbPath string, gasContractAddress string) *App {
 	database := db.NewRocksDB(dbPath)
-	return &App{
-		nodeInfo: nodeInfo,
-		Database: database,
+	app := &App{
+		nodeInfo:           nodeInfo,
+		Database:           database,
+		gasContractAddress: gasContractAddress,
 	}
+	app.SetGasStation(gas.NewFreeGasStation(app))
+	return app
 }
 
 // BeginBlock begins new block
 func (app *App) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock {
 	var err error
 	appHash := gethCommon.BytesToHash(req.Header.GetAppHash())
-	app.state, err = storage.New(appHash, app.Database)
-	if err != nil {
+	if app.state, err = storage.New(appHash, app.Database); err != nil {
 		panic(err)
+	}
+
+	// Keep moving forward
+	for app.gasStation.Switch() {
 	}
 	return types.ResponseBeginBlock{}
 }
@@ -50,6 +60,9 @@ func (app *App) Info(req types.RequestInfo) (resInfo types.ResponseInfo) {
 
 // CheckTx checks if submitted transaction is valid and can be passed to next step
 func (app *App) CheckTx(req types.RequestCheckTx) types.ResponseCheckTx {
+	// Check sig
+	// Check nonce
+	// Check gas wanted (limit)
 	return types.ResponseCheckTx{Code: code.CodeTypeOK}
 }
 
@@ -59,7 +72,7 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 	info := "ok"
 	tx := &crypto.Tx{}
 	tx.Deserialize(req.GetTx())
-	applyEvents, err := core.ApplyTx(app.state, tx)
+	applyEvents, gasUsed, err := core.ApplyTx(app.state, tx, app.gasStation)
 	if err != nil {
 		code = CodeTypeUnknownError
 		info = err.Error()
@@ -80,9 +93,11 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 		},
 	})
 	return types.ResponseDeliverTx{
-		Code:   code,
-		Events: events,
-		Info:   info,
+		Code:      code,
+		Events:    events,
+		Info:      info,
+		GasWanted: int64(tx.GasLimit),
+		GasUsed:   gasUsed,
 	}
 }
 
@@ -94,4 +109,24 @@ func (app *App) Commit() types.ResponseCommit {
 
 func (app *App) Query(reqQuery types.RequestQuery) (resQuery types.ResponseQuery) {
 	return types.ResponseQuery{Log: "hello"}
+}
+
+// SetGasStation active the gas station
+func (app *App) SetGasStation(gasStation gas.Station) {
+	app.gasStation = gasStation
+}
+
+// GetGasContractToken designated
+func (app *App) GetGasContractToken() gas.Token {
+	if len(app.gasContractAddress) > 0 {
+		address := crypto.AddressFromString(app.gasContractAddress)
+		contract, err := app.state.GetAccount(address)
+		if err != nil {
+			panic(err)
+		}
+		if contract != nil {
+			return token.NewToken(contract)
+		}
+	}
+	return nil
 }

@@ -83,7 +83,7 @@ func deploy(cmd *cobra.Command, args []string) {
 	}
 
 	signer := crypto.TxSigner{Nonce: uint64(nonce)}
-	tx := &crypto.Tx{Data: data, From: signer}
+	tx := &crypto.Tx{Data: data, From: signer, GasLimit: 0}
 	sign(tx)
 	broadcast(hex.EncodeToString(tx.Serialize()))
 }
@@ -111,7 +111,7 @@ func invoke(cmd *cobra.Command, args []string) {
 	}
 
 	txData := crypto.TxData{Method: args[3], Params: encodedArgs}
-	tx := &crypto.Tx{Data: txData.Serialize(), From: signer, To: to}
+	tx := &crypto.Tx{Data: txData.Serialize(), From: signer, To: to, GasLimit: 10000}
 
 	sign(tx)
 	broadcast(hex.EncodeToString(tx.Serialize()))

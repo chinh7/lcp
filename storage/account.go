@@ -46,6 +46,11 @@ func (account *Account) SetNonce(nonce uint64) {
 	account.Nonce = nonce
 }
 
+// GetCreator contract creator
+func (account *Account) GetCreator() crypto.Address {
+	return account.Creator
+}
+
 func (account *Account) setContract(contract []byte) {
 	account.contract = contract
 	contractHash := sha3.Sum256(contract)

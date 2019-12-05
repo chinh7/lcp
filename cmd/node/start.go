@@ -17,7 +17,7 @@ import (
 )
 
 func (node *VertexNode) newTendermintNode(logger log.Logger) (*tmNode.Node, error) {
-	node.app = consensus.NewApp(node.config.Moniker, node.config.DBDir())
+	node.app = consensus.NewApp(node.config.Moniker, node.config.DBDir(), node.gasContractAddress)
 	nodeKey, err := p2p.LoadOrGenNodeKey(node.config.NodeKeyFile())
 	if err != nil {
 		return nil, err

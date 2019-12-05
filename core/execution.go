@@ -1,18 +1,27 @@
 package core
 
 import (
-	"strconv"
+	"errors"
 
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/engine"
+	"github.com/QuoineFinancial/vertex/gas"
 	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/common"
 )
 
 // ApplyTx executes a transaction by either deploying the contract code or invoking a contract method call
-func ApplyTx(state *storage.State, tx *crypto.Tx) ([]types.Event, error) {
+func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]types.Event, int64, error) {
+	policy := gasStation.GetPolicy()
+	gasLimit := int64(tx.GasLimit)
 	if (tx.To == crypto.Address{}) {
+		contractSize := len(tx.Data)
+
+		gasUsed := policy.GetCostForContract(contractSize)
+		if !gasStation.Sufficient(tx.From.Address(), gasUsed) {
+			return nil, 0, errors.New("out of gas")
+		}
 		contractAddress := tx.From.CreateAddress()
 		state.CreateAccount(tx.From.Address(), contractAddress, tx.Data)
 		event := types.Event{
@@ -24,30 +33,18 @@ func ApplyTx(state *storage.State, tx *crypto.Tx) ([]types.Event, error) {
 				},
 			},
 		}
-		return []types.Event{event}, nil
+		return []types.Event{event}, gasUsed, nil
 	}
 	data := &crypto.TxData{}
 	data.Deserialize(tx.Data)
-	account, err := state.GetAccount(tx.To)
+	contractAccount, err := state.GetAccount(tx.To)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	execEngine := engine.NewEngine(account, tx.From.Address())
-	if _, err := execEngine.Ignite(data.Method, data.Params); err != nil {
-		return nil, err
+	execEngine := engine.NewEngine(contractAccount, tx.From.Address(), policy, gasLimit)
+	_, vmGasUsed, err := execEngine.Ignite(data.Method, data.Params)
+	if err != nil {
+		return nil, vmGasUsed, err
 	}
-	return execEngine.GetEvents(), nil
-}
-
-func parseEvent(results [][]byte) types.Event {
-	attributes := []common.KVPair{}
-	for index, result := range results {
-		attributes = append(attributes, common.KVPair{
-			Key: []byte(strconv.Itoa(index)), Value: result,
-		})
-	}
-	return types.Event{
-		Type:       "result",
-		Attributes: attributes,
-	}
+	return execEngine.GetEvents(), vmGasUsed, nil
 }

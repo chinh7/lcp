@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base32"
 	"encoding/binary"
-	"log"
 
 	"github.com/pkg/errors"
 	"github.com/stellar/go/crc16"
@@ -52,7 +51,6 @@ func AddressFromPubKey(src []byte) Address {
 	if _, err := raw.Write(checksum); err != nil {
 		return [AddressLength]byte{}
 	}
-	log.Printf("Byte size %d\n", len(raw.Bytes()))
 	var address Address
 	address.setBytes(raw.Bytes())
 	return address

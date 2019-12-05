@@ -33,6 +33,9 @@ func (state *State) LoadAccount(address crypto.Address) (*Account, error) {
 	if err != nil {
 		return nil, err
 	}
+	if raw == nil {
+		return nil, nil
+	}
 	var account Account
 	if rlp.DecodeBytes(raw, &account); err != nil {
 		return nil, err
@@ -83,7 +86,7 @@ func (state *State) CreateAccount(creator crypto.Address, address crypto.Address
 func (state *State) Commit() (trie.Hash, error) {
 	var err error
 	for _, account := range state.accounts {
-		if !account.dirty {
+		if account == nil || !account.dirty {
 			continue
 		}
 

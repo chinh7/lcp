@@ -10,17 +10,18 @@ import (
 
 // VertexNode is the space where app and command lives
 type VertexNode struct {
-	config config.Config
-
-	app     *consensus.App
-	command *cobra.Command
+	config             config.Config
+	gasContractAddress string
+	app                *consensus.App
+	command            *cobra.Command
 }
 
 // New returns new instance of Node
-func New(config config.Config) *VertexNode {
+func New(config config.Config, gasContractAddress string) *VertexNode {
 	vertexNode := VertexNode{
-		config:  config,
-		command: commands.RootCmd,
+		config:             config,
+		command:            commands.RootCmd,
+		gasContractAddress: gasContractAddress,
 	}
 	vertexNode.addDefaultCommands()
 	vertexNode.addStartNodeCommand()

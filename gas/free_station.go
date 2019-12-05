@@ -1,0 +1,55 @@
+package gas
+
+import (
+	"log"
+
+	"github.com/QuoineFinancial/vertex/crypto"
+)
+
+// FreeStation provide a free gas station
+type FreeStation struct {
+	app    App
+	policy Policy
+}
+
+// Sufficient gas of an address is enough for burn
+func (station *FreeStation) Sufficient(addr crypto.Address, gas int64) bool {
+	return true
+}
+
+// Burn gas, do nothing
+func (station *FreeStation) Burn(addr crypto.Address, gas int64) {}
+
+// Switch on fee
+func (station *FreeStation) Switch() bool {
+	app := station.app
+	token := app.GetGasContractToken()
+	if token != nil {
+		contract := token.GetContract()
+		creator := contract.GetCreator()
+		balance, err := token.GetBalance(creator)
+		if err != nil {
+			panic(err)
+		}
+		// Only activate if creator balance > 0 aka minted
+		if balance > 0 {
+			log.Println("Change to liquid station")
+			app.SetGasStation(NewLiquidStation(app, contract.GetAddress()))
+			return true
+		}
+	}
+	return false
+}
+
+// GetPolicy free
+func (station *FreeStation) GetPolicy() Policy {
+	return station.policy
+}
+
+// NewFreeGasStation constructor
+func NewFreeGasStation(app App) Station {
+	return &FreeStation{
+		app:    app,
+		policy: &FreePolicy{},
+	}
+}

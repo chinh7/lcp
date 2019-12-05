@@ -8,6 +8,7 @@ import (
 	"github.com/QuoineFinancial/vertex/abi"
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/db"
+	"github.com/QuoineFinancial/vertex/gas"
 	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/QuoineFinancial/vertex/trie"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -35,7 +36,7 @@ func TestVM(t *testing.T) {
 	database := db.NewMemoryDB()
 	state, _ := storage.New(trie.Hash{}, database)
 	accountState, _ := state.CreateAccount(crypto.AddressFromString(caller), crypto.AddressFromString(contractAddress), contractBytes)
-	execEngine := engine.NewEngine(accountState, crypto.AddressFromString(caller))
+	execEngine := engine.NewEngine(accountState, crypto.AddressFromString(caller), &gas.AlphaPolicy{}, -1)
 	toAddress := "LB3EICIUKOUYCY4D7T2O6RKL7ISEPISNKUXNILDTJ76V2PDZVT5ZDP3U"
 	var mint = 10000000
 	mintAmount := strconv.Itoa(mint)
@@ -75,11 +76,11 @@ func TestVM(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	ret, _ := execEngine.Ignite("get_balance", getBalanceTo)
+	ret, _, _ := execEngine.Ignite("get_balance", getBalanceTo)
 	if int(*ret) != transfer {
 		t.Errorf("Expect return value to be %v, got %v", transfer, *ret)
 	}
-	ret, _ = execEngine.Ignite("get_balance", getBalanceMint)
+	ret, _, _ = execEngine.Ignite("get_balance", getBalanceMint)
 	if int(*ret) != mint-transfer {
 		t.Errorf("Expect return value to be %v, got %v", mint-transfer, *ret)
 	}

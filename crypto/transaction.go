@@ -31,9 +31,10 @@ type TxSigner struct {
 
 // Tx transaction
 type Tx struct {
-	From TxSigner
-	Data []byte
-	To   Address
+	From     TxSigner
+	Data     []byte
+	To       Address
+	GasLimit uint64
 }
 
 // Address derived from TxSigner PubKey

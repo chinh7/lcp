@@ -7,6 +7,7 @@ import (
 	"github.com/QuoineFinancial/vertex/abi"
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/engine"
+	"github.com/QuoineFinancial/vertex/gas"
 	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -63,8 +64,8 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 		return fmt.Errorf("Invalid params for method %s", params.Method)
 	}
 
-	engine := engine.NewEngine(account, crypto.AddressFromString(params.Address))
-	ret, err := engine.Ignite(params.Method, data)
+	engine := engine.NewEngine(account, crypto.AddressFromString(params.Address), &gas.AlphaPolicy{}, -1)
+	ret, _, err := engine.Ignite(params.Method, data)
 	if err != nil {
 		return err
 	}
