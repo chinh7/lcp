@@ -41,7 +41,7 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 	if err != nil {
 		return nil, 0, err
 	}
-	execEngine := engine.NewEngine(contractAccount, tx.From.Address(), policy, gasLimit)
+	execEngine := engine.NewEngine(state, contractAccount, tx.From.Address(), policy, gasLimit)
 	_, gasUsed, err := execEngine.Ignite(data.Method, data.Params)
 	gasStation.Burn(tx.From.Address(), gasUsed)
 	if err != nil {

@@ -159,7 +159,7 @@ func (app *App) GetGasContractToken() gas.Token {
 			panic(err)
 		}
 		if contract != nil {
-			return token.NewToken(contract)
+			return token.NewToken(app.state, contract)
 		}
 	}
 	return nil

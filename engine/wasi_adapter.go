@@ -6,8 +6,8 @@ import (
 	"github.com/vertexdlt/vertexvm/vm"
 )
 
-func wasiDefaultHandler(vm *vm.VM, args ...uint64) uint64 {
-	return 52 // __WASI_ENOSYS
+func wasiDefaultHandler(vm *vm.VM, args ...uint64) (uint64, error) {
+	return 52, nil // __WASI_ENOSYS
 }
 
 func wasiEnvironSizesGet(vm *vm.VM, args ...uint64) uint64 {
@@ -20,8 +20,14 @@ func wasiEnvironSizesGet(vm *vm.VM, args ...uint64) uint64 {
 	}
 
 	// wasm32 size_t = 32bit
-	binary.LittleEndian.PutUint32(vm.GetMemory()[countPtr:], uint32(len(env)))
-	binary.LittleEndian.PutUint32(vm.GetMemory()[bufSizePtr:], uint32(totalSize))
+	countBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(countBytes, uint32(len(env)))
+	vm.MemWrite(countBytes, int(countPtr))
+
+	bufSizeBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bufSizeBytes, uint32(totalSize))
+	vm.MemWrite(bufSizeBytes, int(bufSizePtr))
+
 	return 0 // __WASI_ESUCCESS
 }
 
@@ -30,13 +36,16 @@ func wasiEnvironGet(vm *vm.VM, args ...uint64) uint64 {
 	envPtr := uint32(args[1])
 	env := map[string]string{}
 	for key, value := range env {
-		binary.LittleEndian.PutUint32(vm.GetMemory()[pointersPtr:], envPtr)
+		envPtrBytes := make([]byte, 4)
+		binary.LittleEndian.PutUint32(envPtrBytes, envPtr)
+		vm.MemWrite(envPtrBytes, int(pointersPtr))
 		pointersPtr += 4 // 32 bytes advancement
 		envBytes := []byte(key + "=" + value)
-		copy(vm.GetMemory()[envPtr:], envBytes)
+		vm.MemWrite(envBytes, int(envPtr))
 		envPtr += uint32(len(envBytes))
 	}
-	binary.LittleEndian.PutUint32(vm.GetMemory()[pointersPtr:], 0)
+	zero := make([]byte, 4)
+	vm.MemWrite(zero, int(pointersPtr))
 	return 0 // __WASI_ESUCCESS
 }
 

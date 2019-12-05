@@ -13,6 +13,7 @@ import (
 
 // Token contract
 type Token struct {
+	state    *storage.State
 	contract *storage.Account
 }
 
@@ -31,12 +32,12 @@ func (token *Token) invokeContract(caller crypto.Address, method string, values 
 		return 0, err
 	}
 
-	engine := engine.NewEngine(token.contract, caller, &gas.FreePolicy{}, -1)
+	engine := engine.NewEngine(token.state, token.contract, caller, &gas.FreePolicy{}, -1)
 	ret, _, err := engine.Ignite(method, methodArgs)
 	if err != nil {
 		return 0, err
 	}
-	return *ret, err
+	return ret, err
 }
 
 // GetBalance retrieve token balance by address
@@ -62,8 +63,9 @@ func (token *Token) GetContract() *storage.Account {
 }
 
 // NewToken from contract
-func NewToken(contract *storage.Account) *Token {
+func NewToken(state *storage.State, contract *storage.Account) *Token {
 	return &Token{
+		state:    state,
 		contract: contract,
 	}
 }
