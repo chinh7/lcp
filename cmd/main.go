@@ -12,6 +12,6 @@ func main() {
 
 	// TODO: Get gasContractAddress from genesis file
 	gasContractAddress := os.Getenv("GAS_CONTRACT_ADDRESS")
-	vertexNode := node.New(*config, gasContractAddress)
+	vertexNode := node.New(rootDir, gasContractAddress)
 	vertexNode.Execute()
 }
