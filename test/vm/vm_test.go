@@ -7,6 +7,7 @@ import (
 
 	"github.com/QuoineFinancial/vertex/abi"
 	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/vertex/db"
 	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/QuoineFinancial/vertex/trie"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -31,8 +32,9 @@ func TestVM(t *testing.T) {
 	contractBytes, _ := rlp.EncodeToBytes(&contract)
 	caller := "LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R"
 	contractAddress := "LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53"
-	state := storage.GetState(trie.Hash{})
-	accountState := state.CreateAccount(crypto.AddressFromString(caller), crypto.AddressFromString(contractAddress), &contractBytes)
+	database := db.NewMemoryDB()
+	state, _ := storage.New(trie.Hash{}, database)
+	accountState, _ := state.CreateAccount(crypto.AddressFromString(caller), crypto.AddressFromString(contractAddress), contractBytes)
 	execEngine := engine.NewEngine(accountState, crypto.AddressFromString(caller))
 	toAddress := "LB3EICIUKOUYCY4D7T2O6RKL7ISEPISNKUXNILDTJ76V2PDZVT5ZDP3U"
 	var mint = 10000000

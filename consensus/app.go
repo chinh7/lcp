@@ -6,6 +6,7 @@ import (
 
 	"github.com/QuoineFinancial/vertex/core"
 	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/vertex/db"
 	"github.com/QuoineFinancial/vertex/storage"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
@@ -18,20 +19,27 @@ import (
 type App struct {
 	types.BaseApplication
 	state    *storage.State
+	Database db.Database
 	nodeInfo string
 }
 
 // NewApp initializes a new app
-func NewApp(nodeInfo string) *App {
+func NewApp(nodeInfo string, dbPath string) *App {
+	database := db.NewRocksDB(dbPath)
 	return &App{
 		nodeInfo: nodeInfo,
+		Database: database,
 	}
 }
 
 // BeginBlock begins new block
 func (app *App) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock {
+	var err error
 	appHash := gethCommon.BytesToHash(req.Header.GetAppHash())
-	app.state = storage.GetState(appHash)
+	app.state, err = storage.New(appHash, app.Database)
+	if err != nil {
+		panic(err)
+	}
 	return types.ResponseBeginBlock{}
 }
 

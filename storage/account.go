@@ -49,21 +49,5 @@ func (account *Account) SetNonce(nonce uint64) {
 func (account *Account) setContract(contract []byte) {
 	account.contract = contract
 	contractHash := sha3.Sum256(contract)
-	database.Put(contractHash[:], contract)
 	account.ContractHash = contractHash[:]
-}
-
-func newAccount(creator crypto.Address, address crypto.Address, contract *[]byte) *Account {
-	account := &Account{
-		Nonce:    0,
-		Creator:  creator,
-		address:  address,
-		storage:  trie.New(trie.Hash{}, database),
-		dirty:    true,
-		contract: []byte{},
-	}
-	if contract != nil {
-		account.setContract(*contract)
-	}
-	return account
 }

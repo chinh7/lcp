@@ -1,8 +1,10 @@
 package models
 
+import "github.com/QuoineFinancial/vertex/abi"
+
 // Account contains all info of a account on blockchain
 type Account struct {
-	Nonce        uint64 `json:"nonce"`
-	ContractHash string `json:"contractHash"`
-	Contract     string `json:"contract"`
+	Nonce        uint64      `json:"nonce"`
+	ContractHash string      `json:"contractHash"`
+	Contract     *abi.Contract `json:"contract"`
 }

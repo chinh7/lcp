@@ -2,9 +2,7 @@ package trie
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"log"
 
 	"github.com/QuoineFinancial/vertex/db"
 	"github.com/ethereum/go-ethereum/common"
@@ -20,7 +18,7 @@ type Trie struct {
 type Hash = common.Hash
 
 // New returns a Trie based
-func New(rootHash Hash, db db.Database) *Trie {
+func New(rootHash Hash, db db.Database) (*Trie, error) {
 	if db == nil {
 		panic("Could not run trie.New without db.")
 	}
@@ -28,12 +26,11 @@ func New(rootHash Hash, db db.Database) *Trie {
 	if (rootHash != Hash{}) {
 		rootNode, err := trie.loadNode(rootHash[:])
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		log.Println("rootnode", rootNode)
 		trie.root = rootNode
 	}
-	return trie
+	return trie, nil
 }
 
 // loadNode loads the node from database
@@ -41,16 +38,9 @@ func (tree *Trie) loadNode(node hashNode) (Node, error) {
 	hash := common.BytesToHash(node)
 	data := tree.db.Get(hash[:])
 	if data == nil {
-		return nil, errors.New("Missing node data")
+		return nil, fmt.Errorf("Missing node data for node %s", string(hash[:]))
 	}
 	return mustDecodeNode(hash[:], data), nil
-}
-
-func concat(s1 []byte, s2 ...byte) []byte {
-	r := make([]byte, len(s1)+len(s2))
-	copy(r, s1)
-	copy(r[len(s1):], s2)
-	return r
 }
 
 func (tree *Trie) newFlag() nodeFlag { return nodeFlag{dirty: true} }
@@ -146,13 +136,11 @@ func (tree *Trie) insert(node Node, key []byte, value Node) (bool, Node, error) 
 	}
 }
 
-// Update will insert or delete a key based on value
+// Update will either insert or delete a key based on value
 func (tree *Trie) Update(key, value []byte) error {
 	hexKey := keybytesToHex(key)
 	if len(value) > 0 {
-		v := make([]byte, len(value))
-		copy(v, value)
-		_, newRoot, err := tree.insert(tree.root, hexKey, valueNode(v))
+		_, newRoot, err := tree.insert(tree.root, hexKey, append(valueNode{}, value...))
 		if err != nil {
 			return err
 		}
@@ -269,7 +257,7 @@ func (tree *Trie) delete(node Node, key []byte) (bool, Node, error) {
 			case *shortNode:
 				// Merge the child node with current node
 				return true, &shortNode{
-					Key:   concat(node.Key, childNode.Key...),
+					Key:   append(node.Key, childNode.Key...),
 					Value: childNode.Value,
 					flags: tree.newFlag(),
 				}, nil

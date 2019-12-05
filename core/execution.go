@@ -14,13 +14,13 @@ import (
 func ApplyTx(state *storage.State, tx *crypto.Tx) ([]types.Event, error) {
 	if (tx.To == crypto.Address{}) {
 		contractAddress := tx.From.CreateAddress()
-		state.CreateAccount(tx.From.Address(), contractAddress, &tx.Data)
+		state.CreateAccount(tx.From.Address(), contractAddress, tx.Data)
 		event := types.Event{
 			Type: "deploy",
 			Attributes: []common.KVPair{
 				common.KVPair{
 					Key:   []byte("address"),
-					Value: []byte(contractAddress.String()),
+					Value: contractAddress[:],
 				},
 			},
 		}
@@ -28,9 +28,12 @@ func ApplyTx(state *storage.State, tx *crypto.Tx) ([]types.Event, error) {
 	}
 	data := &crypto.TxData{}
 	data.Deserialize(tx.Data)
-	execEngine := engine.NewEngine(state.GetAccount(tx.To), tx.From.Address())
-	_, err := execEngine.Ignite(data.Method, data.Params)
+	account, err := state.GetAccount(tx.To)
 	if err != nil {
+		return nil, err
+	}
+	execEngine := engine.NewEngine(account, tx.From.Address())
+	if _, err := execEngine.Ignite(data.Method, data.Params); err != nil {
 		return nil, err
 	}
 	return execEngine.GetEvents(), nil

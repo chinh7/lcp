@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -12,7 +11,6 @@ import (
 // Node is the unit of trie
 type Node interface {
 	cache() (node hashNode, isDirty bool)
-	fstring(string) string
 }
 
 type (
@@ -32,48 +30,17 @@ type (
 func (n *branchNode) copy() *branchNode { copy := *n; return &copy }
 func (n *shortNode) copy() *shortNode   { copy := *n; return &copy }
 
-var nilValueNode = valueNode(nil)
-
 // EncodeRLP encodes a full node into the consensus RLP format.
 func (n *branchNode) EncodeRLP(w io.Writer) error {
 	var nodes [17]Node
-
 	for i, child := range &n.Children {
 		if child != nil {
 			nodes[i] = child
 		} else {
-			nodes[i] = nilValueNode
+			nodes[i] = valueNode(nil)
 		}
 	}
 	return rlp.Encode(w, nodes)
-}
-
-var indices = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "[17]"}
-
-func (n *branchNode) String() string { return n.fstring("") }
-func (n *shortNode) String() string  { return n.fstring("") }
-func (n hashNode) String() string    { return n.fstring("") }
-func (n valueNode) String() string   { return n.fstring("") }
-
-func (n *branchNode) fstring(ind string) string {
-	resp := fmt.Sprintf("[\n%s  ", ind)
-	for i, node := range &n.Children {
-		if node == nil {
-			resp += fmt.Sprintf("%s: <nil> ", indices[i])
-		} else {
-			resp += fmt.Sprintf("%s: %v", indices[i], node.fstring(ind+"  "))
-		}
-	}
-	return resp + fmt.Sprintf("\n%s] ", ind)
-}
-func (n *shortNode) fstring(ind string) string {
-	return fmt.Sprintf("{%x: %v} ", n.Key, n.Value.fstring(ind+"  "))
-}
-func (n hashNode) fstring(ind string) string {
-	return fmt.Sprintf("<%x> ", []byte(n))
-}
-func (n valueNode) fstring(ind string) string {
-	return fmt.Sprintf("%x ", []byte(n))
 }
 
 // flags contains caching-related metadata about a node.
@@ -92,15 +59,15 @@ func mustDecodeNode(hash, buf []byte) Node {
 		// Handle nil node
 		return nil
 	}
-	node, err := newNode(hash, buf)
+	node, err := decodeNode(hash, buf)
 	if err != nil {
 		panic(fmt.Sprintf("node %x: %v", hash, err))
 	}
 	return node
 }
 
-// newNode parses the RLP encoding of a trie node.
-func newNode(hash, buf []byte) (Node, error) {
+// decodeNode parses the RLP encoding of a trie node.
+func decodeNode(hash, buf []byte) (Node, error) {
 	if len(buf) == 0 {
 		return nil, errors.New("Unexpected end of buffer")
 	}
@@ -112,17 +79,17 @@ func newNode(hash, buf []byte) (Node, error) {
 	case 0:
 		return valueNode(nil), nil
 	case 2:
-		node, err := newShortNode(hash, elements)
-		return node, wrapError(err, "short")
+		node, err := decodeShortNode(hash, elements)
+		return node, err
 	case 17:
-		node, err := newBranchNode(hash, elements)
-		return node, wrapError(err, "full")
+		node, err := decodeBranchNode(hash, elements)
+		return node, err
 	default:
 		return nil, fmt.Errorf("Node elements count invalid: %v", count)
 	}
 }
 
-func newShortNode(hash, elements []byte) (Node, error) {
+func decodeShortNode(hash, elements []byte) (*shortNode, error) {
 	keyByte, rest, err := rlp.SplitString(elements)
 	if err != nil {
 		return nil, err
@@ -144,9 +111,9 @@ func newShortNode(hash, elements []byte) (Node, error) {
 	}
 
 	// Extension node
-	node, _, err := newRef(rest)
+	node, _, err := decodeRef(rest)
 	if err != nil {
-		return nil, wrapError(err, "val")
+		return nil, err
 	}
 	return &shortNode{
 		Key:   key,
@@ -155,12 +122,12 @@ func newShortNode(hash, elements []byte) (Node, error) {
 	}, nil
 }
 
-func newBranchNode(hash, elements []byte) (*branchNode, error) {
+func decodeBranchNode(hash, elements []byte) (*branchNode, error) {
 	node := &branchNode{flags: nodeFlag{hash: hash}}
 	for i := 0; i < 16; i++ {
-		child, rest, err := newRef(elements)
+		child, rest, err := decodeRef(elements)
 		if err != nil {
-			return node, wrapError(err, fmt.Sprintf("[%d]", i))
+			return node, err
 		}
 		node.Children[i] = child
 		elements = rest
@@ -177,7 +144,7 @@ func newBranchNode(hash, elements []byte) (*branchNode, error) {
 
 const hashLen = len(Hash{})
 
-func newRef(buf []byte) (Node, []byte, error) {
+func decodeRef(buf []byte) (Node, []byte, error) {
 	kind, value, rest, err := rlp.Split(buf)
 	if err != nil {
 		return nil, buf, err
@@ -192,7 +159,7 @@ func newRef(buf []byte) (Node, []byte, error) {
 			err := fmt.Errorf("oversized embedded node (size is %d bytes, want size < %d)", size, hashLen)
 			return nil, buf, err
 		}
-		n, err := newNode(nil, buf)
+		n, err := decodeNode(nil, buf)
 		return n, rest, err
 	case kind == rlp.String && len(value) == 0:
 		// empty node
@@ -202,26 +169,4 @@ func newRef(buf []byte) (Node, []byte, error) {
 	default:
 		return nil, nil, fmt.Errorf("invalid RLP string size %d (want 0 or 32)", len(value))
 	}
-}
-
-// wraps a decoding error with information about the path to the
-// invalid child node (for debugging encoding issues).
-type decodeError struct {
-	what  error
-	stack []string
-}
-
-func wrapError(err error, ctx string) error {
-	if err == nil {
-		return nil
-	}
-	if decErr, ok := err.(*decodeError); ok {
-		decErr.stack = append(decErr.stack, ctx)
-		return decErr
-	}
-	return &decodeError{err, []string{ctx}}
-}
-
-func (err *decodeError) Error() string {
-	return fmt.Sprintf("%v (decode path: %s)", err.what, strings.Join(err.stack, "<-"))
 }

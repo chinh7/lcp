@@ -1,6 +1,7 @@
 package abi
 
 import (
+	"encoding/json"
 	"io"
 
 	"github.com/ethereum/go-ethereum/rlp"
@@ -35,5 +36,16 @@ func (c *Contract) EncodeRLP(w io.Writer) error {
 	}{
 		Header: contractHeader,
 		Code:   c.Code,
+	})
+}
+
+// MarshalJSON returns json string of contract
+func (c *Contract) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Header *Header `json:"header"`
+		Code   string  `json:"code"`
+	}{
+		Header: c.Header,
+		Code:   string(c.Code),
 	})
 }

@@ -37,8 +37,17 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 		}
 		appHash = common.BytesToHash(block.BlockMeta.Header.AppHash)
 	}
-	state := storage.GetState(appHash)
-	account := state.GetAccount(crypto.AddressFromString(params.Address))
+
+	state, err := storage.New(appHash, service.database)
+	if err != nil {
+		return fmt.Errorf("Could not init state for app hash %s", appHash.String())
+	}
+
+	account, err := state.GetAccount(crypto.AddressFromString(params.Address))
+	if err != nil {
+		return fmt.Errorf("Account not found for address %s", params.Address)
+	}
+
 	contract, err := account.GetContract()
 	if err != nil {
 		return fmt.Errorf("Contract not found for address %s", params.Address)

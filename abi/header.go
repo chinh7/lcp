@@ -10,47 +10,30 @@ import (
 
 // Event is emitting from engine
 type Event struct {
-	Name       string
-	Parameters []*Parameter
+	Name       string       `json:"name"`
+	Parameters []*Parameter `json:"parameters"`
 }
 
 // Parameter is model for function signature
 type Parameter struct {
-	Name    string
-	IsArray bool
-	Type    PrimitiveType
-	Size    uint
+	Name    string        `json:"name"`
+	IsArray bool          `json:"is_array"`
+	Type    PrimitiveType `json:"type"`
+	Size    uint          `json:"size"`
 }
 
 // Function is model for function signature
 type Function struct {
-	Name       string
-	Parameters []*Parameter
+	Name       string       `json:"name"`
+	Parameters []*Parameter `json:"parameters"`
 }
 
 // Header is model for function signature
 type Header struct {
-	Version   string
-	Functions map[string]*Function
-	Events    map[string]*Event
+	Version   string               `json:"version"`
+	Functions map[string]*Function `json:"functions"`
+	Events    map[string]*Event    `json:"events"`
 }
-
-const (
-	// HeaderVersionByteLength is number of bytes preservered for version number
-	HeaderVersionByteLength = 2
-
-	// HeaderFunctionCountByteLength is number of bytes preservered for number of functions in header
-	HeaderFunctionCountByteLength = 1
-
-	// FunctionNameByteLength is number of bytes preservered for function name
-	FunctionNameByteLength = 64
-
-	// FunctionParameterCountByteLength is number of bytes preservered for number of Parameters in a function
-	FunctionParameterCountByteLength = 1
-
-	// ParameterByteLength is number of bytes preservered for a parameter
-	ParameterByteLength = 2
-)
 
 // GetEvent return the event
 func (h Header) GetEvent(name string) (*Event, error) {

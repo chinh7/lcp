@@ -57,7 +57,7 @@ func hexToKeybytes(hex []byte) []byte {
 }
 
 func decodeNibbles(nibbles []byte, bytes []byte) {
-	for i := 0; 2*i < len(nibbles); i = i + 1 {
+	for i := 0; 2*i < len(nibbles); i++ {
 		bytes[i] = nibbles[2*i]<<4 | nibbles[2*i+1]
 	}
 }
@@ -69,7 +69,7 @@ func min(a, b int) int {
 	return a
 }
 
-// getCommonLength returns the length of the common prefix of a and b.
+// computeCommonPrefixLength returns the length of the common prefix of a and b.
 func computeCommonPrefixLength(a, b []byte) int {
 	i := 0
 	for ; i < min(len(a), len(b)); i++ {

@@ -5,28 +5,31 @@ import (
 	"github.com/QuoineFinancial/vertex/db"
 	"github.com/QuoineFinancial/vertex/trie"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/stellar/go/support/log"
 )
 
 // State is the global account state consisting of many address->state mapping
 type State struct {
+	db       db.Database
 	trie     *trie.Trie
 	accounts map[crypto.Address]*Account
 }
 
-var database = db.NewRocksDB("state.db")
-
-// GetState get the singleton state
-func GetState(rootHash trie.Hash) *State {
-	return &State{
-		accounts: make(map[crypto.Address]*Account),
-		trie:     trie.New(rootHash, database),
+// New returns a state database
+func New(root trie.Hash, db db.Database) (*State, error) {
+	t, err := trie.New(root, db)
+	if err != nil {
+		return nil, err
 	}
+	return &State{
+		db:       db,
+		trie:     t,
+		accounts: make(map[crypto.Address]*Account),
+	}, nil
 }
 
 // LoadAccount load the account from disk
-func (state *State) LoadAccount(addr crypto.Address) (*Account, error) {
-	raw, err := state.trie.Get(addr[:])
+func (state *State) LoadAccount(address crypto.Address) (*Account, error) {
+	raw, err := state.trie.Get(address[:])
 	if err != nil {
 		return nil, err
 	}
@@ -34,29 +37,46 @@ func (state *State) LoadAccount(addr crypto.Address) (*Account, error) {
 	if rlp.DecodeBytes(raw, &account); err != nil {
 		return nil, err
 	}
-	account.address = addr
-	account.storage = trie.New(account.StorageHash, database)
-	account.contract = database.Get(account.ContractHash)
+	account.address = address
+	account.contract = state.db.Get(account.ContractHash)
+	if account.storage, err = trie.New(account.StorageHash, state.db); err != nil {
+		return nil, err
+	}
 	return &account, nil
 }
 
 // GetAccount retrieve the account state at addr
-func (state *State) GetAccount(addr crypto.Address) *Account {
-	if state.accounts[addr] == nil {
-		loadedAccount, err := state.LoadAccount(addr)
+func (state *State) GetAccount(address crypto.Address) (*Account, error) {
+	if state.accounts[address] == nil {
+		loadedAccount, err := state.LoadAccount(address)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
-		state.accounts[addr] = loadedAccount
+		state.accounts[address] = loadedAccount
 	}
-	return state.accounts[addr]
+	return state.accounts[address], nil
 }
 
 // CreateAccount create a new account state for addr
-func (state *State) CreateAccount(creator crypto.Address, addr crypto.Address, contract *[]byte) *Account {
-	Account := newAccount(creator, addr, contract)
-	state.accounts[addr] = Account
-	return Account
+func (state *State) CreateAccount(creator crypto.Address, address crypto.Address, contract []byte) (*Account, error) {
+	storage, err := trie.New(trie.Hash{}, state.db)
+	if err != nil {
+		return nil, err
+	}
+	account := &Account{
+		Nonce:    0,
+		Creator:  creator,
+		address:  address,
+		storage:  storage,
+		contract: contract,
+		dirty:    true,
+	}
+
+	account.setContract(contract)
+	state.db.Put(account.ContractHash[:], account.contract)
+
+	state.accounts[address] = account
+	return account, nil
 }
 
 // Commit stores all dirty Accounts to state.trie
@@ -66,9 +86,15 @@ func (state *State) Commit() (trie.Hash, error) {
 		if !account.dirty {
 			continue
 		}
+
+		// Add source code
+
+		// Update account storage
 		if account.StorageHash, err = account.storage.Commit(); err != nil {
 			return trie.Hash{}, err
 		}
+
+		// Update account
 		raw, _ := rlp.EncodeToBytes(account)
 		if err = state.trie.Update(account.address[:], raw); err != nil {
 			return trie.Hash{}, err
