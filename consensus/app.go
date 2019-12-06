@@ -48,9 +48,13 @@ func NewApp(nodeInfo string, dbDir string, gasContractAddress string) *App {
 		lastBlockHeight:    0,
 	}
 
-	if b := app.InfoDB.Get([]byte("lastBlockHeight")); len(b) > 0 {
+	// Load last proccessed block height
+	b := app.InfoDB.Get([]byte("lastBlockHeight"))
+	lastBlockAppHash := app.InfoDB.Get([]byte("lastBlockAppHash"))
+
+	if len(b) > 0 && len(lastBlockAppHash) > 0 {
 		app.lastBlockHeight = int64(binary.LittleEndian.Uint64(b))
-		app.lastBlockAppHash = app.InfoDB.Get([]byte("lastBlockAppHash"))
+		app.lastBlockAppHash = lastBlockAppHash
 	}
 
 	app.SetGasStation(gas.NewFreeGasStation(app))
@@ -75,17 +79,11 @@ func (app *App) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock
 
 // Info returns application chain info
 func (app *App) Info(req types.RequestInfo) (resInfo types.ResponseInfo) {
-	b := app.InfoDB.Get([]byte("lastBlockHeight"))
-	lastBlockAppHash := app.InfoDB.Get([]byte("lastBlockAppHash"))
-	if app.lastBlockHeight == -1 && len(b) > 0 && len(lastBlockAppHash) > 0 {
-		height := int64(binary.LittleEndian.Uint64(b))
-		return types.ResponseInfo{
-			Data:             fmt.Sprintf("{\"version\":%s}", app.nodeInfo),
-			LastBlockHeight:  height,
-			LastBlockAppHash: lastBlockAppHash,
-		}
+	return types.ResponseInfo{
+		Data:             fmt.Sprintf("{\"version\":%s}", app.nodeInfo),
+		LastBlockHeight:  app.lastBlockHeight,
+		LastBlockAppHash: app.lastBlockAppHash,
 	}
-	return types.ResponseInfo{Data: fmt.Sprintf("{\"version\":%s}", app.nodeInfo)}
 }
 
 // CheckTx checks if submitted transaction is valid and can be passed to next step
