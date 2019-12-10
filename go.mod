@@ -25,7 +25,7 @@ require (
 	github.com/tecbot/gorocksdb v0.0.0-20190705090504-162552197222
 	github.com/tendermint/go-amino v0.15.0 // indirect
 	github.com/tendermint/tendermint v0.32.2
-	github.com/vertexdlt/vertexvm v0.0.0-20191210081850-664d19e8b3bb
+	github.com/vertexdlt/vertexvm v0.0.0-20191129075647-965065e1f31a
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/sys v0.0.0-20190422165155-953cdadca894 // indirect
 	google.golang.org/genproto v0.0.0-20190327125643-d831d65fe17d // indirect
