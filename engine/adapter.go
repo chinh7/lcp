@@ -210,6 +210,17 @@ func (engine *Engine) handleEmitEvent(event *abi.Event, vm *vm.VM, args ...uint6
 	return 0, nil
 }
 
+func wasiUnstableHandler(name string) vm.HostFunction {
+	switch name {
+	case "proc_exit":
+		return wasiProcExit
+	case "proc_raise":
+		return wasiProcRaise
+	default:
+		return wasiDefaultHandler
+	}
+}
+
 // GetFunction get host function for WebAssembly
 func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 	switch module {
@@ -247,9 +258,9 @@ func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 				}
 			}
 			panic(fmt.Errorf("unknown import resolved: %s", name))
-		case "wasi_unstable":
-			return wasiDefaultHandler
 		}
+	case "wasi_unstable":
+		return wasiUnstableHandler(name)
 	}
 	return nil
 }
