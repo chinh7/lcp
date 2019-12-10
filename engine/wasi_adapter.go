@@ -61,5 +61,9 @@ func wasiProcExit(vm *vm.VM, args ...uint64) (uint64, error) {
 }
 
 func wasiProcRaise(vm *vm.VM, args ...uint64) (uint64, error) {
-	return 0, errors.New("__wasi_proc_raise is not supported")
+	var exitCode string
+	for _, arg := range args {
+		exitCode += fmt.Sprint(arg) + " "
+	}
+	return 0, fmt.Errorf("process exit with code: %s", strings.TrimSpace(exitCode))
 }
