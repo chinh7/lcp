@@ -2,12 +2,12 @@ package engine
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log"
 
 	"github.com/QuoineFinancial/vertex/abi"
 	"github.com/QuoineFinancial/vertex/crypto"
-	"github.com/go-errors/errors"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/common"
 	"github.com/vertexdlt/vertexvm/vm"
