@@ -136,15 +136,15 @@ func main() {
 	}
 
 	var cmdInvoke = &cobra.Command{
-		Use:   "invoke [address] [path to contract abi json file] [params to invoke]",
-		Short: "invoke a smart contract",
+		Use:   "invoke [address] [path to contract abi json file] [params]",
+		Short: "Invoke a smart contract",
 		Args:  cobra.MinimumNArgs(3),
 		Run:   invoke,
 	}
 
 	var cmdCall = &cobra.Command{
-		Use:   "call [address] [method] [param to call]",
-		Short: "call a smart contract (read-only)",
+		Use:   "call [address] [method] [params]",
+		Short: "Call a smart contract (read-only)",
 		Args:  cobra.MinimumNArgs(2),
 		Run:   call,
 	}
