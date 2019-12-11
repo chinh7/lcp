@@ -2,7 +2,6 @@ package engine
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"strings"
 
