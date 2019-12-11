@@ -178,13 +178,19 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 	// Share the gas object with root engine
 	newEngine.gas = engine.gas
 	newEngine.setStats(engine.callDepth+1, engine.memAggr+vm.MemSize())
-	ret, _, err := newEngine.Ignite(foreignMethod.name, methodArgs)
+	ret, err := newEngine.Ignite(foreignMethod.name, methodArgs)
 	engine.events = append(engine.events, newEngine.events...)
 	return ret, err
 }
 
 func (engine *Engine) handleEmitEvent(event *abi.Event, vm *vm.VM, args ...uint64) (uint64, error) {
 	attributes := common.KVPairs{}
+	//
+	address := engine.account.GetAddress()
+	attributes = append(attributes, common.KVPair{
+		Key:   []byte("address"),
+		Value: address[:],
+	})
 	for i, param := range event.Parameters {
 		var value []byte
 		var err error
@@ -200,10 +206,13 @@ func (engine *Engine) handleEmitEvent(event *abi.Event, vm *vm.VM, args ...uint6
 			value = make([]byte, size)
 			binary.BigEndian.PutUint64(value, args[i])
 		}
-		attributes = append(attributes, common.KVPair{
-			Key:   []byte(param.Name),
-			Value: value,
-		})
+		// address is a resvered name
+		if param.Name != "address" {
+			attributes = append(attributes, common.KVPair{
+				Key:   []byte(param.Name),
+				Value: value,
+			})
+		}
 	}
 	engine.events = append(engine.events, types.Event{
 		Type:       EventPrefix + event.Name,

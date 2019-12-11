@@ -40,7 +40,7 @@ func TestVM(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	_, _, err = execEngine.Ignite("mint", mintArgs)
+	_, err = execEngine.Ignite("mint", mintArgs)
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +53,7 @@ func TestVM(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	_, _, err = execEngine.Ignite("transfer", transferArgs)
+	_, err = execEngine.Ignite("transfer", transferArgs)
 	if err != nil {
 		panic(err)
 	}
@@ -71,14 +71,14 @@ func TestVM(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	ret, _, err := execEngine.Ignite("get_balance", getBalanceTo)
+	ret, err := execEngine.Ignite("get_balance", getBalanceTo)
 	if err != nil {
 		t.Error(err)
 	}
 	if int(ret) != transfer {
 		t.Errorf("Expect return value to be %v, got %v", transfer, ret)
 	}
-	ret, _, err = execEngine.Ignite("get_balance", getBalanceMint)
+	ret, err = execEngine.Ignite("get_balance", getBalanceMint)
 	if err != nil {
 		t.Error(err)
 	}
@@ -111,7 +111,7 @@ func TestChainedInvoke(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	_, _, err = execEngine.Ignite(funcName, args)
+	_, err = execEngine.Ignite(funcName, args)
 	if err != nil {
 		panic(err)
 	}
@@ -125,7 +125,7 @@ func TestChainedInvoke(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	ret, _, err := execEngine.Ignite(funcName, args)
+	ret, err := execEngine.Ignite(funcName, args)
 	if err != nil {
 		panic(err)
 	}
@@ -155,7 +155,7 @@ func TestChainedInvokeOverflow(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	_, _, err = execEngine.Ignite(funcName, args)
+	_, err = execEngine.Ignite(funcName, args)
 	if err != nil {
 		panic(err)
 	}
@@ -169,7 +169,7 @@ func TestChainedInvokeOverflow(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	_, _, err = execEngine.Ignite(funcName, args)
+	_, err = execEngine.Ignite(funcName, args)
 	if err == nil || err.Error() != "call depth limit reached" {
 		t.Errorf("Unexpected error %v", err)
 	}

@@ -48,32 +48,34 @@ func NewApp(nodeInfo string, dbDir string, gasContractAddress string) *App {
 		lastBlockHeight:    0,
 	}
 
+	app.SetGasStation(gas.NewFreeGasStation(app))
+
 	// Load last proccessed block height
 	b := app.InfoDB.Get([]byte("lastBlockHeight"))
 	lastBlockAppHash := app.InfoDB.Get([]byte("lastBlockAppHash"))
 
 	if len(b) > 0 && len(lastBlockAppHash) > 0 {
-		app.lastBlockHeight = int64(binary.LittleEndian.Uint64(b))
-		app.lastBlockAppHash = lastBlockAppHash
+		app.loadState(int64(binary.LittleEndian.Uint64(b)), lastBlockAppHash)
 	}
 
-	app.SetGasStation(gas.NewFreeGasStation(app))
 	return app
+}
+
+func (app *App) loadState(height int64, hash []byte) {
+	var err error
+	if app.state, err = storage.New(gethCommon.BytesToHash(hash), app.StateDB); err != nil {
+		panic(err)
+	}
+	app.lastBlockHeight = height
+	app.lastBlockAppHash = hash
+	// Keep moving forward
+	for app.gasStation.Switch() {
+	}
 }
 
 // BeginBlock begins new block
 func (app *App) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock {
-	var err error
-	appHash := gethCommon.BytesToHash(req.Header.GetAppHash())
-	app.lastBlockHeight = req.Header.Height
-	app.lastBlockAppHash = req.Header.AppHash
-	if app.state, err = storage.New(appHash, app.StateDB); err != nil {
-		panic(err)
-	}
-
-	// Keep moving forward
-	for app.gasStation.Switch() {
-	}
+	app.loadState(req.Header.Height, req.Header.AppHash)
 	return types.ResponseBeginBlock{}
 }
 

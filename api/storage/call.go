@@ -65,7 +65,7 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 	}
 
 	engine := engine.NewEngine(state, account, crypto.AddressFromString(params.Address), &gas.FreePolicy{}, 0)
-	ret, _, err := engine.Ignite(params.Method, data)
+	ret, err := engine.Ignite(params.Method, data)
 	if err != nil {
 		return err
 	}

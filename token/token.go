@@ -33,7 +33,7 @@ func (token *Token) invokeContract(caller crypto.Address, method string, values 
 	}
 
 	engine := engine.NewEngine(token.state, token.contract, caller, &gas.FreePolicy{}, 0)
-	ret, _, err := engine.Ignite(method, methodArgs)
+	ret, err := engine.Ignite(method, methodArgs)
 	if err != nil {
 		return 0, nil, err
 	}

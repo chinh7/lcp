@@ -63,19 +63,24 @@ func (engine *Engine) GetEvents() []types.Event {
 	return engine.events
 }
 
+// GetGasUsed return gas used by vm
+func (engine *Engine) GetGasUsed() uint64 {
+	return engine.gas.Used
+}
+
 // Ignite executes a contract given its code, method, and arguments
-func (engine *Engine) Ignite(method string, methodArgs []byte) (uint64, uint64, error) {
+func (engine *Engine) Ignite(method string, methodArgs []byte) (uint64, error) {
 	contract, err := engine.account.GetContract()
 	if err != nil {
-		return 0, 0, err
+		return 0, err
 	}
 	vm, err := vertexvm.NewVM(contract.Code, engine.gasPolicy, engine.gas, engine)
 	if err != nil {
-		return 0, 0, err
+		return 0, err
 	}
 	funcID, ok := vm.GetFunctionIndex(method)
 	if !ok {
-		return 0, 0, errors.New("Cannot find invoke function")
+		return 0, errors.New("Cannot find invoke function")
 	}
 
 	val, _ := vm.Module.ExecInitExpr(vm.Module.GetGlobal(int(vm.Module.ExportSec.ExportMap[ExportSecDataEnd].Desc.Idx)).Init)
@@ -83,21 +88,20 @@ func (engine *Engine) Ignite(method string, methodArgs []byte) (uint64, uint64, 
 
 	function, err := contract.Header.GetFunction(method)
 	if err != nil {
-		return 0, 0, err
+		return 0, err
 	}
 
 	decodedBytes, err := abi.DecodeToBytes(function.Parameters, methodArgs)
 	if err != nil {
-		return 0, 0, err
+		return 0, err
 	}
 
 	arguments, err := engine.loadArguments(vm, decodedBytes, function.Parameters, offset)
 	if err != nil {
-		return 0, 0, err
+		return 0, err
 	}
 	ret, err := vm.Invoke(funcID, arguments...)
-	gasUsed := uint64(vm.GetGasUsed())
-	return ret, gasUsed, err
+	return ret, err
 }
 
 func (engine *Engine) setStats(callDepth, memAggr int) {
