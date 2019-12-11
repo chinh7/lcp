@@ -17,18 +17,10 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/QuoineFinancial/vertex/abi"
+	"github.com/QuoineFinancial/vertex/api/chain"
+	"github.com/QuoineFinancial/vertex/api/storage"
 	"github.com/QuoineFinancial/vertex/crypto"
 )
-
-// BroadcastRequest of JSON RPC
-type BroadcastRequest struct {
-	RawTx string `json:"rawTx"`
-}
-
-// BroadcastResponse of JSON RPC
-type BroadcastResponse struct {
-	Hash string `json:"hash"`
-}
 
 func broadcast(endpoint, serializedTx string) {
 	log.Println("Signed Transaction Len:", len(serializedTx))
@@ -36,9 +28,9 @@ func broadcast(endpoint, serializedTx string) {
 	serializedTx = base64.StdEncoding.EncodeToString(msg)
 	log.Println("Params Len:", len(serializedTx))
 	if len(endpoint) > 0 {
-		var result BroadcastResponse
-		postJSON(endpoint, "chain.Broadcast", BroadcastRequest{RawTx: serializedTx}, &result)
-		log.Printf("Transaction hash: %s\n", result.Hash)
+		var result chain.BroadcastResult
+		postJSON(endpoint, "chain.Broadcast", chain.BroadcastParams{RawTransaction: serializedTx}, &result)
+		log.Printf("Transaction hash: %s\n", result.TransactionHash)
 	} else {
 		log.Println(serializedTx)
 	}
@@ -67,7 +59,7 @@ func sign(privateKey ed25519.PrivateKey, tx *crypto.Tx) {
 }
 
 func deploy(cmd *cobra.Command, args []string) {
-	seedPath, endpoint, nonce, gas := parseFlags(cmd)
+	seedPath, endpoint, nonce, gas, _ := parseFlags(cmd)
 	privateKey := loadPrivateKey(seedPath)
 
 	code, err := ioutil.ReadFile(args[0])
@@ -96,7 +88,7 @@ func deploy(cmd *cobra.Command, args []string) {
 }
 
 func invoke(cmd *cobra.Command, args []string) {
-	seedPath, endpoint, nonce, gas := parseFlags(cmd)
+	seedPath, endpoint, nonce, gas, _ := parseFlags(cmd)
 	privateKey := loadPrivateKey(seedPath)
 
 	signer := crypto.TxSigner{Nonce: uint64(nonce)}
@@ -116,11 +108,23 @@ func invoke(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	txData := crypto.TxData{Method: args[3], Params: encodedArgs}
+	txData := crypto.TxData{Method: args[2], Params: encodedArgs}
 	tx := &crypto.Tx{Data: txData.Serialize(), From: signer, To: to, GasLimit: gas}
 
 	sign(privateKey, tx)
 	broadcast(endpoint, hex.EncodeToString(tx.Serialize()))
+}
+
+func call(cmd *cobra.Command, args []string) {
+	_, endpoint, _, _, height := parseFlags(cmd)
+
+	address := args[0]
+	method := args[1]
+	params := args[2:]
+
+	var result storage.CallResult
+	postJSON(endpoint, "storage.Call", storage.CallParams{Address: address, Method: method, Args: params, Height: height}, &result)
+	log.Printf("Return: %v", result.Return)
 }
 
 func main() {
@@ -132,22 +136,30 @@ func main() {
 	}
 
 	var cmdInvoke = &cobra.Command{
-		Use:   "invoke [address] [path to contract abi json file] [param to invoke]",
+		Use:   "invoke [address] [path to contract abi json file] [params to invoke]",
 		Short: "invoke a smart contract",
 		Args:  cobra.MinimumNArgs(3),
 		Run:   invoke,
 	}
 
+	var cmdCall = &cobra.Command{
+		Use:   "call [address] [method] [param to call]",
+		Short: "call a smart contract (read-only)",
+		Args:  cobra.MinimumNArgs(2),
+		Run:   call,
+	}
+
 	var rootCmd = &cobra.Command{Use: "app"}
-	rootCmd.AddCommand(cmdDeploy, cmdInvoke)
+	rootCmd.AddCommand(cmdDeploy, cmdInvoke, cmdCall)
 	rootCmd.PersistentFlags().StringP("endpoint", "e", "", "Vertex node API endpoint")
 	rootCmd.PersistentFlags().Uint64P("gas", "g", 100000, "Gas limit")
 	rootCmd.PersistentFlags().StringP("seed", "s", "", "Path to seed")
-	rootCmd.PersistentFlags().Uint64P("nonce", "n", 0, "Nonce")
+	rootCmd.PersistentFlags().Uint64P("nonce", "n", 0, "Position of transaction")
+	rootCmd.PersistentFlags().Int64("height", 0, "Call the method at height")
 	rootCmd.Execute()
 }
 
-func parseFlags(cmd *cobra.Command) (string, string, uint64, uint64) {
+func parseFlags(cmd *cobra.Command) (string, string, uint64, uint64, int64) {
 	seedPath, err := cmd.Root().Flags().GetString("seed")
 	if err != nil {
 		panic(err)
@@ -164,7 +176,11 @@ func parseFlags(cmd *cobra.Command) (string, string, uint64, uint64) {
 	if err != nil {
 		panic(err)
 	}
-	return seedPath, endpoint, nonce, gas
+	height, err := cmd.Root().Flags().GetInt64("height")
+	if err != nil {
+		panic(err)
+	}
+	return seedPath, endpoint, nonce, gas, height
 }
 
 func postJSON(endpoint string, method string, params interface{}, result interface{}) {
