@@ -4,17 +4,17 @@ import (
 	"github.com/vertexdlt/vertexvm/opcode"
 )
 
-type gasTable [256]int64
+type gasTable [256]uint64
 
 // Cost for generics operations
 const (
-	GasStack     int64 = 1
-	GasFrame     int64 = 1
-	GasJump      int64 = 3
-	GasBlock     int64 = 5
-	GasNumUnary  int64 = 1
-	GasNumBinary int64 = 2
-	GasMemory    int64 = 1
+	GasStack     uint64 = 1
+	GasFrame     uint64 = 1
+	GasJump      uint64 = 3
+	GasBlock     uint64 = 5
+	GasNumUnary  uint64 = 1
+	GasNumBinary uint64 = 2
+	GasMemory    uint64 = 1
 )
 
 func newGasTable() gasTable {
@@ -200,7 +200,7 @@ type AlphaPolicy struct {
 }
 
 // GetCostForOp get cost from table
-func (p *AlphaPolicy) GetCostForOp(op opcode.Opcode) int64 {
+func (p *AlphaPolicy) GetCostForOp(op opcode.Opcode) uint64 {
 	return gasAlphaTable[op]
 }
 

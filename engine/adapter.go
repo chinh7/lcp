@@ -33,7 +33,7 @@ func (engine *Engine) chainStorageSet(vm *vm.VM, args ...uint64) (uint64, error)
 	valuePtr, valueSize := int(args[2]), int(args[3])
 	// Burn gas before actually execute
 	cost := engine.gasPolicy.GetCostForStorage(valueSize)
-	vm.BurnGas(int64(cost))
+	vm.BurnGas(cost)
 	key, err := readAt(vm, keyPtr, keySize)
 	if err != nil {
 		return 0, err
@@ -171,12 +171,11 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 		return 0, err
 	}
 	// TODO memcheck
-
-	gasLimit := engine.gasLimit - vm.GetGasUsed()
-	newEngine := NewEngine(engine.state, account, engine.account.GetAddress(), engine.gasPolicy, gasLimit)
+	newEngine := NewEngine(engine.state, account, engine.account.GetAddress(), engine.gasPolicy, 0)
+	// Share the gas object with root engine
+	newEngine.gas = engine.gas
 	newEngine.setStats(engine.callDepth+1, engine.memAggr+vm.MemSize())
-	ret, gasUsed, err := newEngine.Ignite(foreignMethod.name, methodArgs)
-	vm.BurnGas(int64(gasUsed))
+	ret, _, err := newEngine.Ignite(foreignMethod.name, methodArgs)
 	engine.events = append(engine.events, newEngine.events...)
 	return ret, err
 }

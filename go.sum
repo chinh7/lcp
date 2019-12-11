@@ -175,8 +175,8 @@ github.com/tendermint/tendermint v0.32.2/go.mod h1:NwMyx58S8VJ7tEpFKqRVlVWKO9N9z
 github.com/tendermint/tm-db v0.1.1 h1:G3Xezy3sOk9+ekhjZ/kjArYIs1SmwV+1OUgNkj7RgV0=
 github.com/tendermint/tm-db v0.1.1/go.mod h1:0cPKWu2Mou3IlxecH+MEUSYc1Ch537alLe6CpFrKzgw=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
-github.com/vertexdlt/vertexvm v0.0.0-20191129075647-965065e1f31a h1:jri735nQS7sBgqgAUBZyZ4kR9OqtCw9RtFcNw/IaXck=
-github.com/vertexdlt/vertexvm v0.0.0-20191129075647-965065e1f31a/go.mod h1:ifLAtZAxszFiq3RAMVfJ8YZmIaWN4lxfF8yV94d+K4k=
+github.com/vertexdlt/vertexvm v0.0.0-20191210081850-664d19e8b3bb h1:gbO7wb5jbtSPXZcLT8hWXbGxHyYIG7aYeUZE7FW2kYY=
+github.com/vertexdlt/vertexvm v0.0.0-20191210081850-664d19e8b3bb/go.mod h1:ifLAtZAxszFiq3RAMVfJ8YZmIaWN4lxfF8yV94d+K4k=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
 go.etcd.io/bbolt v1.3.3 h1:MUGmc65QhB3pIlaQ5bB4LwqSj6GIonVJXpZiaKNyaKk=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=

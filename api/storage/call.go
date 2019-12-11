@@ -64,8 +64,7 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 		return fmt.Errorf("Invalid params for method %s", params.Method)
 	}
 
-	var gasLimit int64 = -1
-	engine := engine.NewEngine(state, account, crypto.AddressFromString(params.Address), &gas.AlphaPolicy{}, gasLimit)
+	engine := engine.NewEngine(state, account, crypto.AddressFromString(params.Address), &gas.FreePolicy{}, 0)
 	ret, _, err := engine.Ignite(params.Method, data)
 	if err != nil {
 		return err

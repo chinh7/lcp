@@ -40,20 +40,21 @@ type Engine struct {
 	events        []types.Event
 	methodLookup  map[string]*foreignMethod
 	ptrArgSizeMap map[int]int
+	gas           *vm.Gas
 }
 
 // NewEngine return new instance of Engine
-func NewEngine(state *storage.State, account *storage.Account, caller crypto.Address, gasPolicy gas.Policy, gasLimit int64) *Engine {
+func NewEngine(state *storage.State, account *storage.Account, caller crypto.Address, gasPolicy gas.Policy, gasLimit uint64) *Engine {
 	return &Engine{
 		state:         state,
 		account:       account,
 		event:         types.Event{},
 		caller:        caller,
 		gasPolicy:     gasPolicy,
-		gasLimit:      gasLimit,
 		events:        []types.Event{},
 		methodLookup:  make(map[string]*foreignMethod),
 		ptrArgSizeMap: make(map[int]int),
+		gas:           &vm.Gas{Limit: gasLimit},
 	}
 }
 
@@ -68,7 +69,7 @@ func (engine *Engine) Ignite(method string, methodArgs []byte) (uint64, uint64, 
 	if err != nil {
 		return 0, 0, err
 	}
-	vm, err := vertexvm.NewVM(contract.Code, engine.gasPolicy, engine.gasLimit, engine)
+	vm, err := vertexvm.NewVM(contract.Code, engine.gasPolicy, engine.gas, engine)
 	if err != nil {
 		return 0, 0, err
 	}

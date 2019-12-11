@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/tendermint/tendermint/abci/types"
 )
 
 // FreeStation provide a free gas station
@@ -18,7 +19,9 @@ func (station *FreeStation) Sufficient(addr crypto.Address, gas uint64) bool {
 }
 
 // Burn gas, do nothing
-func (station *FreeStation) Burn(addr crypto.Address, gas uint64) {}
+func (station *FreeStation) Burn(addr crypto.Address, gas uint64) []types.Event {
+	return nil
+}
 
 // Switch on fee
 func (station *FreeStation) Switch() bool {

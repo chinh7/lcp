@@ -14,11 +14,14 @@ import (
 // ApplyTx executes a transaction by either deploying the contract code or invoking a contract method call
 func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]types.Event, uint64, error) {
 	policy := gasStation.GetPolicy()
-	gasLimit := int64(tx.GasLimit)
+	gasLimit := tx.GasLimit
+	if !gasStation.Sufficient(tx.From.Address(), gasLimit) {
+		return nil, 0, errors.New("out of gas")
+	}
 	if (tx.To == crypto.Address{}) {
 		contractSize := len(tx.Data)
 		gasUsed := policy.GetCostForContract(contractSize)
-		if !gasStation.Sufficient(tx.From.Address(), gasUsed) {
+		if gasLimit < gasUsed {
 			return nil, 0, errors.New("out of gas")
 		}
 		contractAddress := tx.From.CreateAddress()
@@ -32,9 +35,10 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 				},
 			},
 		}
-		gasStation.Burn(tx.From.Address(), gasUsed)
+		gasEvents := gasStation.Burn(tx.From.Address(), gasUsed)
+		events := append([]types.Event{event}, gasEvents...)
 		state.Commit()
-		return []types.Event{event}, gasUsed, nil
+		return events, gasUsed, nil
 	}
 	data := &crypto.TxData{}
 	data.Deserialize(tx.Data)
@@ -47,11 +51,12 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 	gasStation.Burn(tx.From.Address(), gasUsed)
 	if err != nil {
 		state.Revert()
-		gasStation.Burn(tx.From.Address(), gasUsed)
+		events := gasStation.Burn(tx.From.Address(), gasUsed)
 		state.Commit()
-		return nil, gasUsed, err
+		return events, gasUsed, err
 	}
-	gasStation.Burn(tx.From.Address(), gasUsed)
+	gasEvents := gasStation.Burn(tx.From.Address(), gasUsed)
+	events := append(execEngine.GetEvents(), gasEvents...)
 	state.Commit()
-	return execEngine.GetEvents(), gasUsed, nil
+	return events, gasUsed, nil
 }

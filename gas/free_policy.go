@@ -10,7 +10,7 @@ type FreePolicy struct {
 }
 
 // GetCostForOp get cost from table
-func (p *FreePolicy) GetCostForOp(op opcode.Opcode) int64 {
+func (p *FreePolicy) GetCostForOp(op opcode.Opcode) uint64 {
 	return 0
 }
 

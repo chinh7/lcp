@@ -25,7 +25,7 @@ func TestVM(t *testing.T) {
 	database := db.NewMemoryDB()
 	state, _ := storage.New(trie.Hash{}, database)
 	accountState, _ := state.CreateAccount(crypto.AddressFromString(caller), crypto.AddressFromString(contractAddress), contractBytes)
-	execEngine := engine.NewEngine(state, accountState, crypto.AddressFromString(caller), &gas.AlphaPolicy{}, -1)
+	execEngine := engine.NewEngine(state, accountState, crypto.AddressFromString(caller), &gas.FreePolicy{}, 0)
 	toAddress := "LB3EICIUKOUYCY4D7T2O6RKL7ISEPISNKUXNILDTJ76V2PDZVT5ZDP3U"
 	var mint = 10000000
 	mintAmount := strconv.Itoa(mint)
@@ -100,7 +100,7 @@ func TestChainedInvoke(t *testing.T) {
 	utilBytes, _ := rlp.EncodeToBytes(&utilContract)
 	utilAddress := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
 	utilAccount, _ := state.CreateAccount(caller, utilAddress, utilBytes)
-	execEngine := engine.NewEngine(state, utilAccount, caller, &gas.AlphaPolicy{}, -1)
+	execEngine := engine.NewEngine(state, utilAccount, caller, &gas.FreePolicy{}, 0)
 
 	funcName := "init"
 	function, err := utilContract.Header.GetFunction(funcName)
@@ -144,7 +144,7 @@ func TestChainedInvokeOverflow(t *testing.T) {
 	utilAddress := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
 	utilAccount, _ := state.CreateAccount(caller, utilAddress, utilBytes)
 
-	execEngine := engine.NewEngine(state, utilAccount, caller, &gas.AlphaPolicy{}, -1)
+	execEngine := engine.NewEngine(state, utilAccount, caller, &gas.FreePolicy{}, 0)
 
 	funcName := "init"
 	function, err := utilContract.Header.GetFunction(funcName)
