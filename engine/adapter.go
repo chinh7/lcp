@@ -33,7 +33,10 @@ func (engine *Engine) chainStorageSet(vm *vm.VM, args ...uint64) (uint64, error)
 	valuePtr, valueSize := int(args[2]), int(args[3])
 	// Burn gas before actually execute
 	cost := engine.gasPolicy.GetCostForStorage(valueSize)
-	vm.BurnGas(cost)
+	err := vm.BurnGas(cost)
+	if err != nil {
+		return 0, err
+	}
 	key, err := readAt(vm, keyPtr, keySize)
 	if err != nil {
 		return 0, err
