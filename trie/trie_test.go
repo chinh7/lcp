@@ -15,7 +15,10 @@ func newEmpty() *Trie {
 }
 
 func updateString(trie *Trie, k, v string) {
-	trie.Update([]byte(k), []byte(v))
+	err := trie.Update([]byte(k), []byte(v))
+	if err != nil {
+		panic(err)
+	}
 }
 
 func getString(trie *Trie, k string) []byte {
@@ -24,14 +27,20 @@ func getString(trie *Trie, k string) []byte {
 }
 
 func deleteString(trie *Trie, k string) {
-	trie.Update([]byte(k), nil)
+	err := trie.Update([]byte(k), nil)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func TestNull(t *testing.T) {
 	trie := newEmpty()
 	key := make([]byte, 32)
 	value := []byte("test")
-	trie.Update(key, value)
+	err := trie.Update(key, value)
+	if err != nil {
+		panic(err)
+	}
 	storedValue, _ := trie.Get(key)
 	if !bytes.Equal(storedValue, value) {
 		t.Error("wrong value")
@@ -42,7 +51,10 @@ func TestMutable(t *testing.T) {
 	trie := newEmpty()
 	key := []byte{1, 2}
 	value := []byte{1, 2}
-	trie.Update(key, value)
+	err := trie.Update(key, value)
+	if err != nil {
+		panic(err)
+	}
 
 	// Mutable key and value
 	key[0] = 2

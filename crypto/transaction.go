@@ -15,6 +15,7 @@ import (
 const (
 	// MethodNameByteLength is number of bytes preservered for method name
 	MethodNameByteLength = 64
+	defaultGasPrice      = 1
 )
 
 // TxData data for contract deploy/invoke
@@ -63,11 +64,10 @@ func (tx Tx) String() string {
 }
 
 // GetSigHash get the transaction data used for signing
-func (tx *Tx) GetSigHash() []byte {
+func (tx *Tx) GetSigHash() ([]byte, error) {
 	clone := *tx
 	clone.From.Signature = nil
-	bz, _ := cdc.EncodeToBytes(clone)
-	return bz
+	return cdc.EncodeToBytes(clone)
 }
 
 func (tx *Tx) GetFee() (uint64, error) {
@@ -86,7 +86,11 @@ func (tx *Tx) GetFee() (uint64, error) {
 func (tx *Tx) SigVerified() bool {
 	signature := tx.From.Signature
 	log.Printf("Signature %X\n", signature)
-	return ed25519.Verify(tx.From.PubKey, tx.GetSigHash(), signature)
+	sigHash, err := tx.GetSigHash()
+	if err != nil {
+		return false
+	}
+	return ed25519.Verify(tx.From.PubKey, sigHash, signature)
 }
 
 // Serialize a Tx to bytes
@@ -112,17 +116,24 @@ func (txSigner *TxSigner) Serialize() []byte {
 }
 
 // Deserialize converts bytes to Tx
-func (tx *Tx) Deserialize(bz []byte) {
-	cdc.DecodeBytes(bz, &tx)
+func (tx *Tx) Deserialize(bz []byte) error {
+	if err := cdc.DecodeBytes(bz, &tx); err != nil {
+		return err
+	}
+	if tx.GasPrice == 0 {
+		tx.GasPrice = defaultGasPrice
+	}
+	return nil
 }
 
 // Deserialize converts bytes to TxData
-func (txData *TxData) Deserialize(bz []byte) {
+func (txData *TxData) Deserialize(bz []byte) error {
 	txData.Method = string(bytes.Trim(bz[0:64], "\x00"))
 	txData.Params = bz[64:]
+	return nil
 }
 
 // Deserialize converts bytes to txSigner
-func (txSigner *TxSigner) Deserialize(bz []byte) {
-	cdc.DecodeBytes(bz, &txSigner)
+func (txSigner *TxSigner) Deserialize(bz []byte) error {
+	return cdc.DecodeBytes(bz, &txSigner)
 }

@@ -95,7 +95,7 @@ func (node *VertexNode) addStartNodeCommand() {
 			}
 			logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
 
-			if apiFlag == true {
+			if apiFlag {
 				apiServer := api.NewAPI(":5555", api.Config{
 					HomeDir: node.rootDir,
 					NodeURL: "tcp://localhost:26657",

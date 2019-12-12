@@ -53,7 +53,10 @@ func sign(privateKey ed25519.PrivateKey, tx *crypto.Tx) {
 	copy(pubkey, privateKey[32:])
 	tx.From.PubKey = pubkey
 
-	sigHash := tx.GetSigHash()
+	sigHash, err := tx.GetSigHash()
+	if err != nil {
+		panic(err)
+	}
 	signature := ed25519.Sign(privateKey, sigHash)
 	tx.From.Signature = signature
 }
@@ -156,7 +159,9 @@ func main() {
 	rootCmd.PersistentFlags().StringP("seed", "s", "", "Path to seed")
 	rootCmd.PersistentFlags().Uint64P("nonce", "n", 0, "Position of transaction")
 	rootCmd.PersistentFlags().Int64("height", 0, "Call the method at height")
-	rootCmd.Execute()
+	if err := rootCmd.Execute(); err != nil {
+		panic(err)
+	}
 }
 
 func parseFlags(cmd *cobra.Command) (string, string, uint64, uint64, int64) {
@@ -191,6 +196,9 @@ func postJSON(endpoint string, method string, params interface{}, result interfa
 		"params":  params,
 	}
 	bytesRepresentation, err := json.Marshal(message)
+	if err != nil {
+		panic(err)
+	}
 	resp, err := http.Post(endpoint, "application/json", bytes.NewBuffer(bytesRepresentation))
 	if err != nil {
 		panic(err)

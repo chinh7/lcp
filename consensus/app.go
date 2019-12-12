@@ -95,7 +95,12 @@ func (app *App) CheckTx(req types.RequestCheckTx) types.ResponseCheckTx {
 	// Check gas wanted (limit)
 
 	tx := &crypto.Tx{}
-	tx.Deserialize(req.GetTx())
+	if err := tx.Deserialize(req.GetTx()); err != nil {
+		return types.ResponseCheckTx{
+			Code: code.CodeTypeEncodingError,
+			Log:  err.Error(),
+		}
+	}
 
 	if code, err := app.validateTx(tx); err != nil {
 		return types.ResponseCheckTx{
@@ -130,16 +135,26 @@ func (app *App) validateTx(tx *crypto.Tx) (uint32, error) {
 		return code.CodeTypeBadNonce, fmt.Errorf("Insufficient fee")
 	}
 
+	txData := &crypto.TxData{}
+	err = txData.Deserialize(tx.Data)
+	if err != nil {
+		return code.CodeTypeUnknownError, err
+	}
+
 	return code.CodeTypeOK, nil
 }
 
 //DeliverTx executes the submitted transaction
 func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
-	code := CodeTypeOK
+	statusCode := CodeTypeOK
 	info := "ok"
 	tx := &crypto.Tx{}
-	tx.Deserialize(req.GetTx())
-
+	if err := tx.Deserialize(req.GetTx()); err != nil {
+		return types.ResponseDeliverTx{
+			Code: CodeTypeEncodingError,
+			Log:  err.Error(),
+		}
+	}
 	if code, err := app.validateTx(tx); err != nil {
 		return types.ResponseDeliverTx{
 			Code: code,
@@ -149,7 +164,7 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 
 	applyEvents, gasUsed, err := core.ApplyTx(app.state, tx, app.gasStation)
 	if err != nil {
-		code = CodeTypeUnknownError
+		statusCode = CodeTypeUnknownError
 		info = err.Error()
 	}
 	fromAddress := tx.From.Address()
@@ -169,7 +184,7 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 	})
 
 	return types.ResponseDeliverTx{
-		Code:      code,
+		Code:      statusCode,
 		Events:    events,
 		Info:      info,
 		GasWanted: int64(tx.GasLimit),
