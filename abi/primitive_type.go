@@ -26,6 +26,8 @@ const (
 	Address PrimitiveType = 0xa
 )
 
+var name map[PrimitiveType]string = map[PrimitiveType]string{}
+
 // IsPointer return whether p is pointer or not
 func (t PrimitiveType) IsPointer() bool {
 	switch t {
@@ -37,7 +39,19 @@ func (t PrimitiveType) IsPointer() bool {
 }
 
 func (t PrimitiveType) String() string {
-	return []string{"uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64", "float32", "float64", "address"}[t]
+	return map[PrimitiveType]string{
+		Uint8:   "uint8",
+		Uint16:  "uint16",
+		Uint32:  "uint32",
+		Uint64:  "uint64",
+		Int8:    "int8",
+		Int16:   "int16",
+		Int32:   "int32",
+		Int64:   "int64",
+		Float32: "float32",
+		Float64: "float64",
+		Address: "address",
+	}[t]
 }
 
 // GetMemorySize returns memory size for a primitive type

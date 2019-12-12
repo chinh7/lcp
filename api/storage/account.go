@@ -2,7 +2,6 @@ package storage
 
 import (
 	"encoding/hex"
-	"fmt"
 	"net/http"
 
 	"github.com/QuoineFinancial/vertex/api/models"
@@ -25,9 +24,16 @@ type GetAccountResult struct {
 func (service *Service) GetAccount(r *http.Request, params *GetAccountParams, result *GetAccountResult) error {
 	status, _ := service.tAPI.Status()
 	appHash := common.BytesToHash(status.SyncInfo.LatestAppHash)
-	state := storage.GetState(appHash)
-	account := state.GetAccount(crypto.AddressFromString(params.Address))
-	fmt.Println("ACCOUNT", hex.EncodeToString(account.ContractHash))
+	state, err := storage.New(appHash, service.database)
+	if err != nil {
+		return err
+	}
+
+	account, err := state.GetAccount(crypto.AddressFromString(params.Address))
+	if err != nil {
+		return err
+	}
+
 	contract, err := account.GetContract()
 	if err != nil {
 		return err
@@ -35,7 +41,7 @@ func (service *Service) GetAccount(r *http.Request, params *GetAccountParams, re
 	result.Account = &models.Account{
 		Nonce:        account.Nonce,
 		ContractHash: hex.EncodeToString(account.ContractHash),
-		Contract:     hex.EncodeToString(contract.Code),
+		Contract:     contract,
 	}
 	return nil
 }

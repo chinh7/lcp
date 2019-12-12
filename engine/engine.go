@@ -7,9 +7,11 @@ import (
 
 	"github.com/QuoineFinancial/vertex/abi"
 	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/vertex/gas"
 	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/vertexdlt/vertexvm/vm"
+	vertexvm "github.com/vertexdlt/vertexvm/vm"
 )
 
 const (
@@ -20,19 +22,39 @@ const (
 	EventPrefix = "engine."
 )
 
+type foreignMethod struct {
+	contractAddress crypto.Address
+	name            string
+}
+
 // Engine is space to execute function
 type Engine struct {
-	events  []types.Event
-	account *storage.Account
-	caller  crypto.Address
+	state         *storage.State
+	account       *storage.Account
+	caller        crypto.Address
+	gasPolicy     gas.Policy
+	gasLimit      int64
+	callDepth     int
+	memAggr       int
+	events        []types.Event
+	methodLookup  map[string]*foreignMethod
+	ptrArgSizeMap map[int]int
+	gas           *vm.Gas
+	parent        *Engine
 }
 
 // NewEngine return new instance of Engine
-func NewEngine(account *storage.Account, caller crypto.Address) *Engine {
+func NewEngine(state *storage.State, account *storage.Account, caller crypto.Address, gasPolicy gas.Policy, gasLimit uint64) *Engine {
 	return &Engine{
-		events:  []types.Event{},
-		account: account,
-		caller:  caller,
+		state:         state,
+		account:       account,
+		caller:        caller,
+		gasPolicy:     gasPolicy,
+		events:        []types.Event{},
+		methodLookup:  make(map[string]*foreignMethod),
+		ptrArgSizeMap: make(map[int]int),
+		gas:           &vm.Gas{Limit: gasLimit},
+		parent:        nil,
 	}
 }
 
@@ -41,44 +63,68 @@ func (engine *Engine) GetEvents() []types.Event {
 	return engine.events
 }
 
+// GetGasUsed return gas used by vm
+func (engine *Engine) GetGasUsed() uint64 {
+	return engine.gas.Used
+}
+
+// NewChildEngine share with parent state except caller is contract itself
+func (engine *Engine) NewChildEngine(account *storage.Account) *Engine {
+	return &Engine{
+		account:       account,
+		state:         engine.state,
+		caller:        engine.account.GetAddress(),
+		gasPolicy:     engine.gasPolicy,
+		events:        []types.Event{},
+		methodLookup:  make(map[string]*foreignMethod),
+		ptrArgSizeMap: make(map[int]int),
+		gas:           engine.gas,
+		parent:        engine,
+	}
+}
+
 // Ignite executes a contract given its code, method, and arguments
-func (engine *Engine) Ignite(method string, methodArgs []byte) (*uint64, error) {
+func (engine *Engine) Ignite(method string, methodArgs []byte) (uint64, error) {
 	contract, err := engine.account.GetContract()
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	vm, err := vm.NewVM(contract.Code, engine)
+	vm, err := vertexvm.NewVM(contract.Code, engine.gasPolicy, engine.gas, engine)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	funcID, ok := vm.GetFunctionIndex(method)
 	if !ok {
-		return nil, errors.New("Cannot find invoke function")
+		return 0, errors.New("Cannot find invoke function")
 	}
 
-	val, _ := vm.Module.ExecInitExpr(vm.Module.GetGlobal(int(vm.Module.Export.Entries[ExportSecDataEnd].Desc.Idx)).Init)
+	val, _ := vm.Module.ExecInitExpr(vm.Module.GetGlobal(int(vm.Module.ExportSec.ExportMap[ExportSecDataEnd].Desc.Idx)).Init)
 	offset := int(val.(int32))
 
 	function, err := contract.Header.GetFunction(method)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	decodedBytes, err := abi.DecodeToBytes(function.Parameters, methodArgs)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	arguments, err := loadArguments(vm, decodedBytes, function.Parameters, offset)
+	arguments, err := engine.loadArguments(vm, decodedBytes, function.Parameters, offset)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-
-	ret := vm.Invoke(funcID, arguments...)
-	return &ret, nil
+	ret, err := vm.Invoke(funcID, arguments...)
+	return ret, err
 }
 
-func loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.Parameter, offset int) ([]uint64, error) {
+func (engine *Engine) setStats(callDepth, memAggr int) {
+	engine.callDepth = callDepth
+	engine.memAggr = memAggr
+}
+
+func (engine *Engine) loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.Parameter, offset int) ([]uint64, error) {
 	var args = make([]uint64, len(byteArgs))
 	byteSize := 0
 	for _, bytes := range byteArgs {
@@ -90,8 +136,12 @@ func loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.Parameter, offset
 	for i, bytes := range byteArgs {
 		isArray := params[i].IsArray || params[i].Type.String() == "address"
 		if isArray {
-			copy(vm.GetMemory()[offset:], bytes)
+			_, err := vm.MemWrite(bytes, offset)
+			if err != nil {
+				return nil, err
+			}
 			args[i] = uint64(offset)
+			engine.ptrArgSizeMap[offset] = len(bytes)
 			offset += len(bytes)
 		} else {
 			buffer := make([]byte, 8)
@@ -100,4 +150,20 @@ func loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.Parameter, offset
 		}
 	}
 	return args, nil
+}
+
+func (engine *Engine) ptrArgSizeGet(ptr int) (int, error) {
+	size, ok := engine.ptrArgSizeMap[ptr]
+	if !ok {
+		return 0, errors.New("pointer size not found")
+	}
+	return size, nil
+}
+
+func (engine *Engine) pushEvent(event types.Event) {
+	if engine.parent != nil {
+		engine.parent.pushEvent(event)
+	} else {
+		engine.events = append(engine.events, event)
+	}
 }

@@ -10,7 +10,7 @@ import (
 func TestTransaction(t *testing.T) {
 	toAddress := crypto.AddressFromString("LB3Z6N6HTFUPQ573QENJ4OCFFUPENY2EW7ZHQZSSIO4AODT3HHE53N52")
 	txSigner := crypto.TxSigner{Nonce: 10}
-	tx := &crypto.Tx{To: toAddress, From: txSigner}
+	tx := &crypto.Tx{To: toAddress, From: txSigner, GasLimit: 100}
 	txRecouped := &crypto.Tx{}
 	txRecouped.Deserialize(tx.Serialize())
 	if tx.String() != txRecouped.String() {

@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"encoding/base32"
 	"encoding/binary"
-	"log"
 
+	"github.com/QuoineFinancial/vertex/crc16"
 	"github.com/pkg/errors"
-	"github.com/stellar/go/crc16"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -52,7 +51,6 @@ func AddressFromPubKey(src []byte) Address {
 	if _, err := raw.Write(checksum); err != nil {
 		return [AddressLength]byte{}
 	}
-	log.Printf("Byte size %d\n", len(raw.Bytes()))
 	var address Address
 	address.setBytes(raw.Bytes())
 	return address
@@ -66,6 +64,13 @@ func AddressFromString(address string) Address {
 	}
 	pubkey := ed25519.PublicKey(pubkeyString)
 	return AddressFromPubKey(pubkey)
+}
+
+// AddressFromBytes return an address given its bytes
+func AddressFromBytes(b []byte) Address {
+	var a Address
+	a.setBytes(b)
+	return a
 }
 
 func decodeString(src string) ([]byte, error) {

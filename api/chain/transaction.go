@@ -79,7 +79,7 @@ func (service *Service) GetAccountTxs(
 }
 
 /* TODO: Technical reviews
-- Is customizable perPage nessesary or not?
+- Is customizable perPage necessary or not?
 - Which value of perPage is suitable? (50, 100, or block capacity?)
 */
 func (service *Service) searchTransaction(query string, page *int, result *SearchTransactionResult) error {

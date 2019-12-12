@@ -7,6 +7,7 @@ import (
 	"github.com/QuoineFinancial/vertex/abi"
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/engine"
+	"github.com/QuoineFinancial/vertex/gas"
 	"github.com/QuoineFinancial/vertex/storage"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -37,8 +38,17 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 		}
 		appHash = common.BytesToHash(block.BlockMeta.Header.AppHash)
 	}
-	state := storage.GetState(appHash)
-	account := state.GetAccount(crypto.AddressFromString(params.Address))
+
+	state, err := storage.New(appHash, service.database)
+	if err != nil {
+		return fmt.Errorf("Could not init state for app hash %s", appHash.String())
+	}
+
+	account, err := state.GetAccount(crypto.AddressFromString(params.Address))
+	if err != nil {
+		return fmt.Errorf("Account not found for address %s", params.Address)
+	}
+
 	contract, err := account.GetContract()
 	if err != nil {
 		return fmt.Errorf("Contract not found for address %s", params.Address)
@@ -54,7 +64,7 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 		return fmt.Errorf("Invalid params for method %s", params.Method)
 	}
 
-	engine := engine.NewEngine(account, crypto.AddressFromString(params.Address))
+	engine := engine.NewEngine(state, account, crypto.AddressFromString(params.Address), &gas.FreePolicy{}, 0)
 	ret, err := engine.Ignite(params.Method, data)
 	if err != nil {
 		return err

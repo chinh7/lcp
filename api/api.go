@@ -12,6 +12,7 @@ import (
 	"github.com/QuoineFinancial/vertex/api/chain"
 	"github.com/QuoineFinancial/vertex/api/resource"
 	"github.com/QuoineFinancial/vertex/api/storage"
+	"github.com/QuoineFinancial/vertex/db"
 )
 
 // API contains all info to serve an api server
@@ -21,19 +22,24 @@ type API struct {
 	server *rpc.Server
 	router *mux.Router
 
-	// tmAPI is client to interact with Tendermint RPC
-	tmAPI resource.TendermintAPI
+	tmAPI    resource.TendermintAPI
+	database db.Database
 }
 
 // Config to modify the API
 type Config struct {
 	HomeDir string
 	NodeURL string
+	DB      db.Database
 }
 
 // NewAPI return an new instance of API
 func NewAPI(url string, config Config) *API {
-	api := &API{url: url, config: config}
+	api := &API{
+		url:      url,
+		config:   config,
+		database: config.DB,
+	}
 	api.setupExternalAPIs()
 	api.setupServer()
 	api.registerServices()
@@ -45,6 +51,7 @@ func (api *API) setupExternalAPIs() {
 	tAPI := resource.NewTendermintAPI(
 		api.config.HomeDir,
 		api.config.NodeURL,
+		0,
 	)
 	api.tmAPI = tAPI
 }
@@ -69,7 +76,7 @@ func (api *API) registerServices() {
 		panic("api.registerServices call without api.server")
 	}
 	api.server.RegisterService(chain.NewService(api.tmAPI), "chain")
-	api.server.RegisterService(storage.NewService(api.tmAPI), "storage")
+	api.server.RegisterService(storage.NewService(api.tmAPI, api.database), "storage")
 }
 
 // Serve starts the server to serve request
