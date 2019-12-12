@@ -46,7 +46,10 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 	_, gasUsed, err := execEngine.Ignite(data.Method, data.Params)
 	gasStation.Burn(tx.From.Address(), gasUsed)
 	if err != nil {
-		state.Revert()
+		if err = state.Revert(); err != nil {
+			// Unable to revert back to previous state
+			panic(err)
+		}
 		gasStation.Burn(tx.From.Address(), gasUsed)
 		state.Commit()
 		return nil, gasUsed, err
