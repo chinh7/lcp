@@ -181,7 +181,6 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 
 func (engine *Engine) handleEmitEvent(event *abi.Event, vm *vm.VM, args ...uint64) (uint64, error) {
 	attributes := common.KVPairs{}
-	//
 	address := engine.account.GetAddress()
 	attributes = append(attributes, common.KVPair{
 		Key:   []byte("address"),
@@ -202,7 +201,6 @@ func (engine *Engine) handleEmitEvent(event *abi.Event, vm *vm.VM, args ...uint6
 			value = make([]byte, size)
 			binary.BigEndian.PutUint64(value, args[i])
 		}
-		// address is a resvered name
 		if param.Name != "address" {
 			attributes = append(attributes, common.KVPair{
 				Key:   []byte(param.Name),
