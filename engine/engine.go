@@ -31,7 +31,6 @@ type foreignMethod struct {
 type Engine struct {
 	state         *storage.State
 	account       *storage.Account
-	event         types.Event
 	caller        crypto.Address
 	gasPolicy     gas.Policy
 	gasLimit      int64
@@ -41,6 +40,7 @@ type Engine struct {
 	methodLookup  map[string]*foreignMethod
 	ptrArgSizeMap map[int]int
 	gas           *vm.Gas
+	parent        *Engine
 }
 
 // NewEngine return new instance of Engine
@@ -48,13 +48,13 @@ func NewEngine(state *storage.State, account *storage.Account, caller crypto.Add
 	return &Engine{
 		state:         state,
 		account:       account,
-		event:         types.Event{},
 		caller:        caller,
 		gasPolicy:     gasPolicy,
 		events:        []types.Event{},
 		methodLookup:  make(map[string]*foreignMethod),
 		ptrArgSizeMap: make(map[int]int),
 		gas:           &vm.Gas{Limit: gasLimit},
+		parent:        nil,
 	}
 }
 
@@ -66,6 +66,21 @@ func (engine *Engine) GetEvents() []types.Event {
 // GetGasUsed return gas used by vm
 func (engine *Engine) GetGasUsed() uint64 {
 	return engine.gas.Used
+}
+
+// NewChildEngine share with parent state except caller is contract itself
+func (engine *Engine) NewChildEngine(account *storage.Account) *Engine {
+	return &Engine{
+		account:       account,
+		state:         engine.state,
+		caller:        engine.account.GetAddress(),
+		gasPolicy:     engine.gasPolicy,
+		events:        []types.Event{},
+		methodLookup:  make(map[string]*foreignMethod),
+		ptrArgSizeMap: make(map[int]int),
+		gas:           engine.gas,
+		parent:        engine,
+	}
 }
 
 // Ignite executes a contract given its code, method, and arguments
@@ -143,4 +158,12 @@ func (engine *Engine) ptrArgSizeGet(ptr int) (int, error) {
 		return 0, errors.New("pointer size not found")
 	}
 	return size, nil
+}
+
+func (engine *Engine) pushEvent(event types.Event) {
+	if engine.parent != nil {
+		engine.parent.pushEvent(event)
+	} else {
+		engine.events = append(engine.events, event)
+	}
 }

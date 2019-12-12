@@ -174,13 +174,9 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 		return 0, err
 	}
 	// TODO memcheck
-	newEngine := NewEngine(engine.state, account, engine.account.GetAddress(), engine.gasPolicy, 0)
-	// Share the gas object with root engine
-	newEngine.gas = engine.gas
-	newEngine.setStats(engine.callDepth+1, engine.memAggr+vm.MemSize())
-	ret, err := newEngine.Ignite(foreignMethod.name, methodArgs)
-	engine.events = append(engine.events, newEngine.events...)
-	return ret, err
+	childEngine := engine.NewChildEngine(account)
+	childEngine.setStats(engine.callDepth+1, engine.memAggr+vm.MemSize())
+	return childEngine.Ignite(foreignMethod.name, methodArgs)
 }
 
 func (engine *Engine) handleEmitEvent(event *abi.Event, vm *vm.VM, args ...uint64) (uint64, error) {
@@ -214,7 +210,7 @@ func (engine *Engine) handleEmitEvent(event *abi.Event, vm *vm.VM, args ...uint6
 			})
 		}
 	}
-	engine.events = append(engine.events, types.Event{
+	engine.pushEvent(types.Event{
 		Type:       EventPrefix + event.Name,
 		Attributes: attributes,
 	})
