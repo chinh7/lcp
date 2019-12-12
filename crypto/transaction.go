@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 
@@ -13,6 +14,7 @@ import (
 const (
 	// MethodNameByteLength is number of bytes preservered for method name
 	MethodNameByteLength = 64
+	defaultGasPrice      = 1
 )
 
 // TxData data for contract deploy/invoke
@@ -34,6 +36,7 @@ type Tx struct {
 	Data     []byte
 	To       Address
 	GasLimit uint64
+	GasPrice uint64
 }
 
 // Address derived from TxSigner PubKey
@@ -60,17 +63,33 @@ func (tx Tx) String() string {
 }
 
 // GetSigHash get the transaction data used for signing
-func (tx *Tx) GetSigHash() []byte {
+func (tx *Tx) GetSigHash() ([]byte, error) {
 	clone := *tx
 	clone.From.Signature = nil
-	bz, _ := cdc.EncodeToBytes(clone)
-	return bz
+	return cdc.EncodeToBytes(clone)
 }
 
-func (tx *Tx) sigVerified() bool {
+func (tx *Tx) GetFee() (uint64, error) {
+	if tx.GasLimit == 0 || tx.GasPrice == 0 {
+		return 0, nil
+	}
+
+	fee := tx.GasLimit * tx.GasPrice
+	if fee/tx.GasLimit == tx.GasPrice {
+		return fee, nil
+	}
+
+	return 0, errors.New("fee overflow")
+}
+
+func (tx *Tx) SigVerified() bool {
 	signature := tx.From.Signature
 	log.Printf("Signature %X\n", signature)
-	return ed25519.Verify(tx.From.PubKey, tx.GetSigHash(), signature)
+	sigHash, err := tx.GetSigHash()
+	if err != nil {
+		return false
+	}
+	return ed25519.Verify(tx.From.PubKey, sigHash, signature)
 }
 
 // Serialize a Tx to bytes
@@ -92,16 +111,22 @@ func (txSigner *TxSigner) Serialize() []byte {
 }
 
 // Deserialize converts bytes to Tx
-func (tx *Tx) Deserialize(bz []byte) {
-	cdc.DecodeBytes(bz, &tx)
+func (tx *Tx) Deserialize(bz []byte) error {
+	if err := cdc.DecodeBytes(bz, &tx); err != nil {
+		return err
+	}
+	if tx.GasPrice == 0 {
+		tx.GasPrice = defaultGasPrice
+	}
+	return nil
 }
 
 // Deserialize converts bytes to TxData
-func (txData *TxData) Deserialize(bz []byte) {
-	cdc.DecodeBytes(bz, &txData)
+func (txData *TxData) Deserialize(bz []byte) error {
+	return cdc.DecodeBytes(bz, &txData)
 }
 
 // Deserialize converts bytes to txSigner
-func (txSigner *TxSigner) Deserialize(bz []byte) {
-	cdc.DecodeBytes(bz, &txSigner)
+func (txSigner *TxSigner) Deserialize(bz []byte) error {
+	return cdc.DecodeBytes(bz, &txSigner)
 }

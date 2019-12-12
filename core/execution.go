@@ -15,9 +15,6 @@ import (
 func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]types.Event, uint64, error) {
 	policy := gasStation.GetPolicy()
 	gasLimit := tx.GasLimit
-	if !gasStation.Sufficient(tx.From.Address(), gasLimit) {
-		return nil, 0, errors.New("out of gas")
-	}
 	if (tx.To == crypto.Address{}) {
 		contractSize := len(tx.Data)
 		gasUsed := policy.GetCostForContract(contractSize)
@@ -25,7 +22,10 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 			return nil, 0, errors.New("out of gas")
 		}
 		contractAddress := tx.From.CreateAddress()
-		state.CreateAccount(tx.From.Address(), contractAddress, tx.Data)
+		_, err := state.CreateAccount(tx.From.Address(), contractAddress, tx.Data)
+		if err != nil {
+			return nil, 0, err
+		}
 		event := types.Event{
 			Type: "deploy",
 			Attributes: []common.KVPair{
@@ -35,17 +35,31 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 				},
 			},
 		}
-		gasEvents := gasStation.Burn(tx.From.Address(), gasUsed)
+
+		gasEvents := gasStation.Burn(tx.From.Address(), gasUsed*tx.GasPrice)
 		events := append([]types.Event{event}, gasEvents...)
 		state.Commit()
 		return events, gasUsed, nil
 	}
 	data := &crypto.TxData{}
-	data.Deserialize(tx.Data)
+	_ = data.Deserialize(tx.Data) // deserialize error is already checked in checkTx
 	contractAccount, err := state.GetAccount(tx.To)
 	if err != nil {
 		return nil, 0, err
 	}
+
+	// Create new account if fromAddress is not exist
+	fromAddress := tx.From.Address()
+	fromAccount, _ := state.GetAccount(fromAddress)
+	if fromAccount == nil {
+		fromAccount, err = state.CreateAccount(fromAddress, fromAddress, nil)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
+	nonce := fromAccount.Nonce
+	fromAccount.SetNonce(nonce + 1)
 
 	execEngine := engine.NewEngine(state, contractAccount, tx.From.Address(), policy, gasLimit)
 	if _, err = execEngine.Ignite(data.Method, data.Params); err != nil {
@@ -53,7 +67,7 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 	}
 
 	gasUsed := execEngine.GetGasUsed()
-	gasEvents := gasStation.Burn(tx.From.Address(), gasUsed)
+	gasEvents := gasStation.Burn(tx.From.Address(), gasUsed*tx.GasPrice)
 	events := append(execEngine.GetEvents(), gasEvents...)
 	state.Commit()
 	return events, gasUsed, err
