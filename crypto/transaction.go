@@ -1,7 +1,6 @@
 package crypto
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -82,11 +81,7 @@ func (tx *Tx) Serialize() []byte {
 
 // Serialize a TxData to bytes
 func (txData *TxData) Serialize() []byte {
-	var bytes []byte
-	nameBytes := make([]byte, MethodNameByteLength)
-	copy(nameBytes[:], txData.Method)
-	bytes = append(bytes, nameBytes...)
-	bytes = append(bytes, txData.Params...)
+	bytes, _ := cdc.EncodeToBytes(txData)
 	return bytes
 }
 
@@ -103,8 +98,7 @@ func (tx *Tx) Deserialize(bz []byte) {
 
 // Deserialize converts bytes to TxData
 func (txData *TxData) Deserialize(bz []byte) {
-	txData.Method = string(bytes.Trim(bz[0:64], "\x00"))
-	txData.Params = bz[64:]
+	cdc.DecodeBytes(bz, &txData)
 }
 
 // Deserialize converts bytes to txSigner
