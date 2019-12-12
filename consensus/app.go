@@ -133,7 +133,7 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 
 // Commit returns the state root of application storage. Called once all block processing is complete
 func (app *App) Commit() types.ResponseCommit {
-	appHash, _ := app.state.Commit()
+	appHash := app.state.Commit()
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(app.lastBlockHeight))
 	app.InfoDB.Put([]byte("lastBlockHeight"), b)

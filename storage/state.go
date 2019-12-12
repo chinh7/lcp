@@ -85,7 +85,7 @@ func (state *State) CreateAccount(creator crypto.Address, address crypto.Address
 }
 
 // Commit stores all dirty Accounts to state.trie
-func (state *State) Commit() (trie.Hash, error) {
+func (state *State) Commit() trie.Hash {
 	var err error
 	for _, account := range state.accounts {
 		if account == nil || !account.dirty {
@@ -96,27 +96,29 @@ func (state *State) Commit() (trie.Hash, error) {
 
 		// Update account storage
 		if account.StorageHash, err = account.storage.Commit(); err != nil {
-			return trie.Hash{}, err
+			panic(err)
 		}
 
 		// Update account
 		raw, _ := rlp.EncodeToBytes(account)
 		if err = state.trie.Update(account.address[:], raw); err != nil {
-			return trie.Hash{}, err
+			panic(err)
 		}
 		account.dirty = false
 	}
 	state.checkpoint, err = state.trie.Commit()
-	return state.checkpoint, err
+	if err != nil {
+		panic(err)
+	}
+	return state.checkpoint
 }
 
 // Revert state to last checkpoint
-func (state *State) Revert() error {
+func (state *State) Revert() {
 	t, err := trie.New(state.checkpoint, state.db)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	state.trie = t
 	state.accounts = make(map[crypto.Address]*Account)
-	return nil
 }

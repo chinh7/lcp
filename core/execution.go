@@ -46,18 +46,15 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 	if err != nil {
 		return nil, 0, err
 	}
+
 	execEngine := engine.NewEngine(state, contractAccount, tx.From.Address(), policy, gasLimit)
-	_, err = execEngine.Ignite(data.Method, data.Params)
-	gasUsed := execEngine.GetGasUsed()
-	if err = state.Revert(); err != nil {
-		// Unable to revert back to previous state
-		panic(err)
+	if _, err = execEngine.Ignite(data.Method, data.Params); err != nil {
+		state.Revert()
 	}
-	events := gasStation.Burn(tx.From.Address(), gasUsed)
-	state.Commit()
-	return events, gasUsed, err
+
+	gasUsed := execEngine.GetGasUsed()
 	gasEvents := gasStation.Burn(tx.From.Address(), gasUsed)
 	events := append(execEngine.GetEvents(), gasEvents...)
 	state.Commit()
-	return events, gasUsed, nil
+	return events, gasUsed, err
 }
