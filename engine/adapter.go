@@ -2,12 +2,12 @@ package engine
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log"
 
 	"github.com/QuoineFinancial/vertex/abi"
 	"github.com/QuoineFinancial/vertex/crypto"
-	"github.com/go-errors/errors"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/common"
 	"github.com/vertexdlt/vertexvm/vm"
@@ -33,7 +33,10 @@ func (engine *Engine) chainStorageSet(vm *vm.VM, args ...uint64) (uint64, error)
 	valuePtr, valueSize := int(args[2]), int(args[3])
 	// Burn gas before actually execute
 	cost := engine.gasPolicy.GetCostForStorage(valueSize)
-	vm.BurnGas(int64(cost))
+	err := vm.BurnGas(cost)
+	if err != nil {
+		return 0, err
+	}
 	key, err := readAt(vm, keyPtr, keySize)
 	if err != nil {
 		return 0, err
@@ -171,18 +174,18 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 		return 0, err
 	}
 	// TODO memcheck
-
-	gasLimit := engine.gasLimit - vm.GetGasUsed()
-	newEngine := NewEngine(engine.state, account, engine.account.GetAddress(), engine.gasPolicy, gasLimit)
-	newEngine.setStats(engine.callDepth+1, engine.memAggr+vm.MemSize())
-	ret, gasUsed, err := newEngine.Ignite(foreignMethod.name, methodArgs)
-	vm.BurnGas(int64(gasUsed))
-	engine.events = append(engine.events, newEngine.events...)
-	return ret, err
+	childEngine := engine.NewChildEngine(account)
+	childEngine.setStats(engine.callDepth+1, engine.memAggr+vm.MemSize())
+	return childEngine.Ignite(foreignMethod.name, methodArgs)
 }
 
 func (engine *Engine) handleEmitEvent(event *abi.Event, vm *vm.VM, args ...uint64) (uint64, error) {
 	attributes := common.KVPairs{}
+	address := engine.account.GetAddress()
+	attributes = append(attributes, common.KVPair{
+		Key:   []byte("address"),
+		Value: address[:],
+	})
 	for i, param := range event.Parameters {
 		var value []byte
 		var err error
@@ -198,12 +201,14 @@ func (engine *Engine) handleEmitEvent(event *abi.Event, vm *vm.VM, args ...uint6
 			value = make([]byte, size)
 			binary.BigEndian.PutUint64(value, args[i])
 		}
-		attributes = append(attributes, common.KVPair{
-			Key:   []byte(param.Name),
-			Value: value,
-		})
+		if param.Name != "address" {
+			attributes = append(attributes, common.KVPair{
+				Key:   []byte(param.Name),
+				Value: value,
+			})
+		}
 	}
-	engine.events = append(engine.events, types.Event{
+	engine.pushEvent(types.Event{
 		Type:       EventPrefix + event.Name,
 		Attributes: attributes,
 	})

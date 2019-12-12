@@ -25,7 +25,7 @@ func TestVM(t *testing.T) {
 	database := db.NewMemoryDB()
 	state, _ := storage.New(trie.Hash{}, database)
 	accountState, _ := state.CreateAccount(crypto.AddressFromString(caller), crypto.AddressFromString(contractAddress), contractBytes)
-	execEngine := engine.NewEngine(state, accountState, crypto.AddressFromString(caller), &gas.AlphaPolicy{}, -1)
+	execEngine := engine.NewEngine(state, accountState, crypto.AddressFromString(caller), &gas.FreePolicy{}, 0)
 	toAddress := "LB3EICIUKOUYCY4D7T2O6RKL7ISEPISNKUXNILDTJ76V2PDZVT5ZDP3U"
 	var mint = 10000000
 	mintAmount := strconv.Itoa(mint)
@@ -40,7 +40,7 @@ func TestVM(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	_, _, err = execEngine.Ignite("mint", mintArgs)
+	_, err = execEngine.Ignite("mint", mintArgs)
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +53,7 @@ func TestVM(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	_, _, err = execEngine.Ignite("transfer", transferArgs)
+	_, err = execEngine.Ignite("transfer", transferArgs)
 	if err != nil {
 		panic(err)
 	}
@@ -71,14 +71,14 @@ func TestVM(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	ret, _, err := execEngine.Ignite("get_balance", getBalanceTo)
+	ret, err := execEngine.Ignite("get_balance", getBalanceTo)
 	if err != nil {
 		t.Error(err)
 	}
 	if int(ret) != transfer {
 		t.Errorf("Expect return value to be %v, got %v", transfer, ret)
 	}
-	ret, _, err = execEngine.Ignite("get_balance", getBalanceMint)
+	ret, err = execEngine.Ignite("get_balance", getBalanceMint)
 	if err != nil {
 		t.Error(err)
 	}
@@ -100,7 +100,7 @@ func TestChainedInvoke(t *testing.T) {
 	utilBytes, _ := rlp.EncodeToBytes(&utilContract)
 	utilAddress := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
 	utilAccount, _ := state.CreateAccount(caller, utilAddress, utilBytes)
-	execEngine := engine.NewEngine(state, utilAccount, caller, &gas.AlphaPolicy{}, -1)
+	execEngine := engine.NewEngine(state, utilAccount, caller, &gas.FreePolicy{}, 0)
 
 	funcName := "init"
 	function, err := utilContract.Header.GetFunction(funcName)
@@ -111,7 +111,7 @@ func TestChainedInvoke(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	_, _, err = execEngine.Ignite(funcName, args)
+	_, err = execEngine.Ignite(funcName, args)
 	if err != nil {
 		panic(err)
 	}
@@ -125,7 +125,7 @@ func TestChainedInvoke(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	ret, _, err := execEngine.Ignite(funcName, args)
+	ret, err := execEngine.Ignite(funcName, args)
 	if err != nil {
 		panic(err)
 	}
@@ -144,7 +144,7 @@ func TestChainedInvokeOverflow(t *testing.T) {
 	utilAddress := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
 	utilAccount, _ := state.CreateAccount(caller, utilAddress, utilBytes)
 
-	execEngine := engine.NewEngine(state, utilAccount, caller, &gas.AlphaPolicy{}, -1)
+	execEngine := engine.NewEngine(state, utilAccount, caller, &gas.FreePolicy{}, 0)
 
 	funcName := "init"
 	function, err := utilContract.Header.GetFunction(funcName)
@@ -155,7 +155,7 @@ func TestChainedInvokeOverflow(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	_, _, err = execEngine.Ignite(funcName, args)
+	_, err = execEngine.Ignite(funcName, args)
 	if err != nil {
 		panic(err)
 	}
@@ -169,7 +169,7 @@ func TestChainedInvokeOverflow(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	_, _, err = execEngine.Ignite(funcName, args)
+	_, err = execEngine.Ignite(funcName, args)
 	if err == nil || err.Error() != "call depth limit reached" {
 		t.Errorf("Unexpected error %v", err)
 	}

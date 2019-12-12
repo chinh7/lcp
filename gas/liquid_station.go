@@ -2,6 +2,7 @@ package gas
 
 import (
 	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/tendermint/tendermint/abci/types"
 )
 
 // LiquidStation provide a liquid as a gas station
@@ -22,12 +23,17 @@ func (station *LiquidStation) Sufficient(addr crypto.Address, gas uint64) bool {
 }
 
 // Burn gas
-func (station *LiquidStation) Burn(addr crypto.Address, gas uint64) {
+func (station *LiquidStation) Burn(addr crypto.Address, gas uint64) []types.Event {
 	token := station.app.GetGasContractToken()
 	// Move to gas owner
 	if gas > 0 {
-		token.Transfer(addr, station.collector, gas)
+		events, err := token.Transfer(addr, station.collector, gas)
+		if err != nil {
+			panic(err)
+		}
+		return events
 	}
+	return nil
 }
 
 // Switch off fee, never call

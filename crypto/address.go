@@ -5,8 +5,8 @@ import (
 	"encoding/base32"
 	"encoding/binary"
 
+	"github.com/QuoineFinancial/vertex/crc16"
 	"github.com/pkg/errors"
-	"github.com/stellar/go/crc16"
 	"golang.org/x/crypto/ed25519"
 )
 
