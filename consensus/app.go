@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/QuoineFinancial/vertex/constant"
 	"github.com/QuoineFinancial/vertex/core"
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/QuoineFinancial/vertex/db"
@@ -90,9 +91,12 @@ func (app *App) Info(req types.RequestInfo) (resInfo types.ResponseInfo) {
 
 // CheckTx checks if submitted transaction is valid and can be passed to next step
 func (app *App) CheckTx(req types.RequestCheckTx) types.ResponseCheckTx {
-	// Check sig
-	// Check nonce
-	// Check gas wanted (limit)
+	if len(req.GetTx()) > constant.MaxTransactionSize {
+		return types.ResponseCheckTx{
+			Code: code.CodeTypeUnknownError,
+			Log:  fmt.Sprintf("Transaction size exceed %d B", constant.MaxTransactionSize),
+		}
+	}
 
 	tx := &crypto.Tx{}
 	if err := tx.Deserialize(req.GetTx()); err != nil {

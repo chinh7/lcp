@@ -7,13 +7,12 @@ import (
 	"log"
 
 	"github.com/QuoineFinancial/vertex/abi"
+	"github.com/QuoineFinancial/vertex/constant"
 	"github.com/QuoineFinancial/vertex/crypto"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/common"
 	"github.com/vertexdlt/vertexvm/vm"
 )
-
-const maxEngineCallDepth = 16
 
 func readAt(vm *vm.VM, ptr, size int) ([]byte, error) {
 	data := make([]byte, size)
@@ -121,7 +120,7 @@ func (engine *Engine) chainMethodBind(vm *vm.VM, args ...uint64) (uint64, error)
 }
 
 func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM, args ...uint64) (uint64, error) {
-	if engine.callDepth+1 > maxEngineCallDepth {
+	if engine.callDepth+1 > constant.MaxEngineCallDepth {
 		return 0, errors.New("call depth limit reached")
 	}
 
