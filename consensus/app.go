@@ -93,7 +93,44 @@ func (app *App) CheckTx(req types.RequestCheckTx) types.ResponseCheckTx {
 	// Check sig
 	// Check nonce
 	// Check gas wanted (limit)
+
+	tx := &crypto.Tx{}
+	tx.Deserialize(req.GetTx())
+
+	if code, err := app.validateTx(tx); err != nil {
+		return types.ResponseCheckTx{
+			Code: code,
+			Log:  err.Error(),
+		}
+	}
 	return types.ResponseCheckTx{Code: code.CodeTypeOK}
+}
+
+func (app *App) validateTx(tx *crypto.Tx) (uint32, error) {
+	nonce := uint64(0)
+	address := tx.From.Address()
+	account, _ := app.state.GetAccount(address)
+	if account != nil {
+		nonce = account.Nonce
+	}
+
+	if tx.From.Nonce != nonce {
+		return code.CodeTypeBadNonce, fmt.Errorf("Invalid nonce. Expected %v, got %v", nonce, tx.From.Nonce)
+	}
+
+	if !tx.SigVerified() {
+		return code.CodeTypeUnknownError, fmt.Errorf("Invalid signature")
+	}
+
+	fee, err := tx.GetFee()
+	if err != nil {
+		return code.CodeTypeUnknownError, err
+	}
+	if !app.gasStation.Sufficient(address, fee) {
+		return code.CodeTypeBadNonce, fmt.Errorf("Insufficient fee")
+	}
+
+	return code.CodeTypeOK, nil
 }
 
 //DeliverTx executes the submitted transaction
@@ -102,6 +139,14 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 	info := "ok"
 	tx := &crypto.Tx{}
 	tx.Deserialize(req.GetTx())
+
+	if code, err := app.validateTx(tx); err != nil {
+		return types.ResponseDeliverTx{
+			Code: code,
+			Log:  err.Error(),
+		}
+	}
+
 	applyEvents, gasUsed, err := core.ApplyTx(app.state, tx, app.gasStation)
 	if err != nil {
 		code = CodeTypeUnknownError
@@ -122,6 +167,7 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 			},
 		},
 	})
+
 	return types.ResponseDeliverTx{
 		Code:      code,
 		Events:    events,

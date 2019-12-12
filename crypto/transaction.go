@@ -3,6 +3,7 @@ package crypto
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 
@@ -35,6 +36,7 @@ type Tx struct {
 	Data     []byte
 	To       Address
 	GasLimit uint64
+	GasPrice uint64
 }
 
 // Address derived from TxSigner PubKey
@@ -68,7 +70,20 @@ func (tx *Tx) GetSigHash() []byte {
 	return bz
 }
 
-func (tx *Tx) sigVerified() bool {
+func (tx *Tx) GetFee() (uint64, error) {
+	if tx.GasLimit == 0 || tx.GasPrice == 0 {
+		return 0, nil
+	}
+
+	fee := tx.GasLimit * tx.GasPrice
+	if fee/tx.GasLimit == tx.GasPrice {
+		return fee, nil
+	}
+
+	return 0, errors.New("fee overflow")
+}
+
+func (tx *Tx) SigVerified() bool {
 	signature := tx.From.Signature
 	log.Printf("Signature %X\n", signature)
 	return ed25519.Verify(tx.From.PubKey, tx.GetSigHash(), signature)

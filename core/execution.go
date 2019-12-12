@@ -47,6 +47,19 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 		return nil, 0, err
 	}
 
+	// Create new account if fromAddress is not exist
+	fromAddress := tx.From.Address()
+	fromAccount, _ := state.GetAccount(fromAddress)
+	if fromAccount == nil {
+		fromAccount, err = state.CreateAccount(fromAddress, fromAddress, nil)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
+	nonce := fromAccount.Nonce
+	fromAccount.SetNonce(nonce + 1)
+
 	execEngine := engine.NewEngine(state, contractAccount, tx.From.Address(), policy, gasLimit)
 	if _, err = execEngine.Ignite(data.Method, data.Params); err != nil {
 		state.Revert()
