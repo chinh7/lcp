@@ -67,8 +67,11 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) ([]typ
 	}
 
 	gasUsed := execEngine.GetGasUsed()
-	gasEvents := gasStation.Burn(tx.From.Address(), gasUsed*tx.GasPrice)
-	events := append(execEngine.GetEvents(), gasEvents...)
+	events := gasStation.Burn(tx.From.Address(), gasUsed*tx.GasPrice)
 	state.Commit()
+
+	if err == nil {
+		events = append(execEngine.GetEvents(), events...)
+	}
 	return events, gasUsed, err
 }
