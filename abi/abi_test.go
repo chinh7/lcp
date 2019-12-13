@@ -178,7 +178,10 @@ func TestBytesEncoding(t *testing.T) {
 			t.Errorf("Decoding case %v: decode of %v is incorrect, expected: %v, got: %v, diff: %v", index+1, table.encoded, table.decoded, decoded, diff)
 		}
 
-		encoded, _ := EncodeFromBytes(table.types, decoded)
+		encoded, err := EncodeFromBytes(table.types, decoded)
+		if err != nil {
+			panic(err)
+		}
 		if diff := cmp.Diff(encoded, table.encoded); diff != "" {
 			t.Errorf("Encoding case %v: encode of %v is incorrect, expected: %v, got: %v, diff: %v", index+1, decoded, table.encoded, encoded, diff)
 		}

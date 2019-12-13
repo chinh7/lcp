@@ -20,7 +20,7 @@ type testcase struct {
 
 // Read code from wasm file and init a VM with basic configuration
 func getVM(filename string) *vm.VM {
-	wasm := fmt.Sprintf("./data/%s.wasm", filename)
+	wasm := fmt.Sprintf("testdata/%s.wasm", filename)
 	code, err := ioutil.ReadFile(wasm)
 	if err != nil {
 		panic(err)
