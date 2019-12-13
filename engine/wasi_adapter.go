@@ -3,10 +3,20 @@ package engine
 import (
 	"encoding/binary"
 	"fmt"
-	"strings"
 
 	"github.com/vertexdlt/vertexvm/vm"
 )
+
+func wasiUnstableHandler(name string) vm.HostFunction {
+	switch name {
+	case "proc_exit":
+		return wasiProcExit
+	case "proc_raise":
+		return wasiProcRaise
+	default:
+		return wasiDefaultHandler
+	}
+}
 
 func wasiDefaultHandler(vm *vm.VM, args ...uint64) (uint64, error) {
 	return 52, nil // __WASI_ENOSYS
@@ -52,17 +62,12 @@ func wasiEnvironGet(vm *vm.VM, args ...uint64) uint64 {
 }
 
 func wasiProcExit(vm *vm.VM, args ...uint64) (uint64, error) {
-	var exitCode string
-	for _, arg := range args {
-		exitCode += fmt.Sprint(arg) + " "
+	if len(args) != 1 {
+		return 0, fmt.Errorf("invalid proc_exit argument")
 	}
-	return 0, fmt.Errorf("process exit with code: %s", strings.TrimSpace(exitCode))
+	return 0, fmt.Errorf("process exit with code: %d", args[0])
 }
 
 func wasiProcRaise(vm *vm.VM, args ...uint64) (uint64, error) {
-	var exitCode string
-	for _, arg := range args {
-		exitCode += fmt.Sprint(arg) + " "
-	}
-	return 0, fmt.Errorf("process exit with code: %s", strings.TrimSpace(exitCode))
+	return wasiProcRaise(vm, args...)
 }
