@@ -33,7 +33,6 @@ type Engine struct {
 	account       *storage.Account
 	caller        crypto.Address
 	gasPolicy     gas.Policy
-	gasLimit      int64
 	callDepth     int
 	memAggr       int
 	events        []types.Event

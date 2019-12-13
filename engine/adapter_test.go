@@ -7,6 +7,7 @@ import (
 
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/vertexdlt/vertexvm/vm"
+	vertex "github.com/vertexdlt/vertexvm/vm"
 )
 
 type testcase struct {
@@ -26,9 +27,9 @@ func getVM(filename string) *vm.VM {
 	}
 
 	engine := &Engine{}
-	gasLimit := int64(-1)
+	gasLimit := uint64(0)
 	gasPolicy := &gas.FreePolicy{}
-	vm, err := vm.NewVM(code, gasPolicy, gasLimit, engine)
+	vm, err := vertex.NewVM(code, gasPolicy, &vm.Gas{Limit: gasLimit}, engine)
 	if err != nil {
 		panic(err)
 	}

@@ -39,7 +39,7 @@ func (state *State) LoadAccount(address crypto.Address) (*Account, error) {
 		return nil, nil
 	}
 	var account Account
-	if rlp.DecodeBytes(raw, &account); err != nil {
+	if err := rlp.DecodeBytes(raw, &account); err != nil {
 		return nil, err
 	}
 	account.address = address

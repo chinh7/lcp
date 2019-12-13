@@ -30,7 +30,7 @@ type Function struct {
 
 // Header is model for function signature
 type Header struct {
-	Version   string               `json:"version"`
+	Version   uint16               `json:"version"`
 	Functions map[string]*Function `json:"functions"`
 	Events    map[string]*Event    `json:"events"`
 }
@@ -54,11 +54,13 @@ func (h Header) GetFunction(funcName string) (*Function, error) {
 // DecodeHeader decode byte array of header into header
 func DecodeHeader(b []byte) (*Header, error) {
 	var header struct {
-		Version   string
+		Version   uint16
 		Functions []*Function
 		Events    []*Event
 	}
-	rlp.DecodeBytes(b, &header)
+	if err := rlp.DecodeBytes(b, &header); err != nil {
+		return nil, err
+	}
 
 	functions := make(map[string]*Function)
 	for _, function := range header.Functions {
@@ -108,7 +110,7 @@ func (h *Header) getFunctions() []*Function {
 // EncodeRLP encodes a header to RLP format
 func (h *Header) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, struct {
-		Version   string
+		Version   uint16
 		Functions []*Function
 		Events    []*Event
 	}{
