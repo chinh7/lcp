@@ -251,7 +251,9 @@ func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 					return engine.handleInvokeAlias(foreignMethod, vm, args...)
 				}
 			}
-			panic(fmt.Errorf("unknown import resolved: %s", name))
+			return func(vm *vm.VM, args ...uint64) (uint64, error) {
+				return 0, fmt.Errorf("unknown import: %s", name)
+			}
 		case "wasi_unstable":
 			return wasiDefaultHandler
 		}

@@ -2,12 +2,25 @@
   "version": "1.0",
   "events": [
     {
-      "name": "transfer",
+      "name": "Transfer",
       "parameters": [
         {
           "name": "from",
           "type": "address"
         },
+        {
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "name": "Mint",
+      "parameters": [
         {
           "name": "to",
           "type": "address"
@@ -24,7 +37,7 @@
       "name": "mint",
       "parameters": [
         {
-          "is_array": true,
+          "is_array": false,
           "type": "uint64"
         }
       ]
