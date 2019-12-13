@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/QuoineFinancial/vertex/core"
-	"github.com/QuoineFinancial/vertex/crypto"
-	"github.com/QuoineFinancial/vertex/db"
-	"github.com/QuoineFinancial/vertex/gas"
-	"github.com/QuoineFinancial/vertex/storage"
-	"github.com/QuoineFinancial/vertex/token"
+	"github.com/QuoineFinancial/liquid-chain/core"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/db"
+	"github.com/QuoineFinancial/liquid-chain/gas"
+	"github.com/QuoineFinancial/liquid-chain/storage"
+	"github.com/QuoineFinancial/liquid-chain/token"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/tendermint/tendermint/abci/example/code"

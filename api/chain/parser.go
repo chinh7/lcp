@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"strconv"
 
-	"github.com/QuoineFinancial/vertex/api/models"
+	"github.com/QuoineFinancial/liquid-chain/api/models"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 	"github.com/tendermint/tendermint/types"
 )

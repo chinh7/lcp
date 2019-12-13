@@ -2,12 +2,12 @@ version: '3'
 services:
   node:
     volumes:
-      - ./data:/root/.vertex
+      - ./data:/root/.liquid
     ports:
       - 26657:26657
       - 26656:26656
       - 5555:5555
     build:
       context: .
-      dockerfile: ./dockers/vertex.Dockerfile
+      dockerfile: ./dockers/liquid.Dockerfile
     command: node

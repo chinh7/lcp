@@ -3,7 +3,7 @@ package gas
 import (
 	"log"
 
-	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/tendermint/tendermint/abci/types"
 )
 

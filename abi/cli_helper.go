@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
 // HeaderFile representation of Header file

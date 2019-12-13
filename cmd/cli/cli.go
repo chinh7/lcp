@@ -16,10 +16,10 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ed25519"
 
-	"github.com/QuoineFinancial/vertex/abi"
-	"github.com/QuoineFinancial/vertex/api/chain"
-	"github.com/QuoineFinancial/vertex/api/storage"
-	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/api/chain"
+	"github.com/QuoineFinancial/liquid-chain/api/storage"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
 func broadcast(endpoint, serializedTx string) {

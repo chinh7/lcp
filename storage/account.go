@@ -1,9 +1,9 @@
 package storage
 
 import (
-	"github.com/QuoineFinancial/vertex/abi"
-	"github.com/QuoineFinancial/vertex/crypto"
-	"github.com/QuoineFinancial/vertex/trie"
+	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/trie"
 	"golang.org/x/crypto/sha3"
 )
 
