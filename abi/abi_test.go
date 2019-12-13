@@ -179,6 +179,9 @@ func TestBytesEncoding(t *testing.T) {
 		}
 
 		encoded, err := EncodeFromBytes(table.types, decoded)
+		if err != nil {
+			panic(err)
+		}
 		if diff := cmp.Diff(encoded, table.encoded); diff != "" {
 			t.Errorf("Encoding case %v: encode of %v is incorrect, expected: %v, got: %v, diff: %v", index+1, decoded, table.encoded, encoded, diff)
 		}

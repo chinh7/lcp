@@ -19,7 +19,10 @@ func DecodeContract(b []byte) (*Contract, error) {
 		Header []byte
 		Code   []byte
 	}
-	rlp.DecodeBytes(b, &contract)
+	if err := rlp.DecodeBytes(b, &contract); err != nil {
+		return nil, err
+	}
+
 	header, err := DecodeHeader(contract.Header)
 	if err != nil {
 		return nil, err

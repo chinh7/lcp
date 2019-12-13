@@ -3,7 +3,6 @@ package chain
 import (
 	"encoding/hex"
 	"fmt"
-	"math"
 	"net/http"
 
 	"github.com/QuoineFinancial/liquid-chain/api/models"
@@ -93,7 +92,7 @@ func (service *Service) searchTransaction(query string, page *int, result *Searc
 	}
 	result.Pagination = models.Pagination{
 		CurrentPage: p,
-		LastPage:    int(math.Ceil(float64(searchResult.TotalCount / defaultTransactionPerPage))),
+		LastPage:    searchResult.TotalCount / defaultTransactionPerPage,
 		Total:       searchResult.TotalCount,
 	}
 	for _, tx := range searchResult.Txs {

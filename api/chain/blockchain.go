@@ -6,8 +6,6 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/api/models"
 )
 
-const blocksPerPage = int(20)
-
 // BlockchainParams is params of GetBlockchain
 type BlockchainParams struct {
 	Min int64 `json:"min"`

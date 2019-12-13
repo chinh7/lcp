@@ -5,8 +5,9 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/QuoineFinancial/vertex/gas"
+	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/vertexdlt/vertexvm/vm"
+	vertex "github.com/vertexdlt/vertexvm/vm"
 )
 
 type testcase struct {
@@ -19,16 +20,16 @@ type testcase struct {
 
 // Read code from wasm file and init a VM with basic configuration
 func getVM(filename string) *vm.VM {
-	wasm := fmt.Sprintf("./data/%s.wasm", filename)
+	wasm := fmt.Sprintf("testdata/%s.wasm", filename)
 	code, err := ioutil.ReadFile(wasm)
 	if err != nil {
 		panic(err)
 	}
 
 	engine := &Engine{}
-	gasLimit := int64(-1)
+	gasLimit := uint64(0)
 	gasPolicy := &gas.FreePolicy{}
-	vm, err := vm.NewVM(code, gasPolicy, gasLimit, engine)
+	vm, err := vertex.NewVM(code, gasPolicy, &vm.Gas{Limit: gasLimit}, engine)
 	if err != nil {
 		panic(err)
 	}

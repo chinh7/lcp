@@ -12,7 +12,6 @@ func Encode(params []*Parameter, values []interface{}) ([]byte, error) {
 	if len(params) != len(values) {
 		return []byte{0}, fmt.Errorf("Parameter count mismatch, expecting: %d, got: %d", len(params), len(values))
 	}
-	result := []byte{}
 
 	var rlpCompatibleArgs []interface{}
 
