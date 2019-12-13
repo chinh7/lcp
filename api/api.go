@@ -9,10 +9,10 @@ import (
 	"github.com/gorilla/rpc/v2/json2"
 	"github.com/rs/cors"
 
-	"github.com/QuoineFinancial/vertex/api/chain"
-	"github.com/QuoineFinancial/vertex/api/resource"
-	"github.com/QuoineFinancial/vertex/api/storage"
-	"github.com/QuoineFinancial/vertex/db"
+	"github.com/QuoineFinancial/liquid-chain/api/chain"
+	"github.com/QuoineFinancial/liquid-chain/api/resource"
+	"github.com/QuoineFinancial/liquid-chain/api/storage"
+	"github.com/QuoineFinancial/liquid-chain/db"
 )
 
 // API contains all info to serve an api server

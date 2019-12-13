@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/QuoineFinancial/vertex/api"
-	"github.com/QuoineFinancial/vertex/consensus"
+	"github.com/QuoineFinancial/liquid-chain/api"
+	"github.com/QuoineFinancial/liquid-chain/consensus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/cmd/tendermint/commands"
@@ -18,7 +18,7 @@ import (
 	"github.com/tendermint/tendermint/proxy"
 )
 
-func (node *VertexNode) newTendermintNode(config *config.Config, logger log.Logger) (*tmNode.Node, error) {
+func (node *LiquidNode) newTendermintNode(config *config.Config, logger log.Logger) (*tmNode.Node, error) {
 	node.app = consensus.NewApp(config.Moniker, config.DBDir(), node.gasContractAddress)
 	nodeKey, err := p2p.LoadOrGenNodeKey(config.NodeKeyFile())
 	if err != nil {
@@ -66,11 +66,11 @@ func parseConfig() (*config.Config, error) {
 	return conf, err
 }
 
-func (node *VertexNode) addStartNodeCommand() {
+func (node *LiquidNode) addStartNodeCommand() {
 	var apiFlag bool
 	cmd := &cobra.Command{
 		Use:   "start [--api]",
-		Short: "Start the vertex node",
+		Short: "Start the liquid node",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 			config, err := parseConfig()

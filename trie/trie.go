@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/QuoineFinancial/vertex/db"
+	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/ethereum/go-ethereum/common"
 )
 

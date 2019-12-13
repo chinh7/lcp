@@ -1,9 +1,9 @@
 package storage
 
 import (
-	"github.com/QuoineFinancial/vertex/crypto"
-	"github.com/QuoineFinancial/vertex/db"
-	"github.com/QuoineFinancial/vertex/trie"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/db"
+	"github.com/QuoineFinancial/liquid-chain/trie"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 

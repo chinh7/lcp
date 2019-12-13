@@ -4,9 +4,9 @@ import (
 	"encoding/hex"
 	"net/http"
 
-	"github.com/QuoineFinancial/vertex/api/models"
-	"github.com/QuoineFinancial/vertex/crypto"
-	"github.com/QuoineFinancial/vertex/storage"
+	"github.com/QuoineFinancial/liquid-chain/api/models"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/ethereum/go-ethereum/common"
 )
 

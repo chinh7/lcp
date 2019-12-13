@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
 // PrimitiveType PrimitiveType
