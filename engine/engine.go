@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/QuoineFinancial/vertex/abi"
-	"github.com/QuoineFinancial/vertex/crypto"
-	"github.com/QuoineFinancial/vertex/gas"
-	"github.com/QuoineFinancial/vertex/storage"
+	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/gas"
+	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/vertexdlt/vertexvm/vm"
-	vertexvm "github.com/vertexdlt/vertexvm/vm"
+	vertex "github.com/vertexdlt/vertexvm/vm"
 )
 
 const (
@@ -89,7 +89,7 @@ func (engine *Engine) Ignite(method string, methodArgs []byte) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	vm, err := vertexvm.NewVM(contract.Code, engine.gasPolicy, engine.gas, engine)
+	vm, err := vertex.NewVM(contract.Code, engine.gasPolicy, engine.gas, engine)
 	if err != nil {
 		return 0, err
 	}

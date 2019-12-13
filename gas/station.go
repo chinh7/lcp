@@ -1,8 +1,8 @@
 package gas
 
 import (
-	"github.com/QuoineFinancial/vertex/crypto"
-	"github.com/QuoineFinancial/vertex/storage"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/tendermint/tendermint/abci/types"
 )
 

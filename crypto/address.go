@@ -5,7 +5,7 @@ import (
 	"encoding/base32"
 	"encoding/binary"
 
-	"github.com/QuoineFinancial/vertex/crc16"
+	"github.com/QuoineFinancial/liquid-chain/crc16"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ed25519"
 )

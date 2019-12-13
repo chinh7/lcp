@@ -1,14 +1,14 @@
 package node
 
 import (
-	"github.com/QuoineFinancial/vertex/consensus"
+	"github.com/QuoineFinancial/liquid-chain/consensus"
 	"github.com/spf13/cobra"
 	"github.com/tendermint/tendermint/cmd/tendermint/commands"
 	"github.com/tendermint/tendermint/libs/cli"
 )
 
-// VertexNode is the space where app and command lives
-type VertexNode struct {
+// LiquidNode is the space where app and command lives
+type LiquidNode struct {
 	rootDir            string
 	gasContractAddress string
 	app                *consensus.App
@@ -16,18 +16,18 @@ type VertexNode struct {
 }
 
 // New returns new instance of Node
-func New(rootDir string, gasContractAddress string) *VertexNode {
-	vertexNode := VertexNode{
+func New(rootDir string, gasContractAddress string) *LiquidNode {
+	liquidNode := LiquidNode{
 		rootDir:            rootDir,
 		command:            commands.RootCmd,
 		gasContractAddress: gasContractAddress,
 	}
-	vertexNode.addDefaultCommands()
-	vertexNode.addStartNodeCommand()
-	return &vertexNode
+	liquidNode.addDefaultCommands()
+	liquidNode.addStartNodeCommand()
+	return &liquidNode
 }
 
-func (node *VertexNode) addDefaultCommands() {
+func (node *LiquidNode) addDefaultCommands() {
 	node.command.AddCommand(
 		commands.GenValidatorCmd,
 		commands.InitFilesCmd,
@@ -47,7 +47,7 @@ func (node *VertexNode) addDefaultCommands() {
 }
 
 // Execute run the node.command base on user input
-func (node *VertexNode) Execute() {
+func (node *LiquidNode) Execute() {
 	prefix := "TM"
 	command := cli.PrepareBaseCmd(node.command, prefix, node.rootDir)
 	if err := command.Execute(); err != nil {
