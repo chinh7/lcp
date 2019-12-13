@@ -3,11 +3,11 @@ package token
 import (
 	"strconv"
 
-	"github.com/QuoineFinancial/vertex/abi"
-	"github.com/QuoineFinancial/vertex/crypto"
-	"github.com/QuoineFinancial/vertex/engine"
-	"github.com/QuoineFinancial/vertex/gas"
-	"github.com/QuoineFinancial/vertex/storage"
+	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/engine"
+	"github.com/QuoineFinancial/liquid-chain/gas"
+	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/tendermint/tendermint/abci/types"
 )
 

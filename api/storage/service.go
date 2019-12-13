@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"github.com/QuoineFinancial/vertex/api/resource"
-	"github.com/QuoineFinancial/vertex/db"
+	"github.com/QuoineFinancial/liquid-chain/api/resource"
+	"github.com/QuoineFinancial/liquid-chain/db"
 )
 
 // Service is first service

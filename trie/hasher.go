@@ -4,7 +4,7 @@ import (
 	"hash"
 	"sync"
 
-	"github.com/QuoineFinancial/vertex/db"
+	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/blake2b"
 )

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/QuoineFinancial/vertex/abi"
-	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/common"
 	"github.com/vertexdlt/vertexvm/vm"

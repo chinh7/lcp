@@ -1,6 +1,6 @@
 package chain
 
-import "github.com/QuoineFinancial/vertex/api/resource"
+import "github.com/QuoineFinancial/liquid-chain/api/resource"
 
 // Service is first service
 type Service struct {

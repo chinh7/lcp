@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/QuoineFinancial/vertex/db"
-	"github.com/QuoineFinancial/vertex/trie"
+	"github.com/QuoineFinancial/liquid-chain/db"
+	"github.com/QuoineFinancial/liquid-chain/trie"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/uuid"
 )
