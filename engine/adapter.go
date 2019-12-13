@@ -251,12 +251,11 @@ func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 					return engine.handleInvokeAlias(foreignMethod, vm, args...)
 				}
 			}
-			return func(vm *vm.VM, args ...uint64) (uint64, error) {
-				return 0, fmt.Errorf("unknown import: %s", name)
-			}
-		case "wasi_unstable":
-			return wasiDefaultHandler
 		}
+	case "wasi_unstable":
+		return wasiUnstableHandler(name)
 	}
-	return nil
+	return func(vm *vm.VM, args ...uint64) (uint64, error) {
+		return 0, fmt.Errorf("unknown import %s for module %s", name, module)
+	}
 }
