@@ -252,9 +252,9 @@ func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 				}
 			}
 			panic(fmt.Errorf("unknown import resolved: %s", name))
-		case "wasi_unstable":
-			return wasiDefaultHandler
 		}
+	case "wasi_unstable":
+		return wasiUnstableHandler(name)
 	}
 	return nil
 }
