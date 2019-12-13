@@ -159,7 +159,7 @@ func main() {
 	rootCmd.PersistentFlags().StringP("seed", "s", "", "Path to seed")
 	rootCmd.PersistentFlags().Uint64P("nonce", "n", 0, "Position of transaction")
 	rootCmd.PersistentFlags().Int64("height", 0, "Call the method at height")
-	rootCmd.PersistentFlags().Uint64P("price", 1, "p", "Gas price")
+	rootCmd.PersistentFlags().Uint64P("price", "p", 1, "Gas price")
 	if err := rootCmd.Execute(); err != nil {
 		panic(err)
 	}
