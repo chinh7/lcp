@@ -115,9 +115,6 @@ func (tx *Tx) Deserialize(bz []byte) error {
 	if err := cdc.DecodeBytes(bz, &tx); err != nil {
 		return err
 	}
-	if tx.GasPrice == 0 {
-		tx.GasPrice = defaultGasPrice
-	}
 	return nil
 }
 
