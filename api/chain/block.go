@@ -3,7 +3,7 @@ package chain
 import (
 	"net/http"
 
-	"github.com/QuoineFinancial/vertex/api/models"
+	"github.com/QuoineFinancial/liquid-chain/api/models"
 )
 
 // BlockParams is params of ChainService

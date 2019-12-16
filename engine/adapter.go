@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/QuoineFinancial/vertex/abi"
-	"github.com/QuoineFinancial/vertex/constant"
-	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/constant"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/common"
 	"github.com/vertexdlt/vertexvm/vm"
@@ -250,10 +250,11 @@ func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 					return engine.handleInvokeAlias(foreignMethod, vm, args...)
 				}
 			}
-			panic(fmt.Errorf("unknown import resolved: %s", name))
-		case "wasi_unstable":
-			return wasiDefaultHandler
 		}
+	case "wasi_unstable":
+		return wasiUnstableHandler(name)
 	}
-	return nil
+	return func(vm *vm.VM, args ...uint64) (uint64, error) {
+		return 0, fmt.Errorf("unknown import %s for module %s", name, module)
+	}
 }

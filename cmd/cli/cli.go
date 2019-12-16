@@ -16,10 +16,10 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ed25519"
 
-	"github.com/QuoineFinancial/vertex/abi"
-	"github.com/QuoineFinancial/vertex/api/chain"
-	"github.com/QuoineFinancial/vertex/api/storage"
-	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/api/chain"
+	"github.com/QuoineFinancial/liquid-chain/api/storage"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
 func broadcast(endpoint, serializedTx string) {
@@ -62,7 +62,7 @@ func sign(privateKey ed25519.PrivateKey, tx *crypto.Tx) {
 }
 
 func deploy(cmd *cobra.Command, args []string) {
-	seedPath, endpoint, nonce, gas, _ := parseFlags(cmd)
+	seedPath, endpoint, nonce, gas, price, _ := parseFlags(cmd)
 	privateKey := loadPrivateKey(seedPath)
 
 	code, err := ioutil.ReadFile(args[0])
@@ -85,13 +85,13 @@ func deploy(cmd *cobra.Command, args []string) {
 	}
 
 	signer := crypto.TxSigner{Nonce: uint64(nonce)}
-	tx := &crypto.Tx{Data: data, From: signer, GasLimit: gas}
+	tx := &crypto.Tx{Data: data, From: signer, GasLimit: gas, GasPrice: price}
 	sign(privateKey, tx)
 	broadcast(endpoint, hex.EncodeToString(tx.Serialize()))
 }
 
 func invoke(cmd *cobra.Command, args []string) {
-	seedPath, endpoint, nonce, gas, _ := parseFlags(cmd)
+	seedPath, endpoint, nonce, gas, price, _ := parseFlags(cmd)
 	privateKey := loadPrivateKey(seedPath)
 
 	signer := crypto.TxSigner{Nonce: uint64(nonce)}
@@ -112,14 +112,14 @@ func invoke(cmd *cobra.Command, args []string) {
 	}
 
 	txData := crypto.TxData{Method: args[2], Params: encodedArgs}
-	tx := &crypto.Tx{Data: txData.Serialize(), From: signer, To: to, GasLimit: gas}
+	tx := &crypto.Tx{Data: txData.Serialize(), From: signer, To: to, GasLimit: gas, GasPrice: price}
 
 	sign(privateKey, tx)
 	broadcast(endpoint, hex.EncodeToString(tx.Serialize()))
 }
 
 func call(cmd *cobra.Command, args []string) {
-	_, endpoint, _, _, height := parseFlags(cmd)
+	_, endpoint, _, _, _, height := parseFlags(cmd)
 
 	address := args[0]
 	method := args[1]
@@ -139,14 +139,14 @@ func main() {
 	}
 
 	var cmdInvoke = &cobra.Command{
-		Use:   "invoke [address] [path to contract abi json file] [params]",
+		Use:   "invoke [address] [path to contract abi json file] [function] [params]",
 		Short: "Invoke a smart contract",
 		Args:  cobra.MinimumNArgs(3),
 		Run:   invoke,
 	}
 
 	var cmdCall = &cobra.Command{
-		Use:   "call [address] [method] [params]",
+		Use:   "call [address] [function] [params]",
 		Short: "Call a smart contract (read-only)",
 		Args:  cobra.MinimumNArgs(2),
 		Run:   call,
@@ -159,12 +159,13 @@ func main() {
 	rootCmd.PersistentFlags().StringP("seed", "s", "", "Path to seed")
 	rootCmd.PersistentFlags().Uint64P("nonce", "n", 0, "Position of transaction")
 	rootCmd.PersistentFlags().Int64("height", 0, "Call the method at height")
+	rootCmd.PersistentFlags().Uint64P("price", "p", 1, "Gas price")
 	if err := rootCmd.Execute(); err != nil {
 		panic(err)
 	}
 }
 
-func parseFlags(cmd *cobra.Command) (string, string, uint64, uint64, int64) {
+func parseFlags(cmd *cobra.Command) (string, string, uint64, uint64, uint64, int64) {
 	seedPath, err := cmd.Root().Flags().GetString("seed")
 	if err != nil {
 		panic(err)
@@ -181,11 +182,15 @@ func parseFlags(cmd *cobra.Command) (string, string, uint64, uint64, int64) {
 	if err != nil {
 		panic(err)
 	}
+	price, err := cmd.Root().Flags().GetUint64("price")
+	if err != nil {
+		panic(err)
+	}
 	height, err := cmd.Root().Flags().GetInt64("height")
 	if err != nil {
 		panic(err)
 	}
-	return seedPath, endpoint, nonce, gas, height
+	return seedPath, endpoint, nonce, gas, price, height
 }
 
 func postJSON(endpoint string, method string, params interface{}, result interface{}) {

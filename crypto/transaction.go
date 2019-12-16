@@ -14,7 +14,6 @@ import (
 const (
 	// MethodNameByteLength is number of bytes preservered for method name
 	MethodNameByteLength = 64
-	defaultGasPrice      = 1
 )
 
 // TxData data for contract deploy/invoke
@@ -59,7 +58,7 @@ func (txSigner TxSigner) String() string {
 
 // String Tx string presentation
 func (tx Tx) String() string {
-	return fmt.Sprintf("Data: %s To: %s Signer: %s", hex.EncodeToString(tx.Data), tx.To, tx.From)
+	return fmt.Sprintf("Data: %s To: %s Signer: %s", hex.EncodeToString(tx.Data), tx.To.String(), tx.From.String())
 }
 
 // GetSigHash get the transaction data used for signing
@@ -69,6 +68,7 @@ func (tx *Tx) GetSigHash() ([]byte, error) {
 	return cdc.EncodeToBytes(clone)
 }
 
+// GetFee gets transaction fee limit
 func (tx *Tx) GetFee() (uint64, error) {
 	if tx.GasLimit == 0 || tx.GasPrice == 0 {
 		return 0, nil
@@ -82,6 +82,7 @@ func (tx *Tx) GetFee() (uint64, error) {
 	return 0, errors.New("fee overflow")
 }
 
+// SigVerified checks if transaction signature is correct
 func (tx *Tx) SigVerified() bool {
 	signature := tx.From.Signature
 	log.Printf("Signature %X\n", signature)
@@ -114,9 +115,6 @@ func (txSigner *TxSigner) Serialize() []byte {
 func (tx *Tx) Deserialize(bz []byte) error {
 	if err := cdc.DecodeBytes(bz, &tx); err != nil {
 		return err
-	}
-	if tx.GasPrice == 0 {
-		tx.GasPrice = defaultGasPrice
 	}
 	return nil
 }

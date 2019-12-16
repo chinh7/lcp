@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
 // HeaderFile representation of Header file
 type HeaderFile struct {
-	Version string `json:"version"`
+	Version uint16 `json:"version"`
 	Events  []struct {
 		Name       string `json:"name"`
 		Parameters []struct {
@@ -305,7 +305,9 @@ func LoadHeaderFromFile(path string) (*Header, error) {
 	if err != nil {
 		return nil, err
 	}
-	json.Unmarshal(headerFileContent, &headerFile)
+	if err := json.Unmarshal(headerFileContent, &headerFile); err != nil {
+		return nil, err
+	}
 	header := Header{
 		Version:   headerFile.Version,
 		Functions: make(map[string]*Function),

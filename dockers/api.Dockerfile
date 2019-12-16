@@ -1,7 +1,7 @@
 FROM quoine/rocksdb:latest AS builder
 ENV GO111MODULE=on
 
-WORKDIR $GOPATH/src/github.com/QuoineFinancial/vertex
+WORKDIR $GOPATH/src/github.com/QuoineFinancial/liquid-chain
 COPY go.mod go.sum ./
 RUN go mod download
 

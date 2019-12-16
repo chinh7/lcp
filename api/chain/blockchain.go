@@ -3,10 +3,8 @@ package chain
 import (
 	"net/http"
 
-	"github.com/QuoineFinancial/vertex/api/models"
+	"github.com/QuoineFinancial/liquid-chain/api/models"
 )
-
-const blocksPerPage = int(20)
 
 // BlockchainParams is params of GetBlockchain
 type BlockchainParams struct {
