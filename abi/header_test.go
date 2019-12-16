@@ -29,3 +29,41 @@ func TestDecodeHeader(t *testing.T) {
 		t.Errorf("Decoding of %v is incorrect, expected: %v, got: %v, diff: %v", bytes, h, decoded, diff)
 	}
 }
+
+func TestGetEvent(t *testing.T) {
+	h, _ := LoadHeaderFromFile("../test/fixtures/header-event.json")
+	event, err := h.GetEvent("Transfer")
+	if err != nil {
+		t.Error(err)
+	}
+	if diff := cmp.Diff(event, h.Events["Transfer"]); diff != "" {
+		t.Errorf("GetEvent of %v is incorrect, expected: %v, got: %v, diff: %v", h, h.Events["Transfer"], event, diff)
+	}
+
+	notFoundEvent, err := h.GetEvent("nil")
+	if err == nil {
+		t.Error("expecting error is nil for getting not found event")
+	}
+	if notFoundEvent != nil || err.Error() != "event nil not found" {
+		t.Errorf("Error of GetEvent of %v is incorrect, expected: %v, got: %v", h, "event nil not found", err.Error())
+	}
+}
+
+func TestGetFunction(t *testing.T) {
+	h, _ := LoadHeaderFromFile("../test/fixtures/header-event.json")
+	event, err := h.GetFunction("transfer")
+	if err != nil {
+		t.Error(err)
+	}
+	if diff := cmp.Diff(event, h.Functions["transfer"]); diff != "" {
+		t.Errorf("GetFunction of %v is incorrect, expected: %v, got: %v, diff: %v", h, h.Functions["transfer"], event, diff)
+	}
+
+	notFoundFunction, err := h.GetFunction("nil")
+	if err == nil {
+		t.Error("expecting error is nil for getting not found function")
+	}
+	if notFoundFunction != nil || err.Error() != "function nil not found" {
+		t.Errorf("Error of GetFunction of %v is incorrect, expected: %v, got: %v", h, "function nil not found", err.Error())
+	}
+}

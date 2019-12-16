@@ -113,7 +113,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 	case Address:
 		parsed, ok := value.([]crypto.Address)
 		if !ok {
-			return nil, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t.String())
 		}
 		for _, p := range parsed {
 			arg, err := t.NewArgument(p)
@@ -125,7 +125,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 	case Uint8:
 		parsed, ok := value.([]uint8)
 		if !ok {
-			return nil, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t.String())
 		}
 		for _, p := range parsed {
 			arg, err := t.NewArgument(p)
@@ -137,7 +137,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 	case Uint16:
 		parsed, ok := value.([]uint16)
 		if !ok {
-			return nil, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t.String())
 		}
 		for _, p := range parsed {
 			arg, err := t.NewArgument(p)
@@ -149,7 +149,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 	case Uint32:
 		parsed, ok := value.([]uint32)
 		if !ok {
-			return nil, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t.String())
 		}
 		for _, p := range parsed {
 			arg, err := t.NewArgument(p)
@@ -161,7 +161,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 	case Uint64:
 		parsed, ok := value.([]uint64)
 		if !ok {
-			return nil, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t.String())
 		}
 		for _, p := range parsed {
 			arg, err := t.NewArgument(p)
@@ -173,7 +173,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 	case Int8:
 		parsed, ok := value.([]int8)
 		if !ok {
-			return nil, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t.String())
 		}
 		for _, p := range parsed {
 			arg, err := t.NewArgument(p)
@@ -185,7 +185,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 	case Int16:
 		parsed, ok := value.([]int16)
 		if !ok {
-			return nil, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t.String())
 		}
 		for _, p := range parsed {
 			arg, err := t.NewArgument(p)
@@ -197,7 +197,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 	case Int32:
 		parsed, ok := value.([]int32)
 		if !ok {
-			return nil, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t.String())
 		}
 		for _, p := range parsed {
 			arg, err := t.NewArgument(p)
@@ -209,7 +209,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 	case Int64:
 		parsed, ok := value.([]int64)
 		if !ok {
-			return nil, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t.String())
 		}
 		for _, p := range parsed {
 			arg, err := t.NewArgument(p)
@@ -221,7 +221,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 	case Float32:
 		parsed, ok := value.([]float32)
 		if !ok {
-			return nil, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t.String())
 		}
 		for _, p := range parsed {
 			arg, err := t.NewArgument(p)
@@ -233,7 +233,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 	case Float64:
 		parsed, ok := value.([]float64)
 		if !ok {
-			return nil, fmt.Errorf("unable to convert array element into %s", t)
+			return nil, fmt.Errorf("unable to convert array element into %s", t.String())
 		}
 		for _, p := range parsed {
 			arg, err := t.NewArgument(p)
