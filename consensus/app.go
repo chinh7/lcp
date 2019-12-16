@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/core"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
@@ -90,28 +91,31 @@ func (app *App) Info(req types.RequestInfo) (resInfo types.ResponseInfo) {
 
 // CheckTx checks if submitted transaction is valid and can be passed to next step
 func (app *App) CheckTx(req types.RequestCheckTx) types.ResponseCheckTx {
-	// Check sig
-	// Check nonce
-	// Check gas wanted (limit)
-
 	tx := &crypto.Tx{}
 	if err := tx.Deserialize(req.GetTx()); err != nil {
 		return types.ResponseCheckTx{
-			Code: code.CodeTypeEncodingError,
+			Code: CodeTypeEncodingError,
 			Log:  err.Error(),
 		}
 	}
 
-	if code, err := app.validateTx(tx); err != nil {
+	if code, err := app.validateTx(tx, len(req.GetTx())); err != nil {
 		return types.ResponseCheckTx{
 			Code: code,
 			Log:  err.Error(),
 		}
 	}
+
 	return types.ResponseCheckTx{Code: code.CodeTypeOK}
 }
 
-func (app *App) validateTx(tx *crypto.Tx) (uint32, error) {
+func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
+	// Validate tx size
+	if txSize > constant.MaxTransactionSize {
+		err := fmt.Errorf("Transaction size exceed %dB", constant.MaxTransactionSize)
+		return code.CodeTypeUnknownError, err
+	}
+
 	nonce := uint64(0)
 	address := tx.From.Address()
 	account, _ := app.state.GetAccount(address)
@@ -119,14 +123,18 @@ func (app *App) validateTx(tx *crypto.Tx) (uint32, error) {
 		nonce = account.Nonce
 	}
 
+	// Validate tx nonce
 	if tx.From.Nonce != nonce {
-		return code.CodeTypeBadNonce, fmt.Errorf("Invalid nonce. Expected %v, got %v", nonce, tx.From.Nonce)
+		err := fmt.Errorf("Invalid nonce. Expected %v, got %v", nonce, tx.From.Nonce)
+		return code.CodeTypeBadNonce, err
 	}
 
+	// Validate tx signature
 	if !tx.SigVerified() {
 		return code.CodeTypeUnknownError, fmt.Errorf("Invalid signature")
 	}
 
+	// Validate gas limit
 	fee, err := tx.GetFee()
 	if err != nil {
 		return code.CodeTypeUnknownError, err
@@ -135,6 +143,7 @@ func (app *App) validateTx(tx *crypto.Tx) (uint32, error) {
 		return code.CodeTypeBadNonce, fmt.Errorf("Insufficient fee")
 	}
 
+	// Validate tx data
 	txData := &crypto.TxData{}
 	err = txData.Deserialize(tx.Data)
 	if err != nil {
@@ -146,8 +155,6 @@ func (app *App) validateTx(tx *crypto.Tx) (uint32, error) {
 
 //DeliverTx executes the submitted transaction
 func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
-	statusCode := CodeTypeOK
-	info := "ok"
 	tx := &crypto.Tx{}
 	if err := tx.Deserialize(req.GetTx()); err != nil {
 		return types.ResponseDeliverTx{
@@ -155,20 +162,33 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 			Log:  err.Error(),
 		}
 	}
-	if code, err := app.validateTx(tx); err != nil {
+	if code, err := app.validateTx(tx, len(req.GetTx())); err != nil {
 		return types.ResponseDeliverTx{
 			Code: code,
 			Log:  err.Error(),
 		}
 	}
 
+	info := "ok"
+	codeType := CodeTypeOK
 	applyEvents, gasUsed, err := core.ApplyTx(app.state, tx, app.gasStation)
 	if err != nil {
-		statusCode = CodeTypeUnknownError
+		codeType = CodeTypeUnknownError
 		info = err.Error()
 	}
+	events := append(applyEvents, getDetailEvent(tx))
+	return types.ResponseDeliverTx{
+		Code:      codeType,
+		Events:    events,
+		Info:      info,
+		GasWanted: int64(tx.GasLimit),
+		GasUsed:   int64(gasUsed),
+	}
+}
+
+func getDetailEvent(tx *crypto.Tx) types.Event {
 	fromAddress := tx.From.Address()
-	events := append(applyEvents, types.Event{
+	return types.Event{
 		Type: "detail",
 		Attributes: []common.KVPair{
 			common.KVPair{
@@ -181,14 +201,6 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 				Key: []byte("nonce"), Value: []byte(strconv.FormatUint(tx.From.Nonce, 10)),
 			},
 		},
-	})
-
-	return types.ResponseDeliverTx{
-		Code:      statusCode,
-		Events:    events,
-		Info:      info,
-		GasWanted: int64(tx.GasLimit),
-		GasUsed:   int64(gasUsed),
 	}
 }
 
@@ -200,10 +212,6 @@ func (app *App) Commit() types.ResponseCommit {
 	app.InfoDB.Put([]byte("lastBlockHeight"), b)
 	app.InfoDB.Put([]byte("lastBlockAppHash"), app.lastBlockAppHash)
 	return types.ResponseCommit{Data: appHash[:]}
-}
-
-func (app *App) Query(reqQuery types.RequestQuery) (resQuery types.ResponseQuery) {
-	return types.ResponseQuery{Log: "hello"}
 }
 
 // SetGasStation active the gas station
