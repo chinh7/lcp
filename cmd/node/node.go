@@ -1,10 +1,12 @@
 package node
 
 import (
+	"github.com/QuoineFinancial/liquid-chain/api"
 	"github.com/QuoineFinancial/liquid-chain/consensus"
 	"github.com/spf13/cobra"
 	"github.com/tendermint/tendermint/cmd/tendermint/commands"
 	"github.com/tendermint/tendermint/libs/cli"
+	tmNode "github.com/tendermint/tendermint/node"
 )
 
 // LiquidNode is the space where app and command lives
@@ -13,10 +15,12 @@ type LiquidNode struct {
 	gasContractAddress string
 	app                *consensus.App
 	command            *cobra.Command
+	tmNode             *tmNode.Node
+	vertexApi          *api.API
 }
 
 // New returns new instance of Node
-func New(rootDir string, gasContractAddress string) *LiquidNode {
+func NewNode(rootDir string, gasContractAddress string) *LiquidNode {
 	liquidNode := LiquidNode{
 		rootDir:            rootDir,
 		command:            commands.RootCmd,

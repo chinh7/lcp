@@ -12,6 +12,6 @@ func main() {
 
 	// TODO: Get gasContractAddress from genesis file
 	gasContractAddress := os.Getenv("GAS_CONTRACT_ADDRESS")
-	liquidNode := node.New(rootDir, gasContractAddress)
+	liquidNode := node.NewNode(rootDir, gasContractAddress)
 	liquidNode.Execute()
 }

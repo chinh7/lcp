@@ -19,6 +19,7 @@ import (
 type API struct {
 	url    string
 	config Config
+	srv    *http.Server
 	server *rpc.Server
 	router *mux.Router
 
@@ -86,7 +87,7 @@ func (api *API) registerServices() {
 }
 
 // Serve starts the server to serve request
-func (api *API) Serve() {
+func (api *API) Serve() error {
 	log.Println("Server is ready at", api.url)
 
 	c := cors.New(cors.Options{
@@ -95,12 +96,27 @@ func (api *API) Serve() {
 		AllowedMethods:   []string{"POST", "DELETE", "PUT", "GET", "HEAD", "OPTIONS"},
 	})
 	handler := c.Handler(api.router)
-	err := http.ListenAndServe(api.url, handler)
-	if err != nil {
-		panic(err)
-	}
-	err = http.ListenAndServe(api.url, api.router)
-	if err != nil {
-		panic(err)
+	// err := http.ListenAndServe(api.url, handler)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// err = http.ListenAndServe(api.url, api.router)
+	// if err != nil {
+	// 	panic(err)
+
+	api.srv = &http.Server{Addr: api.url, Handler: handler}
+	err := api.srv.ListenAndServe()
+	return err
+}
+
+// This will immediately stop the server without waiting for any active connection to complete
+// For gracefully shutdown please implement another function and use Server.Shutdown()
+func (api *API) Close() {
+	log.Println("Closing server")
+	if api.srv != nil {
+		err := api.srv.Close()
+		if err != nil {
+			panic(err)
+		}
 	}
 }
