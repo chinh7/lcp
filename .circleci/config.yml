@@ -1,7 +1,7 @@
 version: 2.1
 jobs:
   test:
-    working_directory: ~/vertex
+    working_directory: ~/liquid
     docker:
       - image: quoine/rocksdb:latest
         environment:
@@ -16,7 +16,7 @@ jobs:
           command: go mod download
       - run:
           name: Build
-          command: cd cmd && go build -o /vertex .
+          command: cd cmd && go build -o /liquid .
       - run:
           name: Test
           command: |

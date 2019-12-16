@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
 // PrimitiveType PrimitiveType
@@ -25,8 +25,6 @@ const (
 	Float64 PrimitiveType = 0x9
 	Address PrimitiveType = 0xa
 )
-
-var name map[PrimitiveType]string = map[PrimitiveType]string{}
 
 // IsPointer return whether p is pointer or not
 func (t PrimitiveType) IsPointer() bool {

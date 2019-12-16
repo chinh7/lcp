@@ -4,19 +4,19 @@ import (
 	"encoding/binary"
 	"fmt"
 	"path/filepath"
-	"strconv"
 
-	"github.com/QuoineFinancial/vertex/core"
-	"github.com/QuoineFinancial/vertex/crypto"
-	"github.com/QuoineFinancial/vertex/db"
-	"github.com/QuoineFinancial/vertex/gas"
-	"github.com/QuoineFinancial/vertex/storage"
-	"github.com/QuoineFinancial/vertex/token"
+	"github.com/QuoineFinancial/liquid-chain/constant"
+	"github.com/QuoineFinancial/liquid-chain/core"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/db"
+	"github.com/QuoineFinancial/liquid-chain/event"
+	"github.com/QuoineFinancial/liquid-chain/gas"
+	"github.com/QuoineFinancial/liquid-chain/storage"
+	"github.com/QuoineFinancial/liquid-chain/token"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/common"
 )
 
 // App basic Tendermint base app
@@ -90,28 +90,31 @@ func (app *App) Info(req types.RequestInfo) (resInfo types.ResponseInfo) {
 
 // CheckTx checks if submitted transaction is valid and can be passed to next step
 func (app *App) CheckTx(req types.RequestCheckTx) types.ResponseCheckTx {
-	// Check sig
-	// Check nonce
-	// Check gas wanted (limit)
-
 	tx := &crypto.Tx{}
 	if err := tx.Deserialize(req.GetTx()); err != nil {
 		return types.ResponseCheckTx{
-			Code: code.CodeTypeEncodingError,
+			Code: CodeTypeEncodingError,
 			Log:  err.Error(),
 		}
 	}
 
-	if code, err := app.validateTx(tx); err != nil {
+	if code, err := app.validateTx(tx, len(req.GetTx())); err != nil {
 		return types.ResponseCheckTx{
 			Code: code,
 			Log:  err.Error(),
 		}
 	}
+
 	return types.ResponseCheckTx{Code: code.CodeTypeOK}
 }
 
-func (app *App) validateTx(tx *crypto.Tx) (uint32, error) {
+func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
+	// Validate tx size
+	if txSize > constant.MaxTransactionSize {
+		err := fmt.Errorf("Transaction size exceed %dB", constant.MaxTransactionSize)
+		return code.CodeTypeUnknownError, err
+	}
+
 	nonce := uint64(0)
 	address := tx.From.Address()
 	account, _ := app.state.GetAccount(address)
@@ -119,14 +122,18 @@ func (app *App) validateTx(tx *crypto.Tx) (uint32, error) {
 		nonce = account.Nonce
 	}
 
+	// Validate tx nonce
 	if tx.From.Nonce != nonce {
-		return code.CodeTypeBadNonce, fmt.Errorf("Invalid nonce. Expected %v, got %v", nonce, tx.From.Nonce)
+		err := fmt.Errorf("Invalid nonce. Expected %v, got %v", nonce, tx.From.Nonce)
+		return code.CodeTypeBadNonce, err
 	}
 
+	// Validate tx signature
 	if !tx.SigVerified() {
 		return code.CodeTypeUnknownError, fmt.Errorf("Invalid signature")
 	}
 
+	// Validate gas limit
 	fee, err := tx.GetFee()
 	if err != nil {
 		return code.CodeTypeUnknownError, err
@@ -135,6 +142,7 @@ func (app *App) validateTx(tx *crypto.Tx) (uint32, error) {
 		return code.CodeTypeBadNonce, fmt.Errorf("Insufficient fee")
 	}
 
+	// Validate tx data
 	txData := &crypto.TxData{}
 	err = txData.Deserialize(tx.Data)
 	if err != nil {
@@ -146,8 +154,6 @@ func (app *App) validateTx(tx *crypto.Tx) (uint32, error) {
 
 //DeliverTx executes the submitted transaction
 func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
-	statusCode := CodeTypeOK
-	info := "ok"
 	tx := &crypto.Tx{}
 	if err := tx.Deserialize(req.GetTx()); err != nil {
 		return types.ResponseDeliverTx{
@@ -155,37 +161,30 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 			Log:  err.Error(),
 		}
 	}
-	if code, err := app.validateTx(tx); err != nil {
+	if code, err := app.validateTx(tx, len(req.GetTx())); err != nil {
 		return types.ResponseDeliverTx{
 			Code: code,
 			Log:  err.Error(),
 		}
 	}
 
-	applyEvents, gasUsed, err := core.ApplyTx(app.state, tx, app.gasStation)
+	info := "ok"
+	codeType := CodeTypeOK
+	result, applyEvents, gasUsed, err := core.ApplyTx(app.state, tx, app.gasStation)
 	if err != nil {
-		statusCode = CodeTypeUnknownError
+		codeType = CodeTypeUnknownError
 		info = err.Error()
 	}
 	fromAddress := tx.From.Address()
-	events := append(applyEvents, types.Event{
-		Type: "detail",
-		Attributes: []common.KVPair{
-			common.KVPair{
-				Key: []byte("from"), Value: []byte(fromAddress.String()),
-			},
-			common.KVPair{
-				Key: []byte("to"), Value: []byte(tx.To.String()),
-			},
-			common.KVPair{
-				Key: []byte("nonce"), Value: []byte(strconv.FormatUint(tx.From.Nonce, 10)),
-			},
-		},
-	})
-
+	detailEvent := event.NewDetailsEvent(fromAddress, tx.To, tx.From.Nonce, result)
+	events := append(applyEvents, detailEvent)
+	tmEvents := make([]types.Event, len(events))
+	for index := range events {
+		tmEvents[index] = events[index].ToTMEvent()
+	}
 	return types.ResponseDeliverTx{
-		Code:      statusCode,
-		Events:    events,
+		Code:      codeType,
+		Events:    tmEvents,
 		Info:      info,
 		GasWanted: int64(tx.GasLimit),
 		GasUsed:   int64(gasUsed),
@@ -200,10 +199,6 @@ func (app *App) Commit() types.ResponseCommit {
 	app.InfoDB.Put([]byte("lastBlockHeight"), b)
 	app.InfoDB.Put([]byte("lastBlockAppHash"), app.lastBlockAppHash)
 	return types.ResponseCommit{Data: appHash[:]}
-}
-
-func (app *App) Query(reqQuery types.RequestQuery) (resQuery types.ResponseQuery) {
-	return types.ResponseQuery{Log: "hello"}
 }
 
 // SetGasStation active the gas station

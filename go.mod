@@ -1,4 +1,4 @@
-module github.com/QuoineFinancial/vertex
+module github.com/QuoineFinancial/liquid-chain
 
 go 1.12
 

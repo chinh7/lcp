@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	"github.com/QuoineFinancial/vertex/crypto"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/google/go-cmp/cmp"
 )
 

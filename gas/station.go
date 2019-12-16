@@ -1,15 +1,15 @@
 package gas
 
 import (
-	"github.com/QuoineFinancial/vertex/crypto"
-	"github.com/QuoineFinancial/vertex/storage"
-	"github.com/tendermint/tendermint/abci/types"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/event"
+	"github.com/QuoineFinancial/liquid-chain/storage"
 )
 
 // Station interface for check and burn gas
 type Station interface {
 	Sufficient(addr crypto.Address, gas uint64) bool
-	Burn(addr crypto.Address, gas uint64) []types.Event
+	Burn(addr crypto.Address, gas uint64) []event.Event
 	Switch() bool
 	GetPolicy() Policy
 }
@@ -17,7 +17,7 @@ type Station interface {
 // Token interface
 type Token interface {
 	GetBalance(addr crypto.Address) (uint64, error)
-	Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]types.Event, error)
+	Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]event.Event, error)
 	GetContract() *storage.Account
 }
 

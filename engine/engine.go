@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/QuoineFinancial/vertex/abi"
-	"github.com/QuoineFinancial/vertex/crypto"
-	"github.com/QuoineFinancial/vertex/gas"
-	"github.com/QuoineFinancial/vertex/storage"
-	"github.com/tendermint/tendermint/abci/types"
+	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/event"
+	"github.com/QuoineFinancial/liquid-chain/gas"
+	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/vertexdlt/vertexvm/vm"
-	vertexvm "github.com/vertexdlt/vertexvm/vm"
+	vertex "github.com/vertexdlt/vertexvm/vm"
 )
 
 const (
@@ -33,10 +33,9 @@ type Engine struct {
 	account       *storage.Account
 	caller        crypto.Address
 	gasPolicy     gas.Policy
-	gasLimit      int64
 	callDepth     int
 	memAggr       int
-	events        []types.Event
+	events        []event.Event
 	methodLookup  map[string]*foreignMethod
 	ptrArgSizeMap map[int]int
 	gas           *vm.Gas
@@ -50,7 +49,7 @@ func NewEngine(state *storage.State, account *storage.Account, caller crypto.Add
 		account:       account,
 		caller:        caller,
 		gasPolicy:     gasPolicy,
-		events:        []types.Event{},
+		events:        []event.Event{},
 		methodLookup:  make(map[string]*foreignMethod),
 		ptrArgSizeMap: make(map[int]int),
 		gas:           &vm.Gas{Limit: gasLimit},
@@ -59,7 +58,7 @@ func NewEngine(state *storage.State, account *storage.Account, caller crypto.Add
 }
 
 // GetEvents return the event of engine
-func (engine *Engine) GetEvents() []types.Event {
+func (engine *Engine) GetEvents() []event.Event {
 	return engine.events
 }
 
@@ -75,7 +74,7 @@ func (engine *Engine) NewChildEngine(account *storage.Account) *Engine {
 		state:         engine.state,
 		caller:        engine.account.GetAddress(),
 		gasPolicy:     engine.gasPolicy,
-		events:        []types.Event{},
+		events:        []event.Event{},
 		methodLookup:  make(map[string]*foreignMethod),
 		ptrArgSizeMap: make(map[int]int),
 		gas:           engine.gas,
@@ -89,7 +88,7 @@ func (engine *Engine) Ignite(method string, methodArgs []byte) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	vm, err := vertexvm.NewVM(contract.Code, engine.gasPolicy, engine.gas, engine)
+	vm, err := vertex.NewVM(contract.Code, engine.gasPolicy, engine.gas, engine)
 	if err != nil {
 		return 0, err
 	}
@@ -160,7 +159,7 @@ func (engine *Engine) ptrArgSizeGet(ptr int) (int, error) {
 	return size, nil
 }
 
-func (engine *Engine) pushEvent(event types.Event) {
+func (engine *Engine) pushEvent(event event.Event) {
 	if engine.parent != nil {
 		engine.parent.pushEvent(event)
 	} else {
