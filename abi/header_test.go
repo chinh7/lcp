@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestEncodeHeaderFromFile(t *testing.T) {
@@ -25,7 +26,7 @@ func TestDecodeHeader(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if diff := cmp.Diff(decoded, h); diff != "" {
+	if diff := cmp.Diff(decoded, h, cmpopts.IgnoreUnexported(Event{})); diff != "" {
 		t.Errorf("Decoding of %v is incorrect, expected: %v, got: %v, diff: %v", bytes, h, decoded, diff)
 	}
 }

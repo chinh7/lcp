@@ -1,6 +1,8 @@
 package abi
 
 import (
+	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -12,6 +14,7 @@ import (
 type Event struct {
 	Name       string       `json:"name"`
 	Parameters []*Parameter `json:"parameters"`
+	index      uint32
 }
 
 // Parameter is model for function signature
@@ -43,6 +46,16 @@ func (h Header) GetEvent(name string) (*Event, error) {
 	return nil, fmt.Errorf("event %s not found", name)
 }
 
+// GetEventByIndex use index to retrieve event
+func (h Header) GetEventByIndex(index uint32) (*Event, error) {
+	for _, event := range h.Events {
+		if event.GetIndex() == index {
+			return event, nil
+		}
+	}
+	return nil, errors.New("Event not found")
+}
+
 // GetFunction returns function of a header from the func name
 func (h Header) GetFunction(funcName string) (*Function, error) {
 	if f, found := h.Functions[funcName]; found {
@@ -68,7 +81,8 @@ func DecodeHeader(b []byte) (*Header, error) {
 	}
 
 	events := make(map[string]*Event)
-	for _, event := range header.Events {
+	for index, event := range header.Events {
+		event.index = uint32(index)
 		events[event.Name] = event
 	}
 
@@ -118,4 +132,16 @@ func (h *Header) EncodeRLP(w io.Writer) error {
 		Functions: h.getFunctions(),
 		Events:    h.getEvents(),
 	})
+}
+
+// GetIndex return index of event
+func (e *Event) GetIndex() uint32 {
+	return e.index
+}
+
+// GetIndexByte return []byte representation of event
+func (e *Event) GetIndexByte() []byte {
+	b := make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, e.index)
+	return b
 }

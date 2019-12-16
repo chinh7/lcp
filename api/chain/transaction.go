@@ -51,7 +51,9 @@ func (service *Service) GetTx(
 	} else if block, err := service.tAPI.Block(&tx.Height); err != nil {
 		return err
 	} else {
-		result.Transaction = service.parseTransaction(tx)
+		if result.Transaction, err = service.parseTransaction(tx); err != nil {
+			return err
+		}
 		result.Transaction.Block = service.parseBlock(block)
 	}
 	return nil
@@ -96,8 +98,11 @@ func (service *Service) searchTransaction(query string, page *int, result *Searc
 		Total:       searchResult.TotalCount,
 	}
 	for _, tx := range searchResult.Txs {
-		transaction := service.parseTransaction(tx)
-		result.Transactions = append(result.Transactions, transaction)
+		if transaction, err := service.parseTransaction(tx); err != nil {
+			return err
+		} else {
+			result.Transactions = append(result.Transactions, transaction)
+		}
 
 	}
 

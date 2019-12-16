@@ -9,8 +9,7 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/common"
+	"github.com/QuoineFinancial/liquid-chain/event"
 	"github.com/vertexdlt/vertexvm/vm"
 )
 
@@ -178,39 +177,32 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 	return childEngine.Ignite(foreignMethod.name, methodArgs)
 }
 
-func (engine *Engine) handleEmitEvent(event *abi.Event, vm *vm.VM, args ...uint64) (uint64, error) {
-	attributes := common.KVPairs{}
+func (engine *Engine) handleEmitEvent(abiEvent *abi.Event, vm *vm.VM, args ...uint64) (uint64, error) {
 	address := engine.account.GetAddress()
-	attributes = append(attributes, common.KVPair{
-		Key:   []byte("address"),
-		Value: address[:],
-	})
-	for i, param := range event.Parameters {
-		var value []byte
-		var err error
+	var memBytes [][]byte
+
+	for i, param := range abiEvent.Parameters {
 		if param.Type.IsPointer() {
 			paramPtr := int(uint32(args[i]))
 			size := param.Type.GetMemorySize()
-			value, err = readAt(vm, paramPtr, size)
+			memValue, err := readAt(vm, paramPtr, size)
 			if err != nil {
 				return 0, err
 			}
+			memBytes = append(memBytes, memValue)
 		} else {
 			size := abi.Uint64.GetMemorySize()
-			value = make([]byte, size)
-			binary.BigEndian.PutUint64(value, args[i])
-		}
-		if param.Name != "address" {
-			attributes = append(attributes, common.KVPair{
-				Key:   []byte(param.Name),
-				Value: value,
-			})
+			value := make([]byte, size)
+			binary.LittleEndian.PutUint64(value, args[i])
+			memBytes = append(memBytes, value)
 		}
 	}
-	engine.pushEvent(types.Event{
-		Type:       EventPrefix + event.Name,
-		Attributes: attributes,
-	})
+
+	values, err := abi.EncodeFromBytes(abiEvent.Parameters, memBytes)
+	if err != nil {
+		return 0, err
+	}
+	engine.pushEvent(event.NewCustomEvent(abiEvent, values, address))
 	return 0, nil
 }
 

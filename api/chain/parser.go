@@ -1,10 +1,15 @@
 package chain
 
 import (
+	"encoding/binary"
 	"encoding/hex"
-	"strconv"
 
 	"github.com/QuoineFinancial/liquid-chain/api/models"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/event"
+	"github.com/QuoineFinancial/liquid-chain/storage"
+	"github.com/ethereum/go-ethereum/common"
+	abciTypes "github.com/tendermint/tendermint/abci/types"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 	"github.com/tendermint/tendermint/types"
 )
@@ -28,7 +33,7 @@ func (service *Service) parseBlock(resultBlock *core_types.ResultBlock) *models.
 	return block
 }
 
-func (service *Service) parseTransaction(resultTx *core_types.ResultTx) *models.Transaction {
+func (service *Service) parseTransaction(resultTx *core_types.ResultTx) (*models.Transaction, error) {
 	transaction := &models.Transaction{
 		Hash:     resultTx.Hash.String(),
 		Info:     resultTx.TxResult.Info,
@@ -36,43 +41,85 @@ func (service *Service) parseTransaction(resultTx *core_types.ResultTx) *models.
 		GasLimit: resultTx.TxResult.GetGasWanted(),
 		Code:     resultTx.TxResult.GetCode(),
 		Data:     string(resultTx.TxResult.GetData()),
-		Result:   make(map[string]string),
 		Events:   []*models.Event{},
 	}
 
-	for _, event := range resultTx.TxResult.GetEvents() {
-		switch event.Type {
-		case "result":
-			for _, attribute := range event.GetAttributes() {
-				transaction.Result[string(attribute.GetKey())] = string(attribute.GetValue())
-			}
-		case "detail":
-			for _, attribute := range event.GetAttributes() {
-				switch string(attribute.GetKey()) {
-				case "to":
-					transaction.To = string(attribute.GetValue())
-				case "from":
-					transaction.From = string(attribute.GetValue())
-				case "nonce":
-					nonce, _ := strconv.Atoi(string(attribute.GetValue()))
-					transaction.Nonce = int64(nonce)
-				}
-			}
-		default:
-			vEvent := models.Event{Name: event.GetType()}
-			for _, attribute := range event.GetAttributes() {
-				vEvent.Attributes = append(vEvent.Attributes, struct {
-					Key   string `json:"key"`
-					Value string `json:"value"`
-				}{
-					Key:   string(attribute.Key),
-					Value: hex.EncodeToString(attribute.Value),
-				})
-			}
-			transaction.Events = append(transaction.Events, &vEvent)
-
+	for _, e := range resultTx.TxResult.GetEvents() {
+		parsedEvent, err := service.parseEvent(transaction, e)
+		if err != nil {
+			return nil, err
+		}
+		if parsedEvent != nil {
+			transaction.Events = append(transaction.Events, parsedEvent)
 		}
 	}
 
-	return transaction
+	return transaction, nil
+}
+
+func parseEventName(name []byte) (*crypto.Address, uint32, error) {
+	address := crypto.AddressFromBytes(name[0:35])
+	index := binary.LittleEndian.Uint32(name[35:])
+	return &address, index, nil
+}
+
+func (service *Service) parseEvent(tx *models.Transaction, tmEvent abciTypes.Event) (*models.Event, error) {
+	name, err := hex.DecodeString(tmEvent.Type)
+	var result models.Event
+	if err != nil {
+		return nil, err
+	}
+
+	if len(name) == 1 {
+		eventCode := event.SystemEventCode(name[0])
+		switch eventCode {
+		case event.Detail:
+			detailEvent := event.LoadDetailEvent(tmEvent)
+			tx.From = detailEvent.From.String()
+			tx.To = detailEvent.To.String()
+			tx.Nonce = detailEvent.Nonce
+			tx.Result = detailEvent.Result
+		case event.Deployment:
+			tx.Contract = event.LoadDeploymentEvent(tmEvent).Address.String()
+		}
+		return nil, nil
+
+	} else {
+		contractAddress, index, err := parseEventName(name)
+		if err != nil {
+			return nil, err
+		}
+
+		status, _ := service.tAPI.Status()
+		appHash := common.BytesToHash(status.SyncInfo.LatestAppHash)
+		state, err := storage.New(appHash, service.database)
+		if err != nil {
+			return nil, err
+		}
+		account, err := state.GetAccount(*contractAddress)
+		if err != nil {
+			return nil, err
+		}
+
+		contract, err := account.GetContract()
+		if err != nil {
+			return nil, err
+		}
+
+		abiEvent, err := contract.Header.GetEventByIndex(index)
+		if err != nil {
+			return nil, err
+		}
+
+		result.Name = abiEvent.Name
+		result.Contract = contractAddress.String()
+		for index, param := range abiEvent.Parameters {
+			result.Attributes = append(result.Attributes, models.EventAttribute{
+				Key:   param.Name,
+				Type:  param.Type.String(),
+				Value: hex.EncodeToString(tmEvent.Attributes[index].Value),
+			})
+		}
+	}
+	return &result, nil
 }

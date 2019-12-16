@@ -4,12 +4,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"path/filepath"
-	"strconv"
 
 	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/core"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
+	"github.com/QuoineFinancial/liquid-chain/event"
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/QuoineFinancial/liquid-chain/token"
@@ -17,7 +17,6 @@ import (
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/common"
 )
 
 // App basic Tendermint base app
@@ -171,36 +170,24 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 
 	info := "ok"
 	codeType := CodeTypeOK
-	applyEvents, gasUsed, err := core.ApplyTx(app.state, tx, app.gasStation)
+	result, applyEvents, gasUsed, err := core.ApplyTx(app.state, tx, app.gasStation)
 	if err != nil {
 		codeType = CodeTypeUnknownError
 		info = err.Error()
 	}
-	events := append(applyEvents, getDetailEvent(tx))
+	fromAddress := tx.From.Address()
+	detailEvent := event.NewDetailsEvent(fromAddress, tx.To, tx.From.Nonce, result)
+	events := append(applyEvents, detailEvent)
+	tmEvents := make([]types.Event, len(events))
+	for index := range events {
+		tmEvents[index] = events[index].ToTMEvent()
+	}
 	return types.ResponseDeliverTx{
 		Code:      codeType,
-		Events:    events,
+		Events:    tmEvents,
 		Info:      info,
 		GasWanted: int64(tx.GasLimit),
 		GasUsed:   int64(gasUsed),
-	}
-}
-
-func getDetailEvent(tx *crypto.Tx) types.Event {
-	fromAddress := tx.From.Address()
-	return types.Event{
-		Type: "detail",
-		Attributes: []common.KVPair{
-			common.KVPair{
-				Key: []byte("from"), Value: []byte(fromAddress.String()),
-			},
-			common.KVPair{
-				Key: []byte("to"), Value: []byte(tx.To.String()),
-			},
-			common.KVPair{
-				Key: []byte("nonce"), Value: []byte(strconv.FormatUint(tx.From.Nonce, 10)),
-			},
-		},
 	}
 }
 

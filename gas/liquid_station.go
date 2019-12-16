@@ -2,7 +2,7 @@ package gas
 
 import (
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/tendermint/tendermint/abci/types"
+	"github.com/QuoineFinancial/liquid-chain/event"
 )
 
 // LiquidStation provide a liquid as a gas station
@@ -23,7 +23,7 @@ func (station *LiquidStation) Sufficient(addr crypto.Address, fee uint64) bool {
 }
 
 // Burn gas
-func (station *LiquidStation) Burn(addr crypto.Address, fee uint64) []types.Event {
+func (station *LiquidStation) Burn(addr crypto.Address, fee uint64) []event.Event {
 	token := station.app.GetGasContractToken()
 	// Move to gas owner
 	if fee > 0 {
