@@ -1,7 +1,7 @@
 package api
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -75,13 +75,19 @@ func (api *API) registerServices() {
 	if api.server == nil {
 		panic("api.registerServices call without api.server")
 	}
-	api.server.RegisterService(chain.NewService(api.tmAPI), "chain")
-	api.server.RegisterService(storage.NewService(api.tmAPI, api.database), "storage")
+	err := api.server.RegisterService(chain.NewService(api.tmAPI, api.database), "chain")
+	if err != nil {
+		panic(err)
+	}
+	err = api.server.RegisterService(storage.NewService(api.tmAPI, api.database), "storage")
+	if err != nil {
+		panic(err)
+	}
 }
 
 // Serve starts the server to serve request
 func (api *API) Serve() {
-	fmt.Println("Server is ready at", api.url)
+	log.Println("Server is ready at", api.url)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
@@ -89,9 +95,11 @@ func (api *API) Serve() {
 		AllowedMethods:   []string{"POST", "DELETE", "PUT", "GET", "HEAD", "OPTIONS"},
 	})
 	handler := c.Handler(api.router)
-	http.ListenAndServe(api.url, handler)
-
-	err := http.ListenAndServe(api.url, api.router)
+	err := http.ListenAndServe(api.url, handler)
+	if err != nil {
+		panic(err)
+	}
+	err = http.ListenAndServe(api.url, api.router)
 	if err != nil {
 		panic(err)
 	}

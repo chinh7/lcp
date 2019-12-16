@@ -1,6 +1,8 @@
 package abi
 
 import (
+	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -12,6 +14,7 @@ import (
 type Event struct {
 	Name       string       `json:"name"`
 	Parameters []*Parameter `json:"parameters"`
+	index      uint32
 }
 
 // Parameter is model for function signature
@@ -30,7 +33,7 @@ type Function struct {
 
 // Header is model for function signature
 type Header struct {
-	Version   string               `json:"version"`
+	Version   uint16               `json:"version"`
 	Functions map[string]*Function `json:"functions"`
 	Events    map[string]*Event    `json:"events"`
 }
@@ -41,6 +44,16 @@ func (h Header) GetEvent(name string) (*Event, error) {
 		return event, nil
 	}
 	return nil, fmt.Errorf("event %s not found", name)
+}
+
+// GetEventByIndex use index to retrieve event
+func (h Header) GetEventByIndex(index uint32) (*Event, error) {
+	for _, event := range h.Events {
+		if event.GetIndex() == index {
+			return event, nil
+		}
+	}
+	return nil, errors.New("Event not found")
 }
 
 // GetFunction returns function of a header from the func name
@@ -54,11 +67,13 @@ func (h Header) GetFunction(funcName string) (*Function, error) {
 // DecodeHeader decode byte array of header into header
 func DecodeHeader(b []byte) (*Header, error) {
 	var header struct {
-		Version   string
+		Version   uint16
 		Functions []*Function
 		Events    []*Event
 	}
-	rlp.DecodeBytes(b, &header)
+	if err := rlp.DecodeBytes(b, &header); err != nil {
+		return nil, err
+	}
 
 	functions := make(map[string]*Function)
 	for _, function := range header.Functions {
@@ -66,7 +81,8 @@ func DecodeHeader(b []byte) (*Header, error) {
 	}
 
 	events := make(map[string]*Event)
-	for _, event := range header.Events {
+	for index, event := range header.Events {
+		event.index = uint32(index)
 		events[event.Name] = event
 	}
 
@@ -108,7 +124,7 @@ func (h *Header) getFunctions() []*Function {
 // EncodeRLP encodes a header to RLP format
 func (h *Header) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, struct {
-		Version   string
+		Version   uint16
 		Functions []*Function
 		Events    []*Event
 	}{
@@ -116,4 +132,16 @@ func (h *Header) EncodeRLP(w io.Writer) error {
 		Functions: h.getFunctions(),
 		Events:    h.getEvents(),
 	})
+}
+
+// GetIndex return index of event
+func (e *Event) GetIndex() uint32 {
+	return e.index
+}
+
+// GetIndexByte return []byte representation of event
+func (e *Event) GetIndexByte() []byte {
+	b := make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, e.index)
+	return b
 }

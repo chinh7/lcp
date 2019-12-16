@@ -3,7 +3,6 @@ package chain
 import (
 	"encoding/hex"
 	"fmt"
-	"math"
 	"net/http"
 
 	"github.com/QuoineFinancial/liquid-chain/api/models"
@@ -52,7 +51,9 @@ func (service *Service) GetTx(
 	} else if block, err := service.tAPI.Block(&tx.Height); err != nil {
 		return err
 	} else {
-		result.Transaction = service.parseTransaction(tx)
+		if result.Transaction, err = service.parseTransaction(tx); err != nil {
+			return err
+		}
 		result.Transaction.Block = service.parseBlock(block)
 	}
 	return nil
@@ -93,12 +94,15 @@ func (service *Service) searchTransaction(query string, page *int, result *Searc
 	}
 	result.Pagination = models.Pagination{
 		CurrentPage: p,
-		LastPage:    int(math.Ceil(float64(searchResult.TotalCount / defaultTransactionPerPage))),
+		LastPage:    searchResult.TotalCount / defaultTransactionPerPage,
 		Total:       searchResult.TotalCount,
 	}
 	for _, tx := range searchResult.Txs {
-		transaction := service.parseTransaction(tx)
-		result.Transactions = append(result.Transactions, transaction)
+		if transaction, err := service.parseTransaction(tx); err != nil {
+			return err
+		} else {
+			result.Transactions = append(result.Transactions, transaction)
+		}
 
 	}
 

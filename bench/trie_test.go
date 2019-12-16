@@ -60,9 +60,14 @@ func benchmarkInsertDisk(n int, b *testing.B) {
 		root := common.HexToHash("")
 		tree, _ := trie.New(root, database)
 		for j := 0; j < n; j++ {
-			tree.Update(nodes[j].key, nodes[j].value)
+			if err := tree.Update(nodes[j].key, nodes[j].value); err != nil {
+				panic(err)
+			}
 		}
-		tree.Commit()
+		_, err := tree.Commit()
+		if err != nil {
+			panic(err)
+		}
 		os.RemoveAll(path)
 	}
 }
@@ -74,7 +79,9 @@ func benchmarkGetDisk(n int, b *testing.B) {
 	root := common.HexToHash("")
 	tree, _ := trie.New(root, database)
 	for i := 0; i < n; i++ {
-		tree.Update(nodes[i].key, nodes[i].value)
+		if err := tree.Update(nodes[i].key, nodes[i].value); err != nil {
+			panic(err)
+		}
 	}
 	hash, _ := tree.Commit()
 

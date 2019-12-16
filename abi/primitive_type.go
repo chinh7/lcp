@@ -26,8 +26,6 @@ const (
 	Address PrimitiveType = 0xa
 )
 
-var name map[PrimitiveType]string = map[PrimitiveType]string{}
-
 // IsPointer return whether p is pointer or not
 func (t PrimitiveType) IsPointer() bool {
 	switch t {

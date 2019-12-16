@@ -17,7 +17,7 @@ import (
 )
 
 func TestVM(t *testing.T) {
-	contract := loadContract("../fixtures/header-event.json", "../data/token-event.wasm")
+	contract := loadContract("testdata/token-abi.json", "testdata/token.wasm")
 	header := contract.Header
 	contractBytes, _ := rlp.EncodeToBytes(&contract)
 	caller := "LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R"
@@ -88,7 +88,7 @@ func TestVM(t *testing.T) {
 }
 
 func TestChainedInvoke(t *testing.T) {
-	mathContract := loadContract("../fixtures/math-abi.json", "../data/math.wasm")
+	mathContract := loadContract("testdata/math-abi.json", "testdata/math.wasm")
 	mathBytes, _ := rlp.EncodeToBytes(&mathContract)
 	caller := crypto.AddressFromString("LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R")
 	mathAddress := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
@@ -96,7 +96,7 @@ func TestChainedInvoke(t *testing.T) {
 	state, _ := storage.New(trie.Hash{}, database)
 	state.CreateAccount(caller, mathAddress, mathBytes)
 
-	utilContract := loadContract("../fixtures/util-abi.json", "../data/util.wasm")
+	utilContract := loadContract("testdata/util-abi.json", "testdata/util.wasm")
 	utilBytes, _ := rlp.EncodeToBytes(&utilContract)
 	utilAddress := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
 	utilAccount, _ := state.CreateAccount(caller, utilAddress, utilBytes)
@@ -139,7 +139,7 @@ func TestChainedInvokeOverflow(t *testing.T) {
 	database := db.NewMemoryDB()
 	state, _ := storage.New(trie.Hash{}, database)
 
-	utilContract := loadContract("../fixtures/util-abi.json", "../data/util.wasm")
+	utilContract := loadContract("testdata/util-abi.json", "testdata/util.wasm")
 	utilBytes, _ := rlp.EncodeToBytes(&utilContract)
 	utilAddress := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
 	utilAccount, _ := state.CreateAccount(caller, utilAddress, utilBytes)

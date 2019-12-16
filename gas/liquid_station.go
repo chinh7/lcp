@@ -2,7 +2,7 @@ package gas
 
 import (
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/tendermint/tendermint/abci/types"
+	"github.com/QuoineFinancial/liquid-chain/event"
 )
 
 // LiquidStation provide a liquid as a gas station
@@ -13,21 +13,21 @@ type LiquidStation struct {
 }
 
 // Sufficient gas of an address is enough for burn
-func (station *LiquidStation) Sufficient(addr crypto.Address, gas uint64) bool {
+func (station *LiquidStation) Sufficient(addr crypto.Address, fee uint64) bool {
 	token := station.app.GetGasContractToken()
 	balance, err := token.GetBalance(addr)
 	if err != nil {
 		panic(err)
 	}
-	return gas <= balance
+	return fee <= balance
 }
 
 // Burn gas
-func (station *LiquidStation) Burn(addr crypto.Address, gas uint64) []types.Event {
+func (station *LiquidStation) Burn(addr crypto.Address, fee uint64) []event.Event {
 	token := station.app.GetGasContractToken()
 	// Move to gas owner
-	if gas > 0 {
-		events, err := token.Transfer(addr, station.collector, gas)
+	if fee > 0 {
+		events, err := token.Transfer(addr, station.collector, fee)
 		if err != nil {
 			panic(err)
 		}

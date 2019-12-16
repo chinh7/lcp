@@ -158,7 +158,11 @@ func (h *hasher) store(node Node, db db.Database, force bool) (Node, error) {
 	// Larger nodes are replaced by their hash and stored in the database.
 	hash, _ := node.cache()
 	if hash == nil {
-		hash = h.makeHashNode()
+		var err error
+		hash, err = h.makeHashNode()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Store node
@@ -169,8 +173,11 @@ func (h *hasher) store(node Node, db db.Database, force bool) (Node, error) {
 	return hash, nil
 }
 
-func (h *hasher) makeHashNode() hashNode {
+func (h *hasher) makeHashNode() (hashNode, error) {
 	h.blake.Reset()
-	h.blake.Write(h.buf)
-	return h.blake.Sum([]byte{})
+	_, err := h.blake.Write(h.buf)
+	if err != nil {
+		return nil, err
+	}
+	return h.blake.Sum([]byte{}), err
 }
