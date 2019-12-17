@@ -2,6 +2,7 @@ package node
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"sync"
 	"testing"
@@ -26,7 +27,7 @@ func setupNode() (*LiquidNode, *config.Config, error) {
 	liquidNode := NewNode(conf.RootDir, gasContractAddress)
 
 	conf, err := liquidNode.parseConfig()
-	conf.LogLevel = "*:error"
+	conf.LogLevel = "error"
 	conf.Consensus.CreateEmptyBlocks = false
 
 	return liquidNode, conf, err
@@ -48,8 +49,14 @@ func TestBroadcastTx(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
+	contractHex, err := ioutil.ReadFile("./testdata/contract-hex.txt")
+	if err != nil {
+		panic(err)
+	}
+	body := fmt.Sprintf(`{"rawTx": "%s"}`, string(contractHex))
 	testcases := []testCase{
-		{"Broadcast", "chain.Broadcast", `{"rawTx": "+Nn4ZKBZheHjjJtrb75IOm2u18eUHwn1+rEw8fI5kPueGVO7VwO4QLMiPEIy9zhnECC8tqMB3f1XpJbicg8y9f1Rci9nZrvDAUs8jQ3yrzMTFVjt+kfQzmfuKZ2128DP1e4n/zk/AA64Sm1pbnQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADJiOgDAAAAAAAAo1gFZBrn8LIoxOWStF4FDbmoaktFlfppYNuLH9n3pK/0M4E/gicQ"}`, `{"jsonrpc":"2.0","result":{"hash":"6B5E4F16974D1D387BFA41B1BF606A107D6361831ED60D3E1CCE5A37C7490DA8"},"id":1}`},
+		{"Broadcast", "chain.Broadcast", body, `{"jsonrpc":"2.0","result":{"hash":"A1D8A3AB7CC2971CD26409418205D1DAEEF5AEBB228BFA8643ABA3AEE126B961"},"id":1}`},
+		{"Broadcast", "chain.Broadcast", `{"rawTx": "+KH4ZKBZheHjjJtrb75IOm2u18eUHwn1+rEw8fI5kPueGVO7V4C4QA40TwFk+Muh6/5vUsM0szRyaW8g0iWrALLj+DdebvFSWcgbXEeR7m1WUxGIz+W/Wy3N3ka668fzE6gXNLM6tQGR0IRtaW50ismIhAMAAAAAAACjWAVkGufwsijE5ZK0XgUNuahqS0WV+mlg24sf2fekr/QzgT+DAYagAQ=="}`, `{"jsonrpc":"2.0","result":{"hash":"F058970C18F36659C6722A7BD6656E01AB425158B553B58BE6AD79F54025FC63"},"id":1}`},
 	}
 
 	go startNode(&wg, liquidNode, conf)
@@ -61,9 +68,11 @@ func TestBroadcastTx(t *testing.T) {
 		for _, test := range testcases {
 			result := MakeRequest(test.method, test.params)
 			if result != test.result {
-				t.Errorf("%s: expected %s, got %s", test.name, test.result, result)
+				t.Errorf("%s: expect %s, got %s", test.name, test.result, result)
 			}
 		}
+
+		time.Sleep(3 * time.Second)
 
 		liquidNode.stopNode(true)
 		fmt.Printf("Removing data in %s\n", liquidNode.rootDir)
