@@ -110,7 +110,7 @@ func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
 	return nil
 }
 
-func (node *LiquidNode) StopNode(apiFlag bool) {
+func (node *LiquidNode) stopNode(apiFlag bool) {
 	if node.tmNode.IsRunning() {
 		_ = node.tmNode.Stop() // TODO: Properly handle error
 	}

@@ -65,7 +65,7 @@ func TestBroadcastTx(t *testing.T) {
 			}
 		}
 
-		liquidNode.StopNode(true)
+		liquidNode.stopNode(true)
 		fmt.Printf("Removing data in %s\n", liquidNode.rootDir)
 		err := os.RemoveAll(liquidNode.rootDir)
 		if err != nil {
