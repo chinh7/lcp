@@ -28,8 +28,11 @@ func (service *Service) GetAccount(r *http.Request, params *GetAccountParams, re
 	if err != nil {
 		return err
 	}
-
-	account, err := state.GetAccount(crypto.AddressFromString(params.Address))
+	address, err := crypto.AddressFromString(params.Address)
+	if err != nil {
+		return err
+	}
+	account, err := state.GetAccount(address)
 	if err != nil {
 		return err
 	}

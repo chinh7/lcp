@@ -188,8 +188,7 @@ func parseArgFromString(t PrimitiveType, value string) (interface{}, error) {
 	value = strings.TrimSpace(value)
 	switch t {
 	case Address:
-		address := crypto.AddressFromString(value)
-		return address, nil
+		return crypto.AddressFromString(value)
 	case Uint8:
 		param, err := strconv.ParseUint(value, 10, 8)
 		if err != nil {

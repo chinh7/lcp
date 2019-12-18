@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base32"
 	"encoding/binary"
+	"log"
 
 	"github.com/QuoineFinancial/liquid-chain/crc16"
 	"github.com/pkg/errors"
@@ -38,18 +39,18 @@ func AddressFromPubKey(src []byte) Address {
 
 	// write version byte
 	if err := binary.Write(&raw, binary.LittleEndian, version); err != nil {
-		return [AddressLength]byte{}
+		log.Fatalf("byte write should not fail %v", err)
 	}
 
 	// write payload
 	if _, err := raw.Write(src); err != nil {
-		return [AddressLength]byte{}
+		log.Fatalf("byte write should not fail %v", err)
 	}
 
 	// calculate and write checksum
 	checksum := crc16.Checksum(raw.Bytes())
 	if _, err := raw.Write(checksum); err != nil {
-		return [AddressLength]byte{}
+		log.Fatalf("byte write should not fail %v", err)
 	}
 	var address Address
 	address.setBytes(raw.Bytes())
@@ -57,13 +58,13 @@ func AddressFromPubKey(src []byte) Address {
 }
 
 // AddressFromString parse an address string to Address
-func AddressFromString(address string) Address {
-	pubkeyString, err := decodeAddress(versionByteAccountID, address)
+func AddressFromString(address string) (Address, error) {
+	pubKeyBytes, err := decodeAddress(versionByteAccountID, address)
 	if err != nil {
-		panic(err)
+		return Address{}, err
 	}
-	pubkey := ed25519.PublicKey(pubkeyString)
-	return AddressFromPubKey(pubkey)
+	pubkey := ed25519.PublicKey(pubKeyBytes)
+	return AddressFromPubKey(pubkey), nil
 }
 
 // AddressFromBytes return an address given its bytes
@@ -91,22 +92,18 @@ func decodeAddress(expected byte, src string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// decode into components
 	version := byte(raw[0])
-	vp := raw[0 : len(raw)-2]
 	payload := raw[1 : len(raw)-2]
 	checksum := raw[len(raw)-2:]
+	original := raw[0 : len(raw)-2]
 
 	if version != expected {
-		panic("Unexpected version")
+		return nil, errors.Errorf("Unexpected version %x", version)
 	}
 
-	// ensure checksum is valid
-	if err := crc16.Validate(vp, checksum); err != nil {
+	// checksum check
+	if err := crc16.Validate(original, checksum); err != nil {
 		return nil, err
 	}
-
-	// if we made it through the gaunlet, return the decoded value
 	return payload, nil
 }

@@ -31,8 +31,8 @@ func parseParameterFromString(s string) (Parameter, error) {
 }
 
 func TestEncode(t *testing.T) {
-	address := crypto.AddressFromString("LCHILMXMODD5DMDMPKVSD5MUODDQMBRU5GZVLGXEFBPG36HV4CLSYM7O")
-	address2 := crypto.AddressFromString("LCHILMXMODD5DMDMPKVSD5MUODDQMBRU5GZVLGXEFBPG36HV4CLSYM7O")
+	address, _ := crypto.AddressFromString("LCHILMXMODD5DMDMPKVSD5MUODDQMBRU5GZVLGXEFBPG36HV4CLSYM7O")
+	address2, _ := crypto.AddressFromString("LCHILMXMODD5DMDMPKVSD5MUODDQMBRU5GZVLGXEFBPG36HV4CLSYM7O")
 	addresses := []crypto.Address{address, address2}
 	var parameters1 []*Parameter
 	var parameters2 []*Parameter

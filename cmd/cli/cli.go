@@ -48,19 +48,6 @@ func loadPrivateKey(path string) ed25519.PrivateKey {
 	return ed25519.NewKeyFromSeed(parsed)
 }
 
-func sign(privateKey ed25519.PrivateKey, tx *crypto.Tx) {
-	pubkey := make([]byte, ed25519.PublicKeySize)
-	copy(pubkey, privateKey[32:])
-	tx.From.PubKey = pubkey
-
-	sigHash, err := tx.GetSigHash()
-	if err != nil {
-		panic(err)
-	}
-	signature := ed25519.Sign(privateKey, sigHash)
-	tx.From.Signature = signature
-}
-
 func deploy(cmd *cobra.Command, args []string) {
 	seedPath, endpoint, nonce, gas, price, _ := parseFlags(cmd)
 	privateKey := loadPrivateKey(seedPath)
@@ -86,7 +73,7 @@ func deploy(cmd *cobra.Command, args []string) {
 
 	signer := crypto.TxSigner{Nonce: uint64(nonce)}
 	tx := &crypto.Tx{Data: data, From: signer, GasLimit: gas, GasPrice: price}
-	sign(privateKey, tx)
+	tx.Sign(privateKey)
 	broadcast(endpoint, hex.EncodeToString(tx.Serialize()))
 }
 
@@ -95,7 +82,10 @@ func invoke(cmd *cobra.Command, args []string) {
 	privateKey := loadPrivateKey(seedPath)
 
 	signer := crypto.TxSigner{Nonce: uint64(nonce)}
-	to := crypto.AddressFromString(args[0])
+	to, err := crypto.AddressFromString(args[0])
+	if err != nil {
+		panic(err)
+	}
 
 	header, err := abi.LoadHeaderFromFile(args[1])
 	if err != nil {
@@ -114,7 +104,7 @@ func invoke(cmd *cobra.Command, args []string) {
 	txData := crypto.TxData{Method: args[2], Params: encodedArgs}
 	tx := &crypto.Tx{Data: txData.Serialize(), From: signer, To: to, GasLimit: gas, GasPrice: price}
 
-	sign(privateKey, tx)
+	tx.Sign(privateKey)
 	broadcast(endpoint, hex.EncodeToString(tx.Serialize()))
 }
 

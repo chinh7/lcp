@@ -43,8 +43,11 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 	if err != nil {
 		return fmt.Errorf("Could not init state for app hash %s", appHash.String())
 	}
-
-	account, err := state.GetAccount(crypto.AddressFromString(params.Address))
+	address, err := crypto.AddressFromString(params.Address)
+	if err != nil {
+		return err
+	}
+	account, err := state.GetAccount(address)
 	if err != nil {
 		return fmt.Errorf("Account not found for address %s", params.Address)
 	}
@@ -64,7 +67,11 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 		return fmt.Errorf("Invalid params for method %s", params.Method)
 	}
 
-	engine := engine.NewEngine(state, account, crypto.AddressFromString(params.Address), &gas.FreePolicy{}, 0)
+	address, err = crypto.AddressFromString(params.Address)
+	if err != nil {
+		return err
+	}
+	engine := engine.NewEngine(state, account, address, &gas.FreePolicy{}, 0)
 	ret, err := engine.Ignite(params.Method, data)
 	if err != nil {
 		return err
