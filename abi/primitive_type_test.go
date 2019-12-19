@@ -5,6 +5,32 @@ import (
 	"testing"
 )
 
+func TestIsPointer(t *testing.T) {
+
+	testTables := []struct {
+		types     []string
+		isPointer bool
+	}{
+		{
+			types:     []string{"address"},
+			isPointer: true,
+		},
+		{
+			types:     []string{"uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64", "float32", "float64"},
+			isPointer: false,
+		},
+	}
+
+	for index, table := range testTables {
+		for _, testType := range table.types {
+			p, _ := parsePrimitiveTypeFromString(testType)
+			if p.IsPointer() != table.isPointer {
+				t.Errorf("case %v: expecting type %v isPointer to be %v", index+1, p.String(), table.isPointer)
+			}
+		}
+	}
+}
+
 func TestNewArrayArgument(t *testing.T) {
 	var primitiveTypes []PrimitiveType
 	types := []string{"address", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64", "float32", "float64"}

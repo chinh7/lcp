@@ -32,12 +32,13 @@ func TestDecodeHeader(t *testing.T) {
 }
 
 func TestGetEvent(t *testing.T) {
-	h, _ := LoadHeaderFromFile("../test/fixtures/header-event.json")
+	h, _ := LoadHeaderFromFile("../test/testdata/token-abi.json")
 	event, err := h.GetEvent("Transfer")
 	if err != nil {
 		t.Error(err)
 	}
-	if diff := cmp.Diff(event, h.Events["Transfer"]); diff != "" {
+	opts := cmpopts.IgnoreUnexported(Event{})
+	if diff := cmp.Diff(event, h.Events["Transfer"], opts); diff != "" {
 		t.Errorf("GetEvent of %v is incorrect, expected: %v, got: %v, diff: %v", h, h.Events["Transfer"], event, diff)
 	}
 
@@ -50,13 +51,34 @@ func TestGetEvent(t *testing.T) {
 	}
 }
 
+func TestGetEventByIndex(t *testing.T) {
+	h, _ := LoadHeaderFromFile("../test/testdata/token-abi.json")
+	event, err := h.GetEventByIndex(0)
+	if err != nil {
+		t.Error(err)
+	}
+	opts := cmpopts.IgnoreUnexported(Event{})
+	if diff := cmp.Diff(event, h.Events["Transfer"], opts); diff != "" {
+		t.Errorf("GetEventByIndex of %v is incorrect, expected: %v, got: %v, diff: %v", h, h.Events["Transfer"], event, diff)
+	}
+
+	notFoundEvent, err := h.GetEventByIndex(100)
+	if err == nil {
+		t.Error("expecting error is nil for getting not found event")
+	}
+	if notFoundEvent != nil || err.Error() != "Event not found" {
+		t.Errorf("Error of GetEvent of %v is incorrect, expected: %v, got: %v", h, "Event not found", err.Error())
+	}
+}
+
 func TestGetFunction(t *testing.T) {
-	h, _ := LoadHeaderFromFile("../test/fixtures/header-event.json")
+	h, _ := LoadHeaderFromFile("../test/testdata/token-abi.json")
 	event, err := h.GetFunction("transfer")
 	if err != nil {
 		t.Error(err)
 	}
-	if diff := cmp.Diff(event, h.Functions["transfer"]); diff != "" {
+	opts := cmpopts.IgnoreUnexported(Event{})
+	if diff := cmp.Diff(event, h.Functions["transfer"], opts); diff != "" {
 		t.Errorf("GetFunction of %v is incorrect, expected: %v, got: %v, diff: %v", h, h.Functions["transfer"], event, diff)
 	}
 
@@ -66,5 +88,24 @@ func TestGetFunction(t *testing.T) {
 	}
 	if notFoundFunction != nil || err.Error() != "function nil not found" {
 		t.Errorf("Error of GetFunction of %v is incorrect, expected: %v, got: %v", h, "function nil not found", err.Error())
+	}
+}
+
+func TestEventGetIndex(t *testing.T) {
+	index := uint32(5)
+	event := Event{index: index}
+	result := event.GetIndex()
+	if result != index {
+		t.Errorf("Error of TestEventGetIndex expected: %v, got: %v", event.index, result)
+	}
+}
+
+func TestEventGetIndexByte(t *testing.T) {
+	index := uint32(5)
+	bytes := []byte{5, 0, 0, 0}
+	event := Event{index: index}
+	result := event.GetIndexByte()
+	if diff := cmp.Diff(result, bytes); diff != "" {
+		t.Errorf("GetIndexByte of %v is incorrect, expected: %v, got: %v, diff: %v", event, bytes, result, diff)
 	}
 }
