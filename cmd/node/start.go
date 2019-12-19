@@ -69,7 +69,7 @@ func (node *LiquidNode) parseConfig() (*config.Config, error) {
 	return conf, err
 }
 
-func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
+func (node *LiquidNode) startTendermintNode(conf *config.Config) error {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	logger, err := tmflags.ParseLogLevel(conf.LogLevel, logger, config.DefaultLogLevel())
 	if err != nil {
@@ -91,6 +91,14 @@ func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
 		return fmt.Errorf("Failed to start node: %v", err)
 	}
 	logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
+	return nil
+}
+
+func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
+	err := node.startTendermintNode(conf)
+	if err != nil {
+		return err
+	}
 
 	if apiFlag {
 		node.vertexApi = api.NewAPI(":5555", api.Config{
