@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -19,35 +18,57 @@ type testCase struct {
 	result string
 }
 
-func setupNode() (*LiquidNode, *config.Config, error) {
-	conf := config.ResetTestRoot("integration_test")
-	fmt.Printf("Init node data in %s\n", conf.RootDir)
-
-	gasContractAddress := "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7"
-	liquidNode := NewNode(conf.RootDir, gasContractAddress)
-
-	conf, err := liquidNode.parseConfig()
-	conf.LogLevel = "error"
-	conf.Consensus.CreateEmptyBlocks = false
-
-	return liquidNode, conf, err
+type testServer struct {
+	node *LiquidNode
 }
 
-func startNode(wg *sync.WaitGroup, liquidNode *LiquidNode, conf *config.Config) {
-	defer wg.Done()
-	err := liquidNode.startNode(conf, true)
-	if err != nil && err.Error() != "http: Server closed" {
-		panic(err)
-	}
-}
+const (
+	blockchainTestName = "integration_test"
+	gasContractAddress = "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7"
+)
 
-func TestBroadcastTx(t *testing.T) {
-	liquidNode, conf, err := setupNode()
+func (ts *testServer) startNode() {
+	conf := config.ResetTestRoot(blockchainTestName)
+	fmt.Println("Init node config data...")
+
+	ts.node = NewNode(conf.RootDir, gasContractAddress)
+	conf, err := ts.node.parseConfig()
 	if err != nil {
 		panic(err)
 	}
-	var wg sync.WaitGroup
-	wg.Add(2)
+	conf.LogLevel = "error"
+	conf.Consensus.CreateEmptyBlocks = false
+
+	go func() {
+		err := ts.node.startNode(conf, true)
+		if err != nil && err.Error() != "http: Server closed" {
+			panic(err)
+		}
+	}()
+
+	// Wait some time for server to ready
+	time.Sleep(5 * time.Second)
+}
+
+// Please remember to call stopNode after done testing
+func (ts *testServer) stopNode() {
+	time.Sleep(2 * time.Second)
+
+	ts.node.stopNode()
+	fmt.Println("Clean up node data")
+	err := os.RemoveAll(ts.node.rootDir)
+	if err != nil {
+		panic(err)
+	}
+
+	// Wait for blockchain to completely close
+	time.Sleep(500 * time.Millisecond)
+}
+
+func TestBroadcastTx(t *testing.T) {
+	ts := &testServer{}
+	defer ts.stopNode()
+	ts.startNode()
 
 	contractHex, err := ioutil.ReadFile("./testdata/contract-hex.txt")
 	if err != nil {
@@ -59,33 +80,12 @@ func TestBroadcastTx(t *testing.T) {
 		{"Broadcast", "chain.Broadcast", `{"rawTx": "+KH4ZKBZheHjjJtrb75IOm2u18eUHwn1+rEw8fI5kPueGVO7V4C4QA40TwFk+Muh6/5vUsM0szRyaW8g0iWrALLj+DdebvFSWcgbXEeR7m1WUxGIz+W/Wy3N3ka668fzE6gXNLM6tQGR0IRtaW50ismIhAMAAAAAAACjWAVkGufwsijE5ZK0XgUNuahqS0WV+mlg24sf2fekr/QzgT+DAYagAQ=="}`, `{"jsonrpc":"2.0","result":{"hash":"F058970C18F36659C6722A7BD6656E01AB425158B553B58BE6AD79F54025FC63"},"id":1}`},
 	}
 
-	go startNode(&wg, liquidNode, conf)
-	go func() {
-		defer wg.Done()
-		// Wait for blockchain node and api server to start
-		time.Sleep(5 * time.Second)
-
-		for _, test := range testcases {
-			result := MakeRequest(test.method, test.params)
-			if result != test.result {
-				t.Errorf("%s: expect %s, got %s", test.name, test.result, result)
-			}
+	for _, test := range testcases {
+		result := MakeRequest(test.method, test.params)
+		if result != test.result {
+			t.Errorf("%s: expect %s, got %s", test.name, test.result, result)
 		}
-
-		time.Sleep(3 * time.Second)
-
-		liquidNode.stopNode(true)
-		fmt.Printf("Removing data in %s\n", liquidNode.rootDir)
-		err := os.RemoveAll(liquidNode.rootDir)
-		if err != nil {
-			panic(err)
-		}
-
-		// Wait for blockchain to completely close
-		time.Sleep(2 * time.Second)
-	}()
-
-	wg.Wait()
+	}
 }
 
 func MakeRequest(method string, params string) string {

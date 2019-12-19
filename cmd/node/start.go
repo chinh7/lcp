@@ -71,7 +71,6 @@ func (node *LiquidNode) parseConfig() (*config.Config, error) {
 
 func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-	// Set log level by --log_level flag or default
 	logger, err := tmflags.ParseLogLevel(conf.LogLevel, logger, config.DefaultLogLevel())
 	if err != nil {
 		return err
@@ -85,9 +84,7 @@ func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
 
 	// Stop upon receiving SIGTERM or CTRL-C.
 	common.TrapSignal(logger, func() {
-		if n.IsRunning() {
-			_ = n.Stop() // TODO: Properly handle error
-		}
+		node.stopNode()
 	})
 
 	if err := n.Start(); err != nil {
@@ -110,16 +107,19 @@ func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
 	return nil
 }
 
-func (node *LiquidNode) stopNode(apiFlag bool) {
+func (node *LiquidNode) stopNode() {
+	if node.vertexApi != nil {
+		node.vertexApi.Close()
+	}
+
 	if node.tmNode.IsRunning() {
 		_ = node.tmNode.Stop() // TODO: Properly handle error
 	}
-
-	node.vertexApi.Close()
 }
 
 func (node *LiquidNode) addStartNodeCommand() {
 	var apiFlag bool
+
 	cmd := &cobra.Command{
 		Use:   "start [--api]",
 		Short: "Start the liquid node",
