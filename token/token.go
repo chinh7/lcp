@@ -1,6 +1,8 @@
 package token
 
 import (
+	"errors"
+	"math"
 	"strconv"
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
@@ -49,8 +51,8 @@ func (token *Token) GetBalance(addr crypto.Address) (uint64, error) {
 // Transfer transfer token from caller address to another address
 func (token *Token) Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]event.Event, error) {
 	ret, events, err := token.invokeContract(caller, "transfer", []string{addr.String(), strconv.FormatUint(amount, 10)})
-	if int(ret) < 0 {
-		panic("transfer token failed")
+	if ret > math.MaxInt32 {
+		return events, errors.New("Token transfer failed")
 	}
 	return events, err
 }

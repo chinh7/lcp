@@ -29,11 +29,11 @@ func setup() *Token {
 		panic(err)
 	}
 
-	header, err := abi.LoadHeaderFromFile("../test/testdata/token-abi.json")
+	header, err := abi.LoadHeaderFromFile("../test/testdata/liquid-token-abi.json")
 	if err != nil {
 		panic(err)
 	}
-	data, err := ioutil.ReadFile("../test/testdata/token.wasm")
+	data, err := ioutil.ReadFile("../test/testdata/liquid-token.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -92,7 +92,7 @@ func TestGetBalance(t *testing.T) {
 	}
 }
 
-func TestTransfer(t *testing.T) {
+func TestTransferOK(t *testing.T) {
 	token := setup()
 	caller := crypto.AddressFromString(otherAddress)
 	collector := crypto.AddressFromString(contractAddress)
@@ -112,5 +112,16 @@ func TestTransfer(t *testing.T) {
 	ret, err = token.GetBalance(collector)
 	if ret != contractBalance+amount {
 		t.Errorf("Expect collector balance to be %v, got %v", contractBalance+amount, ret)
+	}
+}
+
+func TestTransferFail(t *testing.T) {
+	token := setup()
+	caller := crypto.AddressFromString(nonExistentAddress)
+	collector := crypto.AddressFromString(contractAddress)
+
+	_, err := token.Transfer(caller, collector, 100)
+	if err == nil || err.Error() != "Token transfer failed" {
+		t.Errorf("Expect token transfer failed")
 	}
 }
