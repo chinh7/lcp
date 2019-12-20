@@ -24,7 +24,6 @@ func (token *Token) invokeContract(caller crypto.Address, method string, values 
 	if err != nil {
 		return 0, nil, err
 	}
-
 	function, err := contract.Header.GetFunction(method)
 	if err != nil {
 		return 0, nil, err

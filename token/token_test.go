@@ -125,3 +125,19 @@ func TestTransferFail(t *testing.T) {
 		t.Errorf("Expect token transfer failed")
 	}
 }
+
+func TestInvokeUndefinedFunction(t *testing.T) {
+	token := setup()
+	_, _, err := token.invokeContract(crypto.AddressFromString(ownerAddress), "undefined_function", []string{})
+	if err == nil {
+		t.Errorf("Expect contract invoke error")
+	}
+}
+
+func TestInvokeWrongParameters(t *testing.T) {
+	token := setup()
+	_, _, err := token.invokeContract(crypto.AddressFromString(ownerAddress), "mint", []string{})
+	if err == nil {
+		t.Errorf("Expect contract invoke error")
+	}
+}
