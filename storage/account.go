@@ -43,6 +43,7 @@ func (account *Account) GetContract() (*abi.Contract, error) {
 
 // SetNonce stores the latest nonce to account state
 func (account *Account) SetNonce(nonce uint64) {
+	account.dirty = true
 	account.Nonce = nonce
 }
 
