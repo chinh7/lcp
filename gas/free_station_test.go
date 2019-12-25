@@ -9,8 +9,8 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/storage"
 )
 
-const contractAddress = "LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53"
-const otherAddress = "LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY"
+const contractAddressStr = "LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53"
+const otherAddressStr = "LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY"
 
 type MockFreeToken struct {
 	Token
@@ -21,7 +21,7 @@ func (token *MockFreeToken) GetBalance(addr crypto.Address) (uint64, error) {
 }
 
 func (token *MockFreeToken) Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]event.Event, error) {
-	if addr.String() != contractAddress {
+	if addr.String() != contractAddressStr {
 		panic("Expected collector is gas contract address")
 	}
 	if amount == 10000 {
@@ -31,9 +31,10 @@ func (token *MockFreeToken) Transfer(caller crypto.Address, addr crypto.Address,
 }
 
 func (token *MockFreeToken) GetContract() *storage.Account {
+	contractAddress, _ := crypto.AddressFromString(contractAddressStr)
 	return &storage.Account{
 		Nonce:   0,
-		Creator: crypto.AddressFromString(contractAddress),
+		Creator: contractAddress,
 	}
 }
 
@@ -78,7 +79,8 @@ func TestFreeSwitch(t *testing.T) {
 func TestFreeSufficient(t *testing.T) {
 	app := &MockFreeApp{}
 	station := NewFreeStation(app)
-	ret := station.Sufficient(crypto.AddressFromString(otherAddress), 10)
+	otherAddress, _ := crypto.AddressFromString(otherAddressStr)
+	ret := station.Sufficient(otherAddress, 10)
 
 	if !ret {
 		t.Error("Expected return true")
@@ -88,10 +90,10 @@ func TestFreeSufficient(t *testing.T) {
 func TestFreeBurn(t *testing.T) {
 	app := &MockFreeApp{}
 	station := NewFreeStation(app)
+	otherAddress, _ := crypto.AddressFromString(otherAddressStr)
+	station.Burn(otherAddress, 10)
 
-	station.Burn(crypto.AddressFromString(otherAddress), 10)
-
-	ret := station.Burn(crypto.AddressFromString(otherAddress), 0)
+	ret := station.Burn(otherAddress, 0)
 	if ret != nil {
 		t.Error("Expected return nil")
 	}
