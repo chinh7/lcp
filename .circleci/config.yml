@@ -17,9 +17,8 @@ jobs:
           name: Install deps
           command: go mod download
       - run:
-          name: Setup Code Climate test-reporter
+          name: Setup test reporter
           command: |
-          # download test reporter as a static binary
             curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
             chmod +x ./cc-test-reporter
       - run:
@@ -28,7 +27,6 @@ jobs:
       - run:
           name: Test
           command: |
-            # notify Code Climate of a pending test report using `before-build`
             ./cc-test-reporter before-build
             go test ./... -coverprofile=coverage.out
             go tool cover -html=coverage.out -o coverage.html
