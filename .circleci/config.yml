@@ -23,6 +23,7 @@ jobs:
       - run:
           name: Setup test reporter
           command: |
+            go get github.com/axw/gocov/gocov
             apk add curl && apk upgrade
             curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
             chmod +x ./cc-test-reporter
@@ -36,7 +37,8 @@ jobs:
             go test ./... -coverprofile=c.out
             go tool cover -html=c.out -o coverage.html
             mv coverage.html /tmp/artifacts
-            ./cc-test-reporter after-build --coverage-input-type gocov --exit-code $?
+            gocov convert c.out
+            ./cc-test-reporter after-build
       - save_cache: # Store cache in the /go/pkg directory
           key: v1-pkg-cache
           paths:
