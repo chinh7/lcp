@@ -7,10 +7,10 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/event"
 )
 
-func parseEvent(vertexEvent *event.Event) *models.Event {
+func parseEvent(liquidEvent *event.Event) *models.Event {
 	attributes := []models.EventAttribute{}
-	tmEvent := vertexEvent.ToTMEvent()
-	for index, param := range vertexEvent.Parameters {
+	tmEvent := liquidEvent.ToTMEvent()
+	for index, param := range liquidEvent.Parameters {
 		attributes = append(attributes, models.EventAttribute{
 			Key:   param.Name,
 			Type:  param.Type.String(),
@@ -18,8 +18,8 @@ func parseEvent(vertexEvent *event.Event) *models.Event {
 		})
 	}
 	return &models.Event{
-		Name:       vertexEvent.Name,
-		Contract:   vertexEvent.ContractAddress.String(),
+		Name:       liquidEvent.Name,
+		Contract:   liquidEvent.ContractAddress.String(),
 		Attributes: attributes,
 	}
 }

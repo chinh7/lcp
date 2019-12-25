@@ -74,8 +74,8 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 
 	result.Return = ret
 	events := []*models.Event{}
-	for _, vertexEvent := range engine.GetEvents() {
-		events = append(events, parseEvent(&vertexEvent))
+	for _, liquidEvent := range engine.GetEvents() {
+		events = append(events, parseEvent(&liquidEvent))
 	}
 	result.Events = events
 	return nil
