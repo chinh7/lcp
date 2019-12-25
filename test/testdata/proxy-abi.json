@@ -1,1 +1,0 @@
-{"version":1,"functions":[{"name":"transfer_if_thirty","parameters":[{"is_array":false,"type":"uint32"}]},{"name":"transfer","parameters":[{"is_array":false,"type":"address"},{"is_array":false,"type":"uint32"}]}]}

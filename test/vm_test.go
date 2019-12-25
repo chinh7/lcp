@@ -20,12 +20,14 @@ func TestVM(t *testing.T) {
 	contract := loadContract("testdata/token-abi.json", "testdata/token.wasm")
 	header := contract.Header
 	contractBytes, _ := rlp.EncodeToBytes(&contract)
-	caller := "LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R"
-	contractAddress := "LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53"
+	caller, _ := crypto.AddressFromString("LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R")
+	contractAddress, _ := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
+
 	database := db.NewMemoryDB()
 	state, _ := storage.New(trie.Hash{}, database)
-	accountState, _ := state.CreateAccount(crypto.AddressFromString(caller), crypto.AddressFromString(contractAddress), contractBytes)
-	execEngine := engine.NewEngine(state, accountState, crypto.AddressFromString(caller), &gas.FreePolicy{}, 0)
+
+	accountState, _ := state.CreateAccount(caller, contractAddress, contractBytes)
+	execEngine := engine.NewEngine(state, accountState, caller, &gas.FreePolicy{}, 0)
 	toAddress := "LB3EICIUKOUYCY4D7T2O6RKL7ISEPISNKUXNILDTJ76V2PDZVT5ZDP3U"
 	var mint = 10000000
 	mintAmount := strconv.Itoa(mint)
@@ -62,7 +64,7 @@ func TestVM(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	getBalanceMint, _ := abi.EncodeFromString(getBalanceFunction.Parameters, []string{caller})
+	getBalanceMint, _ := abi.EncodeFromString(getBalanceFunction.Parameters, []string{caller.String()})
 	if err != nil {
 		panic(err)
 	}
@@ -84,94 +86,6 @@ func TestVM(t *testing.T) {
 	}
 	if int(ret) != mint-transfer {
 		t.Errorf("Expect return value to be %v, got %v", mint-transfer, ret)
-	}
-}
-
-func TestChainedInvoke(t *testing.T) {
-	mathContract := loadContract("testdata/math-abi.json", "testdata/math.wasm")
-	mathBytes, _ := rlp.EncodeToBytes(&mathContract)
-	caller := crypto.AddressFromString("LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R")
-	mathAddress := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
-	database := db.NewMemoryDB()
-	state, _ := storage.New(trie.Hash{}, database)
-	state.CreateAccount(caller, mathAddress, mathBytes)
-
-	utilContract := loadContract("testdata/util-abi.json", "testdata/util.wasm")
-	utilBytes, _ := rlp.EncodeToBytes(&utilContract)
-	utilAddress := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
-	utilAccount, _ := state.CreateAccount(caller, utilAddress, utilBytes)
-	execEngine := engine.NewEngine(state, utilAccount, caller, &gas.FreePolicy{}, 0)
-
-	funcName := "init"
-	function, err := utilContract.Header.GetFunction(funcName)
-	if err != nil {
-		panic(err)
-	}
-	args, err := abi.EncodeFromString(function.Parameters, []string{mathAddress.String()})
-	if err != nil {
-		panic(err)
-	}
-	_, err = execEngine.Ignite(funcName, args)
-	if err != nil {
-		panic(err)
-	}
-
-	funcName = "variance"
-	function, err = utilContract.Header.GetFunction(funcName)
-	if err != nil {
-		panic(err)
-	}
-	args, err = abi.EncodeFromString(function.Parameters, []string{"[1,2,3,4,5]"})
-	if err != nil {
-		panic(err)
-	}
-	ret, err := execEngine.Ignite(funcName, args)
-	if err != nil {
-		panic(err)
-	}
-	if int32(ret) != 2 {
-		t.Errorf("Expect return value to be %v, got %v", 2, int32(ret))
-	}
-}
-
-func TestChainedInvokeOverflow(t *testing.T) {
-	caller := crypto.AddressFromString("LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R")
-	database := db.NewMemoryDB()
-	state, _ := storage.New(trie.Hash{}, database)
-
-	utilContract := loadContract("testdata/util-abi.json", "testdata/util.wasm")
-	utilBytes, _ := rlp.EncodeToBytes(&utilContract)
-	utilAddress := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
-	utilAccount, _ := state.CreateAccount(caller, utilAddress, utilBytes)
-
-	execEngine := engine.NewEngine(state, utilAccount, caller, &gas.FreePolicy{}, 0)
-
-	funcName := "init"
-	function, err := utilContract.Header.GetFunction(funcName)
-	if err != nil {
-		panic(err)
-	}
-	args, err := abi.EncodeFromString(function.Parameters, []string{utilAddress.String()})
-	if err != nil {
-		panic(err)
-	}
-	_, err = execEngine.Ignite(funcName, args)
-	if err != nil {
-		panic(err)
-	}
-
-	funcName = "mean"
-	function, err = utilContract.Header.GetFunction(funcName)
-	if err != nil {
-		panic(err)
-	}
-	args, err = abi.EncodeFromString(function.Parameters, []string{"[1,2,3,4,5]"})
-	if err != nil {
-		panic(err)
-	}
-	_, err = execEngine.Ignite(funcName, args)
-	if err == nil || err.Error() != "call depth limit reached" {
-		t.Errorf("Unexpected error %v", err)
 	}
 }
 

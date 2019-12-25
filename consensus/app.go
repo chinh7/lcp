@@ -48,7 +48,7 @@ func NewApp(nodeInfo string, dbDir string, gasContractAddress string) *App {
 		lastBlockHeight:    0,
 	}
 
-	app.SetGasStation(gas.NewFreeGasStation(app))
+	app.SetGasStation(gas.NewFreeStation(app))
 
 	// Load last proccessed block height
 	b := app.InfoDB.Get([]byte("lastBlockHeight"))
@@ -139,7 +139,7 @@ func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 		return code.CodeTypeUnknownError, err
 	}
 	if !app.gasStation.Sufficient(address, fee) {
-		return code.CodeTypeBadNonce, fmt.Errorf("Insufficient fee")
+		return code.CodeTypeUnknownError, fmt.Errorf("Insufficient fee")
 	}
 
 	// Validate tx data
@@ -182,6 +182,7 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 	for index := range events {
 		tmEvents[index] = events[index].ToTMEvent()
 	}
+
 	return types.ResponseDeliverTx{
 		Code:      codeType,
 		Events:    tmEvents,
@@ -209,7 +210,10 @@ func (app *App) SetGasStation(gasStation gas.Station) {
 // GetGasContractToken designated
 func (app *App) GetGasContractToken() gas.Token {
 	if len(app.gasContractAddress) > 0 {
-		address := crypto.AddressFromString(app.gasContractAddress)
+		address, err := crypto.AddressFromString(app.gasContractAddress)
+		if err != nil {
+			panic(err)
+		}
 		contract, err := app.state.GetAccount(address)
 		if err != nil {
 			panic(err)

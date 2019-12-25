@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/constant"
@@ -17,13 +16,6 @@ func readAt(vm *vm.VM, ptr, size int) ([]byte, error) {
 	data := make([]byte, size)
 	_, err := vm.MemRead(data, ptr)
 	return data, err
-}
-
-func (engine *Engine) chainPrintBytes(vm *vm.VM, args ...uint64) (uint64, error) {
-	ptr, size := int(args[0]), int(args[1])
-	bytes, err := readAt(vm, ptr, size)
-	log.Println(string(bytes))
-	return 0, err
 }
 
 func (engine *Engine) chainStorageSet(vm *vm.VM, args ...uint64) (uint64, error) {
@@ -154,6 +146,7 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 					return 0, err
 				}
 			} else {
+				bytes = make([]byte, 8)
 				binary.LittleEndian.PutUint64(bytes, args[i])
 				size := param.Type.GetMemorySize()
 				bytes = bytes[:size]
@@ -211,8 +204,6 @@ func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 	switch module {
 	case "env":
 		switch name {
-		case "chain_print_bytes":
-			return engine.chainPrintBytes
 		case "chain_storage_set":
 			return engine.chainStorageSet
 		case "chain_storage_get":

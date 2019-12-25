@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/api/models"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/engine"
 	"github.com/QuoineFinancial/liquid-chain/gas"
@@ -22,7 +23,8 @@ type CallParams struct {
 
 // CallResult is result of Call
 type CallResult struct {
-	Return interface{} `json:"value"`
+	Events []*models.Event `json:"events"`
+	Return interface{}     `json:"value"`
 }
 
 // Call to execute function without tx creation in blockchain
@@ -43,8 +45,11 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 	if err != nil {
 		return fmt.Errorf("Could not init state for app hash %s", appHash.String())
 	}
-
-	account, err := state.GetAccount(crypto.AddressFromString(params.Address))
+	address, err := crypto.AddressFromString(params.Address)
+	if err != nil {
+		return err
+	}
+	account, err := state.GetAccount(address)
 	if err != nil {
 		return fmt.Errorf("Account not found for address %s", params.Address)
 	}
@@ -64,12 +69,21 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 		return fmt.Errorf("Invalid params for method %s", params.Method)
 	}
 
-	engine := engine.NewEngine(state, account, crypto.AddressFromString(params.Address), &gas.FreePolicy{}, 0)
+	address, err = crypto.AddressFromString(params.Address)
+	if err != nil {
+		return err
+	}
+	engine := engine.NewEngine(state, account, address, &gas.FreePolicy{}, 0)
 	ret, err := engine.Ignite(params.Method, data)
 	if err != nil {
 		return err
 	}
 
 	result.Return = ret
+	events := []*models.Event{}
+	for _, liquidEvent := range engine.GetEvents() {
+		events = append(events, parseEvent(&liquidEvent))
+	}
+	result.Events = events
 	return nil
 }
