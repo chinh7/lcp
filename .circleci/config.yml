@@ -1,6 +1,8 @@
 version: 2.1
 jobs:
   test:
+    environment:
+      CC_TEST_REPORTER_ID: c15d7b2d5edf0ca5a041a71d52900f892e781bf9cc01c3232ac1ce545edb2044
     working_directory: ~/liquid
     docker:
       - image: quoine/rocksdb:latest
@@ -15,14 +17,23 @@ jobs:
           name: Install deps
           command: go mod download
       - run:
+          name: Setup Code Climate test-reporter
+          command: |
+          # download test reporter as a static binary
+            curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+            chmod +x ./cc-test-reporter
+      - run:
           name: Build
           command: cd cmd && go build -o /liquid .
       - run:
           name: Test
           command: |
+            # notify Code Climate of a pending test report using `before-build`
+            ./cc-test-reporter before-build
             go test ./... -coverprofile=coverage.out
             go tool cover -html=coverage.out -o coverage.html
             mv coverage.html /tmp/artifacts
+            ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
 
       - store_artifacts:
           path: /tmp/artifacts
