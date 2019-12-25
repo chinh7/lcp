@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/api/models"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/engine"
 	"github.com/QuoineFinancial/liquid-chain/gas"
@@ -22,7 +23,8 @@ type CallParams struct {
 
 // CallResult is result of Call
 type CallResult struct {
-	Return interface{} `json:"value"`
+	Events []*models.Event `json:"events"`
+	Return interface{}     `json:"value"`
 }
 
 // Call to execute function without tx creation in blockchain
@@ -78,5 +80,10 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 	}
 
 	result.Return = ret
+	events := []*models.Event{}
+	for _, liquidEvent := range engine.GetEvents() {
+		events = append(events, parseEvent(&liquidEvent))
+	}
+	result.Events = events
 	return nil
 }

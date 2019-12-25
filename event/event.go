@@ -1,6 +1,8 @@
 package event
 
 import (
+	"encoding/binary"
+
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
@@ -27,4 +29,11 @@ func NewDetailsEvent(from crypto.Address, to crypto.Address, nonce uint64, resul
 // NewCustomEvent return event declared by user
 func NewCustomEvent(event *abi.Event, values []byte, contract crypto.Address) Event {
 	return Event{event, values, &contract}
+}
+
+// ParseCustomEventName return the crypto.Adress and index of an event name
+func ParseCustomEventName(name []byte) (*crypto.Address, uint32, error) {
+	address := crypto.AddressFromBytes(name[0:crypto.AddressLength])
+	index := binary.LittleEndian.Uint32(name[crypto.AddressLength:])
+	return &address, index, nil
 }
