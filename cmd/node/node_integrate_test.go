@@ -51,19 +51,22 @@ func (ts *testServer) startNode() error {
 		}
 	}()
 	// Wait some time for server to ready
-	time.Sleep(2 * time.Second)
-
+	time.Sleep(4 * time.Second)
 	return nil
 }
 
 // Please remember to call stopNode after done testing
 func (ts *testServer) stopNode() {
+	time.Sleep(2 * time.Second)
+
 	ts.node.stopNode()
 	fmt.Println("Clean up node data")
 	err := os.RemoveAll(ts.node.rootDir)
 	if err != nil {
 		panic(err)
 	}
+
+	time.Sleep(500 * time.Millisecond)
 }
 
 func TestBroadcastTx(t *testing.T) {
