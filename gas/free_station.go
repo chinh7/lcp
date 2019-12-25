@@ -49,8 +49,8 @@ func (station *FreeStation) GetPolicy() Policy {
 	return station.policy
 }
 
-// NewFreeGasStation constructor
-func NewFreeGasStation(app App) Station {
+// NewFreeStation constructor
+func NewFreeStation(app App) Station {
 	return &FreeStation{
 		app:    app,
 		policy: &FreePolicy{},

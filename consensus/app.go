@@ -48,7 +48,7 @@ func NewApp(nodeInfo string, dbDir string, gasContractAddress string) *App {
 		lastBlockHeight:    0,
 	}
 
-	app.SetGasStation(gas.NewFreeGasStation(app))
+	app.SetGasStation(gas.NewFreeStation(app))
 
 	// Load last proccessed block height
 	b := app.InfoDB.Get([]byte("lastBlockHeight"))
