@@ -1,6 +1,8 @@
 version: 2.1
 jobs:
   test:
+    environment:
+      CC_TEST_REPORTER_ID: c15d7b2d5edf0ca5a041a71d52900f892e781bf9cc01c3232ac1ce545edb2044
     working_directory: ~/liquid
     docker:
       - image: quoine/rocksdb:latest
@@ -8,6 +10,10 @@ jobs:
           GO111MODULE: "on"
     steps:
       - checkout
+      - restore_cache: # restores saved cache if no changes are detected since last run
+      # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
+          keys:
+            - v1-pkg-cache
       - run:
           name: "Create a temp directory for artifacts"
           command: mkdir -p /tmp/artifacts
@@ -15,15 +21,26 @@ jobs:
           name: Install deps
           command: go mod download
       - run:
+          name: Setup test reporter
+          command: |
+            apk add curl && apk upgrade
+            curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+            chmod +x ./cc-test-reporter
+      - run:
           name: Build
           command: cd cmd && go build -o /liquid .
       - run:
           name: Test
           command: |
-            go test ./... -coverprofile=coverage.out
-            go tool cover -html=coverage.out -o coverage.html
+            ./cc-test-reporter before-build
+            go test ./... -coverprofile=c.out
+            go tool cover -html=c.out -o coverage.html
             mv coverage.html /tmp/artifacts
-
+            ./cc-test-reporter after-build --prefix github.com/QuoineFinancial/liquid-chain/ --coverage-input-type gocov --exit-code $?
+      - save_cache: # Store cache in the /go/pkg directory
+          key: v1-pkg-cache
+          paths:
+            - "/go/pkg"
       - store_artifacts:
           path: /tmp/artifacts
 
