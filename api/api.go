@@ -21,7 +21,7 @@ type API struct {
 	config Config
 	srv    *http.Server
 	server *rpc.Server
-	router *mux.Router
+	Router *mux.Router
 
 	tmAPI    resource.TendermintAPI
 	database db.Database
@@ -69,7 +69,7 @@ func (api *API) setupRouter() {
 	}
 	router := mux.NewRouter()
 	router.Handle("/", api.server).Methods("POST")
-	api.router = router
+	api.Router = router
 }
 
 func (api *API) registerServices() {
@@ -95,12 +95,12 @@ func (api *API) Serve() error {
 		AllowCredentials: true,
 		AllowedMethods:   []string{"POST", "DELETE", "PUT", "GET", "HEAD", "OPTIONS"},
 	})
-	handler := c.Handler(api.router)
+	handler := c.Handler(api.Router)
 	// err := http.ListenAndServe(api.url, handler)
 	// if err != nil {
 	// 	panic(err)
 	// }
-	// err = http.ListenAndServe(api.url, api.router)
+	// err = http.ListenAndServe(api.url, api.Router)
 	// if err != nil {
 	// 	panic(err)
 
