@@ -22,6 +22,7 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.3.2
+	github.com/stretchr/testify v1.3.0
 	github.com/tecbot/gorocksdb v0.0.0-20190705090504-162552197222
 	github.com/tendermint/go-amino v0.15.0 // indirect
 	github.com/tendermint/tendermint v0.32.2

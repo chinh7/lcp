@@ -139,7 +139,7 @@ func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 		return code.CodeTypeUnknownError, err
 	}
 	if !app.gasStation.Sufficient(address, fee) {
-		return code.CodeTypeBadNonce, fmt.Errorf("Insufficient fee")
+		return code.CodeTypeUnknownError, fmt.Errorf("Insufficient fee")
 	}
 
 	// Validate tx data
@@ -182,6 +182,7 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 	for index := range events {
 		tmEvents[index] = events[index].ToTMEvent()
 	}
+
 	return types.ResponseDeliverTx{
 		Code:      codeType,
 		Events:    tmEvents,
