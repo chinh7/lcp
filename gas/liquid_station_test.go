@@ -18,7 +18,7 @@ func (token *MockToken) GetBalance(addr crypto.Address) (uint64, error) {
 }
 
 func (token *MockToken) Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]event.Event, error) {
-	if addr.String() != contractAddress {
+	if addr.String() != contractAddressStr {
 		panic("Expected collector is gas contract address")
 	}
 	if amount == 10000 {
@@ -45,7 +45,8 @@ func (app *MockApp) GetGasContractToken() Token {
 
 func TestSwitch(t *testing.T) {
 	app := &MockApp{}
-	station := NewLiquidStation(app, crypto.AddressFromString(contractAddress))
+	contractAddress, _ := crypto.AddressFromString(contractAddressStr)
+	station := NewLiquidStation(app, contractAddress)
 	ret := station.Switch()
 	if ret {
 		t.Error("Expected return false")
@@ -54,14 +55,17 @@ func TestSwitch(t *testing.T) {
 
 func TestSufficient(t *testing.T) {
 	app := &MockApp{}
-	station := NewLiquidStation(app, crypto.AddressFromString(contractAddress))
-	ret := station.Sufficient(crypto.AddressFromString(otherAddress), 10)
+	contractAddress, _ := crypto.AddressFromString(contractAddressStr)
+	otherAddress, _ := crypto.AddressFromString(otherAddressStr)
+
+	station := NewLiquidStation(app, contractAddress)
+	ret := station.Sufficient(otherAddress, 10)
 
 	if !ret {
 		t.Error("Expected return true")
 	}
 
-	ret = station.Sufficient(crypto.AddressFromString(otherAddress), 1000)
+	ret = station.Sufficient(otherAddress, 1000)
 
 	if ret {
 		t.Error("Expected return false")
@@ -70,11 +74,14 @@ func TestSufficient(t *testing.T) {
 
 func TestBurn(t *testing.T) {
 	app := &MockApp{}
-	station := NewLiquidStation(app, crypto.AddressFromString(contractAddress))
+	contractAddress, _ := crypto.AddressFromString(contractAddressStr)
+	otherAddress, _ := crypto.AddressFromString(otherAddressStr)
 
-	station.Burn(crypto.AddressFromString(otherAddress), 10)
+	station := NewLiquidStation(app, contractAddress)
 
-	ret := station.Burn(crypto.AddressFromString(otherAddress), 0)
+	station.Burn(otherAddress, 10)
+
+	ret := station.Burn(otherAddress, 0)
 	if ret != nil {
 		t.Error("Expected return nil")
 	}
@@ -84,6 +91,5 @@ func TestBurn(t *testing.T) {
 			t.Errorf("The code did not panic")
 		}
 	}()
-
-	station.Burn(crypto.AddressFromString(otherAddress), 10000)
+	station.Burn(otherAddress, 10000)
 }

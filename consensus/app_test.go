@@ -183,7 +183,7 @@ func TestApp_validateTx(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	address := crypto.AddressFromString("LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
+	address, _ := crypto.AddressFromString("LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
 	app.SetGasStation(gas.NewLiquidStation(app, address))
 	_, err = app.state.CreateAccount(address, address, contractHex)
 	if err != nil {
@@ -386,7 +386,7 @@ func TestApp_GetGasContractToken(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	address := crypto.AddressFromString("LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
+	address, _ := crypto.AddressFromString("LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
 	a2 := tc2.app
 	a2.loadState(1, []byte{})
 	account, err := a2.state.CreateAccount(address, address, contractHex)

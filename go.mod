@@ -8,7 +8,6 @@ require (
 	github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51 // indirect
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
-	github.com/go-resty/resty/v2 v2.1.0
 	github.com/google/go-cmp v0.3.0
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
@@ -23,6 +22,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.6.1
+	github.com/stretchr/testify v1.3.0
 	github.com/tecbot/gorocksdb v0.0.0-20190705090504-162552197222
 	github.com/tendermint/go-amino v0.15.0 // indirect
 	github.com/tendermint/tendermint v0.32.2
