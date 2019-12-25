@@ -32,7 +32,7 @@ jobs:
             go test ./... -coverprofile=coverage.out
             go tool cover -html=coverage.out -o coverage.html
             mv coverage.html /tmp/artifacts
-            ./cc-test-reporter after-build --exit-code $?
+            ./cc-test-reporter after-build --coverage-input-type gocov --exit-code $?
 
       - store_artifacts:
           path: /tmp/artifacts
