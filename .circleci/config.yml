@@ -19,7 +19,7 @@ jobs:
       - run:
           name: Setup test reporter
           command: |
-            apk add --update curl && rm -rf /var/cache/apk/*
+            apk add curl && apk upgrade
             curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
             chmod +x ./cc-test-reporter
       - run:
