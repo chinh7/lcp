@@ -209,7 +209,10 @@ func (app *App) SetGasStation(gasStation gas.Station) {
 // GetGasContractToken designated
 func (app *App) GetGasContractToken() gas.Token {
 	if len(app.gasContractAddress) > 0 {
-		address := crypto.AddressFromString(app.gasContractAddress)
+		address, err := crypto.AddressFromString(app.gasContractAddress)
+		if err != nil {
+			panic(err)
+		}
 		contract, err := app.state.GetAccount(address)
 		if err != nil {
 			panic(err)

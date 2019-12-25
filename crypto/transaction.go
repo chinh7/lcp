@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 
 	cdc "github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/ed25519"
@@ -45,7 +44,6 @@ func (txSigner *TxSigner) Address() Address {
 
 // CreateAddress create a new contract address based on pubkey and nonce
 func (txSigner *TxSigner) CreateAddress() Address {
-	// data, _ := rlp.EncodeToBytes([]interface{}{b, nonce})
 	cloned := &TxSigner{PubKey: txSigner.PubKey, Nonce: txSigner.Nonce}
 	var res = sha3.Sum256(cloned.Serialize())
 	return AddressFromPubKey(res[:])
@@ -82,10 +80,23 @@ func (tx *Tx) GetFee() (uint64, error) {
 	return 0, errors.New("fee overflow")
 }
 
+// Sign signs a transaction provided a private key
+func (tx *Tx) Sign(privKey ed25519.PrivateKey) error {
+	pubKey := make([]byte, ed25519.PublicKeySize)
+	copy(pubKey, privKey[32:])
+	tx.From.PubKey = pubKey
+
+	sigHash, err := tx.GetSigHash()
+	if err != nil {
+		return err
+	}
+	tx.From.Signature = ed25519.Sign(privKey, sigHash)
+	return nil
+}
+
 // SigVerified checks if transaction signature is correct
 func (tx *Tx) SigVerified() bool {
 	signature := tx.From.Signature
-	log.Printf("Signature %X\n", signature)
 	sigHash, err := tx.GetSigHash()
 	if err != nil {
 		return false
