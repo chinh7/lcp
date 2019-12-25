@@ -27,11 +27,6 @@ func NewRocksDB(path string) *RocksDB {
 	}
 }
 
-// GetInstance returns the instance that could consume all gorocksdb functionalities
-func (db *RocksDB) GetInstance() *gorocksdb.DB {
-	return db.instance
-}
-
 // Get returns the value based on key
 func (db *RocksDB) Get(key []byte) []byte {
 	ro := gorocksdb.NewDefaultReadOptions()
@@ -48,15 +43,6 @@ func (db *RocksDB) Put(key []byte, value []byte) {
 	wo := gorocksdb.NewDefaultWriteOptions()
 	wo.SetSync(false)
 	if err := db.instance.Put(wo, key, value); err != nil {
-		panic(err)
-	}
-}
-
-// Delete removes a key from database
-func (db *RocksDB) Delete(key []byte) {
-	wo := gorocksdb.NewDefaultWriteOptions()
-	wo.SetSync(false)
-	if err := db.instance.Delete(wo, key); err != nil {
 		panic(err)
 	}
 }
