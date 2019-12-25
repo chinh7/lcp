@@ -33,8 +33,8 @@ jobs:
           name: Test
           command: |
             ./cc-test-reporter before-build
-            go test ./... -coverprofile=coverage.out
-            go tool cover -html=coverage.out -o coverage.html
+            go test ./... -coverprofile=c.out
+            go tool cover -html=c.out -o coverage.html
             mv coverage.html /tmp/artifacts
             ./cc-test-reporter after-build --coverage-input-type gocov --exit-code $?
       - save_cache: # Store cache in the /go/pkg directory
