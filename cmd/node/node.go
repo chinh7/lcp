@@ -20,7 +20,7 @@ type LiquidNode struct {
 }
 
 // New returns new instance of Node
-func NewNode(rootDir string, gasContractAddress string) *LiquidNode {
+func New(rootDir string, gasContractAddress string) *LiquidNode {
 	liquidNode := LiquidNode{
 		rootDir:            rootDir,
 		command:            commands.RootCmd,
