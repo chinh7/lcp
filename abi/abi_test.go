@@ -2,6 +2,7 @@ package abi
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 	"testing"
 
@@ -70,7 +71,6 @@ func TestEncode(t *testing.T) {
 			result: []byte{248, 191, 248, 72, 163, 88, 142, 133, 178, 236, 112, 199, 209, 176, 108, 122, 171, 33, 245, 148, 112, 199, 6, 6, 52, 233, 179, 85, 154, 228, 40, 94, 109, 248, 245, 224, 151, 44, 51, 238, 163, 88, 142, 133, 178, 236, 112, 199, 209, 176, 108, 122, 171, 33, 245, 148, 112, 199, 6, 6, 52, 233, 179, 85, 154, 228, 40, 94, 109, 248, 245, 224, 151, 44, 51, 238, 195, 88, 129, 255, 198, 130, 43, 2, 130, 45, 48, 207, 132, 54, 126, 174, 198, 132, 54, 126, 174, 198, 132, 54, 125, 252, 1, 210, 136, 26, 35, 156, 150, 103, 161, 151, 44, 136, 59, 128, 234, 1, 0, 0, 0, 0, 195, 88, 129, 168, 198, 130, 77, 1, 130, 226, 253, 202, 132, 34, 169, 0, 0, 132, 104, 24, 251, 255, 210, 136, 26, 143, 154, 254, 255, 255, 255, 255, 136, 135, 239, 58, 136, 2, 0, 0, 0, 202, 132, 117, 167, 167, 196, 132, 60, 60, 69, 71, 210, 136, 160, 26, 47, 221, 169, 39, 0, 193, 136, 174, 71, 225, 193, 251, 14, 136, 65},
 		},
 	}
-
 	for index, table := range testTables {
 		encoded, err := Encode(table.types, table.values)
 		if err != nil {
@@ -78,6 +78,28 @@ func TestEncode(t *testing.T) {
 		}
 		if !bytes.Equal(encoded, table.result) {
 			t.Errorf("Encoding case %v: encode of %v is incorrect, expected: %v, got: %v.", index+1, table.values, table.result, encoded)
+		}
+	}
+
+	testErrorsTables := []struct {
+		types  []*Parameter
+		values []interface{}
+		err    error
+	}{
+		{
+			types:  parameters1,
+			values: []interface{}{float64(-4321452.1188)},
+			err:    errors.New("Parameter count mismatch, expecting: 11, got: 1"),
+		},
+	}
+
+	for index, table := range testErrorsTables {
+		_, err := Encode(table.types, table.values)
+		if err == nil {
+			t.Errorf("expecting error at case: %v", index)
+		}
+		if err.Error() != table.err.Error() {
+			t.Errorf("Encoding case %v: error is incorrect, expecting error: %v, got: %v.", index+1, table.err, err)
 		}
 	}
 }
@@ -127,6 +149,28 @@ func TestEncodeFromString(t *testing.T) {
 		}
 		if !bytes.Equal(encoded, table.result) {
 			t.Errorf("Encoding case %v: encode of %v is incorrect, expected: %v, got: %v.", index+1, table.values, table.result, encoded)
+		}
+	}
+
+	testErrorsTables := []struct {
+		types  []*Parameter
+		values []string
+		err    error
+	}{
+		{
+			types:  parameters1,
+			values: []string{"-4321452.1188"},
+			err:    errors.New("Argument count mismatch, expecting: 11, got: 1"),
+		},
+	}
+
+	for index, table := range testErrorsTables {
+		_, err := EncodeFromString(table.types, table.values)
+		if err == nil {
+			t.Errorf("expecting error at case: %v", index)
+		}
+		if err.Error() != table.err.Error() {
+			t.Errorf("Encoding case %v: error is incorrect, expecting error: %v, got: %v.", index+1, table.err, err)
 		}
 	}
 }
@@ -184,6 +228,28 @@ func TestBytesEncoding(t *testing.T) {
 		}
 		if diff := cmp.Diff(encoded, table.encoded); diff != "" {
 			t.Errorf("Encoding case %v: encode of %v is incorrect, expected: %v, got: %v, diff: %v", index+1, decoded, table.encoded, encoded, diff)
+		}
+	}
+
+	testErrorsTables := []struct {
+		types   []*Parameter
+		decoded [][]byte
+		err     error
+	}{
+		{
+			types:   parameters2,
+			decoded: [][]byte{[]byte{142, 133, 178, 236, 112, 199, 209, 176, 108, 122, 171, 33, 245, 148, 112, 199, 6, 6, 52, 233, 179, 85, 154, 228, 40, 94, 109, 248, 245, 224, 151, 44, 51, 238, 88, 142, 133, 178, 236, 112, 199, 209, 176, 108, 122, 171, 33, 245, 148, 112, 199, 6, 6, 52, 233, 179, 85, 154, 228, 40, 94, 109, 248, 245, 224, 151, 44, 51, 238}, []byte{88, 255}, []byte{43, 2, 45, 48}, []byte{54, 126, 174, 198, 54, 126, 174, 198, 54, 125, 252, 1}, []byte{26, 35, 156, 150, 103, 161, 151, 44, 59, 128, 234, 1, 0, 0, 0, 0}, []byte{88, 168}, []byte{77, 1, 226, 253}, []byte{34, 169, 0, 0, 104, 24, 251, 255}, []byte{26, 143, 154, 254, 255, 255, 255, 255, 135, 239, 58, 136, 2, 0, 0, 0}, []byte{117, 167, 167, 196, 60, 60, 69, 71}, []byte{160, 26, 47, 221, 169, 39, 0, 193, 174, 71, 225, 193, 251, 14, 136, 65}},
+			err:     errors.New("misaligned array byte size"),
+		},
+	}
+
+	for index, table := range testErrorsTables {
+		_, err := EncodeFromBytes(table.types, table.decoded)
+		if err == nil {
+			t.Errorf("expecting error at case: %v", index)
+		}
+		if err.Error() != table.err.Error() {
+			t.Errorf("Encoding case %v: error is incorrect, expecting error: %v, got: %v.", index+1, table.err, err)
 		}
 	}
 }
