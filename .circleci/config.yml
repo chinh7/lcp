@@ -10,6 +10,10 @@ jobs:
           GO111MODULE: "on"
     steps:
       - checkout
+      - restore_cache: # restores saved cache if no changes are detected since last run
+      # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
+          keys:
+            - v1-pkg-cache
       - run:
           name: "Create a temp directory for artifacts"
           command: mkdir -p /tmp/artifacts
@@ -33,7 +37,10 @@ jobs:
             go tool cover -html=coverage.out -o coverage.html
             mv coverage.html /tmp/artifacts
             ./cc-test-reporter after-build --coverage-input-type gocov --exit-code $?
-
+      - save_cache: # Store cache in the /go/pkg directory
+          key: v1-pkg-cache
+          paths:
+            - "/go/pkg"
       - store_artifacts:
           path: /tmp/artifacts
 
