@@ -131,14 +131,17 @@ func TestGet(t *testing.T) {
 func TestDelete(t *testing.T) {
 	trie := newEmpty()
 	vals := []struct{ k, v string }{
+		{"doge", "coin"},
+		{"dog", "puppy"},
 		{"do", "verb"},
 		{"ether", "wookiedoo"},
 		{"horse", "stallion"},
 		{"shaman", "horse"},
-		{"doge", "coin"},
 		{"ether", ""},
-		{"dog", "puppy"},
 		{"shaman", ""},
+		{"doge", ""},
+		{"dog", ""},
+		{"do", ""},
 	}
 	for _, val := range vals {
 		if val.v != "" {
@@ -150,7 +153,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	hash := trie.Hash()
-	exp := common.HexToHash("79a9b42da0e261b9f3ca9e78560ac8d486bcce2da8a5ddb2df8721d4c0dc2d0a")
+	exp := common.HexToHash("c75904529cfd1d0d709c8c059858951bdc93663df88f6385dba042c011087111")
 	if hash != exp {
 		t.Errorf("expected %x got %x", exp, hash)
 	}
