@@ -110,6 +110,14 @@ func (engine *Engine) chainMethodBind(vm *vm.VM, args ...uint64) (uint64, error)
 	return 0, nil
 }
 
+func (engine *Engine) chainBlockHeight(vm *vm.VM, args ...uint64) (uint64, error) {
+	return engine.state.BlockInfo.Height, nil
+}
+
+func (engine *Engine) chainBlockTime(vm *vm.VM, args ...uint64) (uint64, error) {
+	return engine.state.BlockInfo.UnixTs, nil
+}
+
 func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM, args ...uint64) (uint64, error) {
 	if engine.callDepth+1 > constant.MaxEngineCallDepth {
 		return 0, errors.New("call depth limit reached")
@@ -220,6 +228,10 @@ func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 			return engine.chainPtrArgSizeGet
 		case "chain_arg_size_set":
 			return engine.chainPtrArgSizeSet
+		case "chain_block_height":
+			return engine.chainBlockHeight
+		case "chain_block_time":
+			return engine.chainBlockTime
 		default:
 			contract, _ := engine.account.GetContract()
 			if event, err := contract.Header.GetEvent(name); err == nil {
