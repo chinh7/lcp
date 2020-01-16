@@ -13,6 +13,7 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/QuoineFinancial/liquid-chain/token"
+	"github.com/QuoineFinancial/liquid-chain/trie"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/tendermint/tendermint/abci/example/code"
@@ -62,7 +63,7 @@ func NewApp(nodeInfo string, dbDir string, gasContractAddress string) *App {
 
 func (app *App) loadState(blockInfo *storage.BlockInfo) {
 	var err error
-	if app.state, err = storage.New(gethCommon.BytesToHash(blockInfo.AppHash), app.StateDB); err != nil {
+	if app.state, err = storage.New(gethCommon.BytesToHash(blockInfo.AppHash[:]), app.StateDB); err != nil {
 		panic(err)
 	}
 	app.state.BlockInfo = blockInfo
@@ -73,10 +74,12 @@ func (app *App) loadState(blockInfo *storage.BlockInfo) {
 
 // BeginBlock begins new block
 func (app *App) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock {
+	var trieHash trie.Hash
+	copy(trieHash[:], req.Header.AppHash)
 	blockInfo := &storage.BlockInfo{
 		Height:  uint64(req.Header.Height),
-		AppHash: req.Header.AppHash,
-		UnixTs:  uint64(req.Header.Time.Unix()),
+		AppHash: trieHash,
+		Time:    req.Header.Time,
 	}
 	app.loadState(blockInfo)
 	return types.ResponseBeginBlock{}
@@ -89,7 +92,7 @@ func (app *App) Info(req types.RequestInfo) (resInfo types.ResponseInfo) {
 
 	if app.state != nil && app.state.BlockInfo != nil {
 		lastBlockHeight = int64(app.state.BlockInfo.Height)
-		lastBlockAppHash = app.state.BlockInfo.AppHash
+		lastBlockAppHash = app.state.BlockInfo.AppHash[:]
 	}
 	return types.ResponseInfo{
 		Data:             fmt.Sprintf("{\"version\":%s}", app.nodeInfo),

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"time"
 
 	"testing"
 
@@ -39,7 +40,7 @@ func TestEngineIgnite(t *testing.T) {
 	utilAddress, _ := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
 	database := db.NewMemoryDB()
 	state, _ := storage.New(trie.Hash{}, database)
-	state.BlockInfo = &storage.BlockInfo{Height: 1, UnixTs: 1578905663}
+	state.BlockInfo = &storage.BlockInfo{Height: 1, Time: time.Unix(1578905663, 0)}
 
 	tests := []struct {
 		name          string

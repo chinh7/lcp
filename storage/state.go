@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"time"
+
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/trie"
@@ -10,8 +12,8 @@ import (
 // BlockInfo contains essential block information
 type BlockInfo struct {
 	Height  uint64
-	AppHash []byte
-	UnixTs  uint64
+	AppHash trie.Hash
+	Time    time.Time
 }
 
 // State is the global account state consisting of many address->state mapping

@@ -115,7 +115,7 @@ func (engine *Engine) chainBlockHeight(vm *vm.VM, args ...uint64) (uint64, error
 }
 
 func (engine *Engine) chainBlockTime(vm *vm.VM, args ...uint64) (uint64, error) {
-	return engine.state.BlockInfo.UnixTs, nil
+	return uint64(engine.state.BlockInfo.Time.Unix()), nil
 }
 
 func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM, args ...uint64) (uint64, error) {
