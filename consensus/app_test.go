@@ -9,13 +9,16 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/event"
 	"github.com/QuoineFinancial/liquid-chain/gas"
+	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/QuoineFinancial/liquid-chain/token"
+	"github.com/QuoineFinancial/liquid-chain/trie"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
 )
@@ -81,8 +84,8 @@ func TestApp_BeginBlock(t *testing.T) {
 		app := tc.app
 
 		reqHeight := int64(1)
-		reqAppHash := []byte{}
-		req := types.RequestBeginBlock{Header: types.Header{Height: reqHeight, AppHash: reqAppHash}}
+		reqAppHash := trie.Hash{}
+		req := types.RequestBeginBlock{Header: types.Header{Height: reqHeight, AppHash: reqAppHash[:]}}
 		got := app.BeginBlock(req)
 		want := types.ResponseBeginBlock{}
 		if !reflect.DeepEqual(got, want) {
@@ -91,8 +94,8 @@ func TestApp_BeginBlock(t *testing.T) {
 
 		// loadState() should be called
 		assert.NotNil(t, app.state)
-		assert.Equal(t, app.lastBlockHeight, reqHeight)
-		assert.Equal(t, app.lastBlockAppHash, reqAppHash)
+		assert.Equal(t, app.state.BlockInfo.Height, uint64(reqHeight))
+		assert.Equal(t, app.state.BlockInfo.AppHash, reqAppHash)
 	})
 }
 
@@ -102,14 +105,14 @@ func TestApp_Info(t *testing.T) {
 
 	t.Run("Should return valid response", func(t *testing.T) {
 		app := tc.app
-		lastBlockHeight := int64(1)
-		lastBlockAppHash := []byte{}
-		app.loadState(lastBlockHeight, lastBlockAppHash)
+		blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
+
+		app.loadState(blockInfo)
 		got := app.Info(types.RequestInfo{})
 		want := types.ResponseInfo{
 			Data:             "{\"version\":testapp}",
-			LastBlockHeight:  lastBlockHeight,
-			LastBlockAppHash: lastBlockAppHash,
+			LastBlockHeight:  int64(blockInfo.Height),
+			LastBlockAppHash: blockInfo.AppHash[:],
 		}
 
 		if !reflect.DeepEqual(got, want) {
@@ -122,7 +125,8 @@ func TestApp_CheckTx(t *testing.T) {
 	tc := NewTestConfig()
 	defer tc.CleanData()
 	app := tc.app
-	app.loadState(1, []byte{})
+	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
+	app.loadState(blockInfo)
 
 	t.Run("Deserialize tx error", func(t *testing.T) {
 		invalidTxBytes, err := ioutil.ReadFile("./testdata/invalid_tx.dat")
@@ -177,7 +181,8 @@ func TestApp_validateTx(t *testing.T) {
 	tc := NewTestConfig()
 	defer tc.CleanData()
 	app := tc.app
-	app.loadState(1, []byte{})
+	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
+	app.loadState(blockInfo)
 
 	contractHex, err := ioutil.ReadFile("./testdata/contract_hex.txt")
 	if err != nil {
@@ -279,7 +284,8 @@ func TestApp_DeliverTx(t *testing.T) {
 	tc := NewTestConfig()
 	defer tc.CleanData()
 	app := tc.app
-	app.loadState(1, []byte{})
+	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
+	app.loadState(blockInfo)
 
 	t.Run("Deserialize tx error", func(t *testing.T) {
 		invalidTxBytes, err := ioutil.ReadFile("./testdata/invalid_tx.dat")
@@ -365,7 +371,8 @@ func TestApp_DeliverTx(t *testing.T) {
 func TestApp_Commit(t *testing.T) {
 	tc := NewTestConfig()
 	defer tc.CleanData()
-	tc.app.loadState(1, []byte{})
+	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
+	tc.app.loadState(blockInfo)
 	got := tc.app.Commit()
 	want := types.ResponseCommit{Data: []byte{69, 176, 207, 194, 32, 206, 236, 91, 124, 28, 98, 196, 212, 25, 61, 56, 228, 235, 164, 142, 136, 21, 114, 156, 231, 95, 156, 10, 176, 228, 193, 192}}
 
@@ -378,7 +385,8 @@ func TestApp_GetGasContractToken(t *testing.T) {
 	tc := NewTestConfig()
 	defer tc.CleanData()
 	a := tc.app
-	a.loadState(1, []byte{})
+	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
+	a.loadState(blockInfo)
 
 	tc2 := NewTestConfig()
 	defer tc.CleanData()
@@ -388,7 +396,7 @@ func TestApp_GetGasContractToken(t *testing.T) {
 	}
 	address, _ := crypto.AddressFromString("LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
 	a2 := tc2.app
-	a2.loadState(1, []byte{})
+	a2.loadState(blockInfo)
 	account, err := a2.state.CreateAccount(address, address, contractHex)
 	_ = a2.state.Commit()
 	if err != nil {

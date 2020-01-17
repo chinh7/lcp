@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"time"
 
 	"testing"
 
@@ -39,6 +40,7 @@ func TestEngineIgnite(t *testing.T) {
 	utilAddress, _ := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
 	database := db.NewMemoryDB()
 	state, _ := storage.New(trie.Hash{}, database)
+	state.BlockInfo = &storage.BlockInfo{Height: 1, Time: time.Unix(1578905663, 0)}
 
 	tests := []struct {
 		name          string
@@ -100,6 +102,22 @@ func TestEngineIgnite(t *testing.T) {
 			funcName:      "mean",
 			args:          []string{"[1,2,3,4,5]"},
 			wantErr:       true,
+		},
+		{
+			name:          "ignite block time",
+			caller:        loadContract("testdata/blockinfo-abi.json", "testdata/blockinfo.wasm"),
+			callerAddress: utilAddress,
+			funcName:      "block_time",
+			args:          []string{},
+			want:          1578905663,
+		},
+		{
+			name:          "ignite block height",
+			caller:        loadContract("testdata/blockinfo-abi.json", "testdata/blockinfo.wasm"),
+			callerAddress: utilAddress,
+			funcName:      "block_height",
+			args:          []string{},
+			want:          1,
 		},
 	}
 	for _, tt := range tests {
