@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"golang.org/x/crypto/blake2b"
+
 	cdc "github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/sha3"
@@ -63,7 +65,12 @@ func (tx Tx) String() string {
 func (tx *Tx) GetSigHash() ([]byte, error) {
 	clone := *tx
 	clone.From.Signature = nil
-	return cdc.EncodeToBytes(clone)
+	txBytes, err := cdc.EncodeToBytes(clone)
+	if err != nil {
+		return nil, err
+	}
+	hash := blake2b.Sum256(txBytes)
+	return hash[:], nil
 }
 
 // GetFee gets transaction fee limit
