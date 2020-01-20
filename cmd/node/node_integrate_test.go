@@ -32,7 +32,7 @@ const (
 	gasContractAddress = "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7"
 )
 
-func (ts *testServer) startNode() error {
+func (ts *testServer) startNode() {
 	conf := config.ResetTestRoot(blockchainTestName)
 	fmt.Println("Init node config data...")
 
@@ -52,7 +52,6 @@ func (ts *testServer) startNode() error {
 	}()
 	// Wait some time for server to ready
 	time.Sleep(4 * time.Second)
-	return nil
 }
 
 // Please remember to call stopNode after done testing
@@ -61,10 +60,8 @@ func (ts *testServer) stopNode() {
 
 	ts.node.stopNode()
 	fmt.Println("Clean up node data")
-	err := os.RemoveAll(ts.node.rootDir)
-	if err != nil {
-		panic(err)
-	}
+	time.Sleep(500 * time.Millisecond)
+	os.RemoveAll(ts.node.rootDir)
 
 	time.Sleep(500 * time.Millisecond)
 }
