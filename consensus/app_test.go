@@ -229,12 +229,12 @@ func TestApp_validateTx(t *testing.T) {
 		panic(err)
 	}
 	// non-existent contract
-	tx_byte, err := ioutil.ReadFile("./testdata/non_existent_contract.json")
+	txByte, err := ioutil.ReadFile("./testdata/non_existent_contract.json")
 	if err != nil {
 		panic(err)
 	}
-	non_existent_tx := &crypto.Tx{}
-	_ = json.Unmarshal([]byte(tx_byte), non_existent_tx)
+	nonExistentTx := &crypto.Tx{}
+	_ = json.Unmarshal([]byte(txByte), nonExistentTx)
 
 	type args struct {
 		tx     *crypto.Tx
@@ -274,7 +274,7 @@ func TestApp_validateTx(t *testing.T) {
 		}, {
 			"non-existent contract",
 			app,
-			args{non_existent_tx, len(tx_byte)},
+			args{nonExistentTx, len(txByte)},
 			code.CodeTypeUnknownError,
 			errors.New("contract not found"),
 		},

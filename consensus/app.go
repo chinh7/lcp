@@ -149,8 +149,8 @@ func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 	// Validate Non-existent contract invoke
 	if (tx.To != crypto.Address{}) {
 		// invoke transaction
-		contract_account, _ := app.state.GetAccount(tx.To)
-		if contract_account == nil {
+		contractAccount, _ := app.state.GetAccount(tx.To)
+		if contractAccount == nil {
 			return code.CodeTypeUnknownError, fmt.Errorf("contract not found")
 		}
 	}
