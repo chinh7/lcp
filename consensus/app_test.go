@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"math/rand"
@@ -227,6 +228,13 @@ func TestApp_validateTx(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+	// non-existent contract
+	tx_byte, err := ioutil.ReadFile("./testdata/non_existent_contract.json")
+	if err != nil {
+		panic(err)
+	}
+	non_existent_tx := &crypto.Tx{}
+	_ = json.Unmarshal([]byte(tx_byte), non_existent_tx)
 
 	type args struct {
 		tx     *crypto.Tx
@@ -263,6 +271,12 @@ func TestApp_validateTx(t *testing.T) {
 			// 	args{tx, len(txBytes)},
 			// 	code.CodeTypeUnknownError,
 			// 	errors.New("Insufficient fee"),
+		}, {
+			"non-existent contract",
+			app,
+			args{non_existent_tx, len(tx_byte)},
+			code.CodeTypeUnknownError,
+			errors.New("contract not found"),
 		},
 	}
 	for _, tt := range tests {
