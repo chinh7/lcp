@@ -12,6 +12,7 @@ import (
 type SystemEventCode byte
 
 type DetailEvent struct {
+	Height uint64
 	From   crypto.Address
 	To     crypto.Address
 	Nonce  uint64
@@ -23,17 +24,24 @@ type DeploymentEvent struct {
 }
 
 func LoadDetailEvent(tmEvent types.Event) *DetailEvent {
+	decodedValues := make([][]byte, len(tmEvent.GetAttributes()))
+	for index, attribute := range tmEvent.GetAttributes() {
+		decodedValues[index], _ = hex.DecodeString(string(attribute.Value))
+	}
+
 	return &DetailEvent{
-		From:   crypto.AddressFromBytes(tmEvent.Attributes[0].Value),
-		To:     crypto.AddressFromBytes(tmEvent.Attributes[1].Value),
-		Nonce:  binary.LittleEndian.Uint64(tmEvent.Attributes[2].Value),
-		Result: binary.LittleEndian.Uint64(tmEvent.Attributes[3].Value),
+		Height: binary.LittleEndian.Uint64(decodedValues[0]),
+		From:   crypto.AddressFromBytes(decodedValues[1]),
+		To:     crypto.AddressFromBytes(decodedValues[2]),
+		Nonce:  binary.LittleEndian.Uint64(decodedValues[3]),
+		Result: binary.LittleEndian.Uint64(decodedValues[4]),
 	}
 }
 
 func LoadDeploymentEvent(tmEvent types.Event) *DeploymentEvent {
+	addressByte, _ := hex.DecodeString(string(tmEvent.Attributes[0].Value))
 	return &DeploymentEvent{
-		Address: crypto.AddressFromBytes(tmEvent.Attributes[0].Value),
+		Address: crypto.AddressFromBytes(addressByte),
 	}
 }
 
@@ -50,6 +58,10 @@ var systemEventName map[SystemEventCode]string = map[SystemEventCode]string{
 var detailEventABI abi.Event = abi.Event{
 	Name: systemEventName[Detail],
 	Parameters: []*abi.Parameter{
+		&abi.Parameter{
+			Name: "height",
+			Type: abi.Uint64,
+		},
 		&abi.Parameter{
 			Name: "from",
 			Type: abi.Address,
@@ -86,13 +98,13 @@ func (code SystemEventCode) GetEvent() *abi.Event {
 	}[code]
 }
 
-func getEventCode(event *abi.Event) SystemEventCode {
+func GetEventCode(event *abi.Event) SystemEventCode {
 	return map[string]SystemEventCode{
 		systemEventName[Detail]:     Detail,
 		systemEventName[Deployment]: Deployment,
 	}[event.Name]
 }
 
-func (code SystemEventCode) string() string {
+func (code SystemEventCode) String() string {
 	return hex.EncodeToString([]byte{byte(code)})
 }

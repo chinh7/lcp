@@ -333,7 +333,7 @@ func TestApp_DeliverTx(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		detailEvent := event.NewDetailsEvent(tx.From.Address(), tx.To, tx.From.Nonce, 0)
+		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0)
 		got := app.DeliverTx(req)
 
 		// Detail event must equal
@@ -356,7 +356,7 @@ func TestApp_DeliverTx(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		detailEvent := event.NewDetailsEvent(tx.From.Address(), tx.To, tx.From.Nonce, 0)
+		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0)
 		got := app.DeliverTx(req)
 
 		// Detail event must equal

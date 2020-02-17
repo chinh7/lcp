@@ -14,15 +14,15 @@ func (event *Event) ToTMEvent() types.Event {
 	decodedParams, _ := abi.DecodeToBytes(event.Event.Parameters, event.Values)
 	for index, param := range decodedParams {
 		attributes = append(attributes, common.KVPair{
-			Key:   []byte{byte(index)},
-			Value: param,
+			Key:   []byte(hex.EncodeToString([]byte{byte(index)})),
+			Value: []byte(hex.EncodeToString(param)),
 		})
 	}
 	var eventName string
 	if event.ContractAddress != nil {
 		eventName = hex.EncodeToString(append(event.ContractAddress[:], event.GetIndexByte()...))
 	} else {
-		eventName = getEventCode(event.Event).string()
+		eventName = GetEventCode(event.Event).String()
 	}
 	return types.Event{
 		Type:       eventName,

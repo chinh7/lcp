@@ -1,11 +1,14 @@
 package chain
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"net/http"
 
 	"github.com/QuoineFinancial/liquid-chain/api/models"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/event"
 )
 
 const defaultTransactionPerPage = int(50)
@@ -65,7 +68,17 @@ func (service *Service) GetBlockTxs(
 	params *GetBlockTxsParams,
 	result *SearchTransactionResult,
 ) error {
-	query := fmt.Sprintf("tx.height=%d", params.Height)
+	heightBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(heightBytes, uint64(params.Height))
+	heightHex := hex.EncodeToString(heightBytes)
+	detailString := event.Detail.String()
+	var heightParam string
+	for index, param := range event.Detail.GetEvent().Parameters {
+		if param.Name == "height" {
+			heightParam = hex.EncodeToString([]byte{byte(index)})
+		}
+	}
+	query := fmt.Sprintf("%s.%s='%s'", detailString, heightParam, heightHex)
 	return service.searchTransaction(query, params.Page, result)
 }
 
@@ -75,7 +88,15 @@ func (service *Service) GetAccountTxs(
 	params *GetAccountTxsParams,
 	result *SearchTransactionResult,
 ) error {
-	query := fmt.Sprintf("detail.from='%s'", params.Address)
+	detailString := event.Detail.String()
+	var fromParam string
+	for index, param := range event.Detail.GetEvent().Parameters {
+		if param.Name == "from" {
+			fromParam = hex.EncodeToString([]byte{byte(index)})
+		}
+	}
+	address, _ := crypto.AddressFromString(params.Address)
+	query := fmt.Sprintf("%s.%s='%s'", detailString, fromParam, hex.EncodeToString(address[:]))
 	return service.searchTransaction(query, params.Page, result)
 }
 
