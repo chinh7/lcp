@@ -13,8 +13,8 @@ type BroadcastParams struct {
 // BroadcastResult is result of broadcast
 type BroadcastResult struct {
 	TransactionHash string `json:"hash"`
-	Code            uint32
-	Log             string
+	Code            uint32 `json:"code"`
+	Log             string `json:"log"`
 }
 
 // Broadcast delivers transction to blockchain
