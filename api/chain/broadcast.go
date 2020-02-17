@@ -13,6 +13,8 @@ type BroadcastParams struct {
 // BroadcastResult is result of broadcast
 type BroadcastResult struct {
 	TransactionHash string `json:"hash"`
+	Code            uint32
+	Log             string
 }
 
 // Broadcast delivers transction to blockchain
@@ -26,5 +28,7 @@ func (service *Service) Broadcast(r *http.Request, params *BroadcastParams, resu
 		return err
 	}
 	result.TransactionHash = broadcastResult.Hash.String()
+	result.Code = broadcastResult.Code
+	result.Log = broadcastResult.Log
 	return nil
 }
