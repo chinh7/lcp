@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/api/models"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/event"
+	"github.com/QuoineFinancial/liquid-chain/storage"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 const defaultTransactionPerPage = int(50)
@@ -28,6 +31,21 @@ type GetTxResult struct {
 type GetBlockTxsParams struct {
 	Height int  `json:"height"`
 	Page   *int `json:"page"`
+}
+
+type GetEventTxsParams struct {
+	Contract string `json:"contract"`
+	Event    Event  `json:"event"`
+	Page     *int   `json:"page"`
+}
+
+type Event struct {
+	Name  string     `json:"name"`
+	Param EventParam `json:"param"`
+}
+type EventParam struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 // GetAccountTxsParams is params of GetTxsByBlockHeight
@@ -97,6 +115,53 @@ func (service *Service) GetAccountTxs(
 	}
 	address, _ := crypto.AddressFromString(params.Address)
 	query := fmt.Sprintf("%s.%s='%s'", detailString, fromParam, hex.EncodeToString(address[:]))
+	return service.searchTransaction(query, params.Page, result)
+}
+
+func (service *Service) GetEventTxs(
+	r *http.Request,
+	params *GetEventTxsParams,
+	result *SearchTransactionResult,
+) error {
+	contractAddress, err := crypto.AddressFromString(params.Contract)
+	if err != nil {
+		return err
+	}
+	status, err := service.tAPI.Status()
+	if err != nil {
+		return err
+	}
+	appHash := common.BytesToHash(status.SyncInfo.LatestAppHash)
+	state, err := storage.New(appHash, service.database)
+	if err != nil {
+		return err
+	}
+	account, err := state.GetAccount(contractAddress)
+	if err != nil {
+		return err
+	}
+	contract, err := account.GetContract()
+	if err != nil {
+		return err
+	}
+	event, err := contract.Header.GetEvent(params.Event.Name)
+	if err != nil {
+		return err
+	}
+	eventName := hex.EncodeToString(append(contractAddress[:], event.GetIndexByte()...))
+	var eventParamKey, eventParamValue string
+	for index, param := range event.Parameters {
+		if param.Name == params.Event.Param.Name {
+			eventParamKey = hex.EncodeToString([]byte{byte(index)})
+			encode, err := abi.EncodeFromString([]*abi.Parameter{param}, []string{params.Event.Param.Value})
+			if err != nil {
+				return err
+			}
+			eventParamValue = hex.EncodeToString(encode[2:])
+		}
+	}
+
+	query := fmt.Sprintf("%s.%s='%s'", eventName, eventParamKey, eventParamValue)
 	return service.searchTransaction(query, params.Page, result)
 }
 
