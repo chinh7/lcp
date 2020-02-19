@@ -85,7 +85,7 @@ func TestBroadcastTx(t *testing.T) {
 	body := fmt.Sprintf(`{"rawTx": "%s"}`, string(contractHex))
 	testcases := []testCase{
 		{"Broadcast", "chain.Broadcast", body, `{"jsonrpc":"2.0","result":{"hash":"A1D8A3AB7CC2971CD26409418205D1DAEEF5AEBB228BFA8643ABA3AEE126B961","code":0,"log":""},"id":1}`},
-		{"Broadcast", "chain.Broadcast", `{"rawTx": "+KH4ZKBZheHjjJtrb75IOm2u18eUHwn1+rEw8fI5kPueGVO7V4C4QA40TwFk+Muh6/5vUsM0szRyaW8g0iWrALLj+DdebvFSWcgbXEeR7m1WUxGIz+W/Wy3N3ka668fzE6gXNLM6tQGR0IRtaW50ismIhAMAAAAAAACjWAVkGufwsijE5ZK0XgUNuahqS0WV+mlg24sf2fekr/QzgT+DAYagAQ=="}`, `{"jsonrpc":"2.0","result":{"hash":"F058970C18F36659C6722A7BD6656E01AB425158B553B58BE6AD79F54025FC63","code":0,"log":""},"id":1}`},
+		{"Broadcast", "chain.Broadcast", `{"rawTx": "+KH4ZKBZheHjjJtrb75IOm2u18eUHwn1+rEw8fI5kPueGVO7V4C4QA40TwFk+Muh6/5vUsM0szRyaW8g0iWrALLj+DdebvFSWcgbXEeR7m1WUxGIz+W/Wy3N3ka668fzE6gXNLM6tQGR0IRtaW50ismIhAMAAAAAAACjWAVkGufwsijE5ZK0XgUNuahqS0WV+mlg24sf2fekr/QzgT+DAYagAQ=="}`, `{"jsonrpc":"2.0","result":{"hash":"F058970C18F36659C6722A7BD6656E01AB425158B553B58BE6AD79F54025FC63","code":4,"log":"contract not found"},"id":1}`},
 	}
 	for _, test := range testcases {
 		response := httptest.NewRecorder()
