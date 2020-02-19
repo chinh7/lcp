@@ -33,16 +33,20 @@ type GetBlockTxsParams struct {
 	Page   *int `json:"page"`
 }
 
+// GetEventTxsParams is params of GetEventTxs
 type GetEventTxsParams struct {
 	Contract string `json:"contract"`
 	Event    Event  `json:"event"`
 	Page     *int   `json:"page"`
 }
 
+// Event is including in GetEventTxsParams
 type Event struct {
 	Name  string     `json:"name"`
 	Param EventParam `json:"param"`
 }
+
+// EventParam is param of Event
 type EventParam struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`

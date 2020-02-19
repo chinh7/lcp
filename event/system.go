@@ -9,8 +9,10 @@ import (
 	"github.com/tendermint/tendermint/abci/types"
 )
 
+// SystemEventCode represents the code of system event
 type SystemEventCode byte
 
+// DetailEvent emitting when a tx is mined
 type DetailEvent struct {
 	Height uint64
 	From   crypto.Address
@@ -19,6 +21,7 @@ type DetailEvent struct {
 	Result uint64
 }
 
+// DeploymentEvent emitting when contract is deployed
 type DeploymentEvent struct {
 	Address crypto.Address
 }
