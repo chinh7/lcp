@@ -12,9 +12,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/event"
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
@@ -57,25 +59,25 @@ func (tc *TestConfig) CleanData() {
 }
 
 func TestNewApp(t *testing.T) {
-	type args struct {
-		nodeInfo           string
-		dbDir              string
-		gasContractAddress string
+	dbDirname := "test_" + strconv.Itoa(rand.Intn(10000))
+	dbPath := "./testdata/db/" + dbDirname + "/"
+	err := ensureDir(dbDirname)
+	if err != nil {
+		panic(err)
 	}
-	tests := []struct {
-		name string
-		args args
-		want *App
-	}{
-		// TODO: Add test cases.
+
+	blockInfo := &storage.BlockInfo{
+		Height:  uint64(1),
+		AppHash: trie.Hash{},
+		Time:    time.Now(),
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewApp(tt.args.nodeInfo, tt.args.dbDir, tt.args.gasContractAddress); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewApp() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	bytes, _ := rlp.EncodeToBytes(blockInfo)
+	infoDB := db.NewRocksDB(filepath.Join(dbPath, "info.db"))
+	infoDB.Put([]byte("lastBlockInfo"), bytes)
+	infoDB.Close()
+
+	app := NewApp("testapp", dbPath, "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
+	assert.NotNil(t, app)
 }
 
 func TestApp_BeginBlock(t *testing.T) {

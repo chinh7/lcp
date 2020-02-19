@@ -46,3 +46,7 @@ func (db *RocksDB) Put(key []byte, value []byte) {
 		panic(err)
 	}
 }
+
+func (db *RocksDB) Close() {
+	db.instance.Close()
+}
