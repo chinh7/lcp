@@ -37,8 +37,8 @@ func (service *Service) parseTransaction(resultTx *core_types.ResultTx) (*models
 	transaction := &models.Transaction{
 		Hash:     resultTx.Hash.String(),
 		Info:     resultTx.TxResult.Info,
-		GasUsed:  resultTx.TxResult.GetGasUsed(),
-		GasLimit: resultTx.TxResult.GetGasWanted(),
+		GasUsed:  uint32(resultTx.TxResult.GetGasUsed()),
+		GasLimit: uint32(resultTx.TxResult.GetGasWanted()),
 		Code:     resultTx.TxResult.GetCode(),
 		Data:     string(resultTx.TxResult.GetData()),
 		Events:   []*models.Event{},

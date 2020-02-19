@@ -28,9 +28,9 @@ type Transaction struct {
 	From     string `json:"from"`
 	To       string `json:"to"`
 
-	GasUsed  int64  `json:"gasUsed"`
-	GasLimit int64  `json:"gasLimit"`
-	GasPrice string `json:"-"`
+	GasUsed  uint32 `json:"gasUsed"`
+	GasLimit uint32 `json:"gasLimit"`
+	GasPrice string `json:"gasPrice"`
 
 	Result uint64   `json:"result"`
 	Events []*Event `json:"events"`
