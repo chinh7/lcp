@@ -145,17 +145,17 @@ func main() {
 	var rootCmd = &cobra.Command{Use: "app"}
 	rootCmd.AddCommand(cmdDeploy, cmdInvoke, cmdCall)
 	rootCmd.PersistentFlags().StringP("endpoint", "e", "", "Vertex node API endpoint")
-	rootCmd.PersistentFlags().Uint64P("gas", "g", 100000, "Gas limit")
+	rootCmd.PersistentFlags().Uint32P("gas", "g", 100000, "Gas limit")
 	rootCmd.PersistentFlags().StringP("seed", "s", "", "Path to seed")
 	rootCmd.PersistentFlags().Uint64P("nonce", "n", 0, "Position of transaction")
 	rootCmd.PersistentFlags().Int64("height", 0, "Call the method at height")
-	rootCmd.PersistentFlags().Uint64P("price", "p", 1, "Gas price")
+	rootCmd.PersistentFlags().Uint32P("price", "p", 1, "Gas price")
 	if err := rootCmd.Execute(); err != nil {
 		panic(err)
 	}
 }
 
-func parseFlags(cmd *cobra.Command) (string, string, uint64, uint64, uint64, int64) {
+func parseFlags(cmd *cobra.Command) (string, string, uint64, uint32, uint32, int64) {
 	seedPath, err := cmd.Root().Flags().GetString("seed")
 	if err != nil {
 		panic(err)
@@ -168,11 +168,11 @@ func parseFlags(cmd *cobra.Command) (string, string, uint64, uint64, uint64, int
 	if err != nil {
 		panic(err)
 	}
-	gas, err := cmd.Root().Flags().GetUint64("gas")
+	gas, err := cmd.Root().Flags().GetUint32("gas")
 	if err != nil {
 		panic(err)
 	}
-	price, err := cmd.Root().Flags().GetUint64("price")
+	price, err := cmd.Root().Flags().GetUint32("price")
 	if err != nil {
 		panic(err)
 	}
