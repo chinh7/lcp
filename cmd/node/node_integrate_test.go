@@ -32,7 +32,7 @@ const (
 	gasContractAddress = "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7"
 )
 
-func (ts *testServer) startNode() error {
+func (ts *testServer) startNode() {
 	conf := config.ResetTestRoot(blockchainTestName)
 	fmt.Println("Init node config data...")
 
@@ -52,7 +52,6 @@ func (ts *testServer) startNode() error {
 	}()
 	// Wait some time for server to ready
 	time.Sleep(4 * time.Second)
-	return nil
 }
 
 // Please remember to call stopNode after done testing
@@ -61,10 +60,8 @@ func (ts *testServer) stopNode() {
 
 	ts.node.stopNode()
 	fmt.Println("Clean up node data")
-	err := os.RemoveAll(ts.node.rootDir)
-	if err != nil {
-		panic(err)
-	}
+	time.Sleep(500 * time.Millisecond)
+	os.RemoveAll(ts.node.rootDir)
 
 	time.Sleep(500 * time.Millisecond)
 }
@@ -87,8 +84,8 @@ func TestBroadcastTx(t *testing.T) {
 	}
 	body := fmt.Sprintf(`{"rawTx": "%s"}`, string(contractHex))
 	testcases := []testCase{
-		{"Broadcast", "chain.Broadcast", body, `{"jsonrpc":"2.0","result":{"hash":"A1D8A3AB7CC2971CD26409418205D1DAEEF5AEBB228BFA8643ABA3AEE126B961"},"id":1}`},
-		{"Broadcast", "chain.Broadcast", `{"rawTx": "+KH4ZKBZheHjjJtrb75IOm2u18eUHwn1+rEw8fI5kPueGVO7V4C4QA40TwFk+Muh6/5vUsM0szRyaW8g0iWrALLj+DdebvFSWcgbXEeR7m1WUxGIz+W/Wy3N3ka668fzE6gXNLM6tQGR0IRtaW50ismIhAMAAAAAAACjWAVkGufwsijE5ZK0XgUNuahqS0WV+mlg24sf2fekr/QzgT+DAYagAQ=="}`, `{"jsonrpc":"2.0","result":{"hash":"F058970C18F36659C6722A7BD6656E01AB425158B553B58BE6AD79F54025FC63"},"id":1}`},
+		{"Broadcast", "chain.Broadcast", body, `{"jsonrpc":"2.0","result":{"hash":"A1D8A3AB7CC2971CD26409418205D1DAEEF5AEBB228BFA8643ABA3AEE126B961","code":0,"log":""},"id":1}`},
+		{"Broadcast", "chain.Broadcast", `{"rawTx": "+KH4ZKBZheHjjJtrb75IOm2u18eUHwn1+rEw8fI5kPueGVO7V4C4QA40TwFk+Muh6/5vUsM0szRyaW8g0iWrALLj+DdebvFSWcgbXEeR7m1WUxGIz+W/Wy3N3ka668fzE6gXNLM6tQGR0IRtaW50ismIhAMAAAAAAACjWAVkGufwsijE5ZK0XgUNuahqS0WV+mlg24sf2fekr/QzgT+DAYagAQ=="}`, `{"jsonrpc":"2.0","result":{"hash":"F058970C18F36659C6722A7BD6656E01AB425158B553B58BE6AD79F54025FC63","code":0,"log":""},"id":1}`},
 	}
 	for _, test := range testcases {
 		response := httptest.NewRecorder()

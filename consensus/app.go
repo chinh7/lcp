@@ -1,8 +1,8 @@
 package consensus
 
 import (
-	"encoding/binary"
 	"fmt"
+	"log"
 	"path/filepath"
 
 	"github.com/QuoineFinancial/liquid-chain/constant"
@@ -13,10 +13,13 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/QuoineFinancial/liquid-chain/token"
+	"github.com/QuoineFinancial/liquid-chain/trie"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
+
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // App basic Tendermint base app
@@ -30,9 +33,6 @@ type App struct {
 
 	gasStation         gas.Station
 	gasContractAddress string
-
-	lastBlockHeight  int64
-	lastBlockAppHash []byte
 }
 
 // NewApp initializes a new app
@@ -45,29 +45,28 @@ func NewApp(nodeInfo string, dbDir string, gasContractAddress string) *App {
 		StateDB:            stateDB,
 		InfoDB:             infoDB,
 		gasContractAddress: gasContractAddress,
-		lastBlockHeight:    0,
 	}
 
 	app.SetGasStation(gas.NewFreeStation(app))
 
 	// Load last proccessed block height
-	b := app.InfoDB.Get([]byte("lastBlockHeight"))
-	lastBlockAppHash := app.InfoDB.Get([]byte("lastBlockAppHash"))
+	bytes := app.InfoDB.Get([]byte("lastBlockInfo"))
 
-	if len(b) > 0 && len(lastBlockAppHash) > 0 {
-		app.loadState(int64(binary.LittleEndian.Uint64(b)), lastBlockAppHash)
+	if len(bytes) > 0 {
+		var blockInfo *storage.BlockInfo
+		rlp.DecodeBytes(bytes, blockInfo)
+		app.loadState(blockInfo)
 	}
 
 	return app
 }
 
-func (app *App) loadState(height int64, hash []byte) {
+func (app *App) loadState(blockInfo *storage.BlockInfo) {
 	var err error
-	if app.state, err = storage.New(gethCommon.BytesToHash(hash), app.StateDB); err != nil {
+	if app.state, err = storage.New(gethCommon.BytesToHash(blockInfo.AppHash[:]), app.StateDB); err != nil {
 		panic(err)
 	}
-	app.lastBlockHeight = height
-	app.lastBlockAppHash = hash
+	app.state.BlockInfo = blockInfo
 	// Keep moving forward
 	for app.gasStation.Switch() {
 	}
@@ -75,16 +74,30 @@ func (app *App) loadState(height int64, hash []byte) {
 
 // BeginBlock begins new block
 func (app *App) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock {
-	app.loadState(req.Header.Height, req.Header.AppHash)
+	var trieHash trie.Hash
+	copy(trieHash[:], req.Header.AppHash)
+	blockInfo := &storage.BlockInfo{
+		Height:  uint64(req.Header.Height),
+		AppHash: trieHash,
+		Time:    req.Header.Time,
+	}
+	app.loadState(blockInfo)
 	return types.ResponseBeginBlock{}
 }
 
 // Info returns application chain info
 func (app *App) Info(req types.RequestInfo) (resInfo types.ResponseInfo) {
+	var lastBlockHeight int64
+	var lastBlockAppHash []byte
+
+	if app.state != nil && app.state.BlockInfo != nil {
+		lastBlockHeight = int64(app.state.BlockInfo.Height)
+		lastBlockAppHash = app.state.BlockInfo.AppHash[:]
+	}
 	return types.ResponseInfo{
 		Data:             fmt.Sprintf("{\"version\":%s}", app.nodeInfo),
-		LastBlockHeight:  app.lastBlockHeight,
-		LastBlockAppHash: app.lastBlockAppHash,
+		LastBlockHeight:  lastBlockHeight,
+		LastBlockAppHash: lastBlockAppHash,
 	}
 }
 
@@ -133,6 +146,15 @@ func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 		return code.CodeTypeUnknownError, fmt.Errorf("Invalid signature")
 	}
 
+	// Validate Non-existent contract invoke
+	if (tx.To != crypto.Address{}) {
+		// invoke transaction
+		contractAccount, _ := app.state.GetAccount(tx.To)
+		if contractAccount == nil {
+			return code.CodeTypeUnknownError, fmt.Errorf("contract not found")
+		}
+	}
+
 	// Validate gas limit
 	fee, err := tx.GetFee()
 	if err != nil {
@@ -176,7 +198,7 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 		info = err.Error()
 	}
 	fromAddress := tx.From.Address()
-	detailEvent := event.NewDetailsEvent(fromAddress, tx.To, tx.From.Nonce, result)
+	detailEvent := event.NewDetailsEvent(app.state.BlockInfo.Height, fromAddress, tx.To, tx.From.Nonce, result)
 	events := append(applyEvents, detailEvent)
 	tmEvents := make([]types.Event, len(events))
 	for index := range events {
@@ -195,10 +217,13 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 // Commit returns the state root of application storage. Called once all block processing is complete
 func (app *App) Commit() types.ResponseCommit {
 	appHash := app.state.Commit()
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uint64(app.lastBlockHeight))
-	app.InfoDB.Put([]byte("lastBlockHeight"), b)
-	app.InfoDB.Put([]byte("lastBlockAppHash"), app.lastBlockAppHash)
+	bytes, err := rlp.EncodeToBytes(app.state.BlockInfo)
+	if err != nil {
+		log.Println("cannot encode block info")
+	} else {
+		app.InfoDB.Put([]byte("lastBlockInfo"), bytes)
+
+	}
 	return types.ResponseCommit{Data: appHash[:]}
 }
 
