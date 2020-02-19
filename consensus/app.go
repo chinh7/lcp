@@ -146,6 +146,15 @@ func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 		return code.CodeTypeUnknownError, fmt.Errorf("Invalid signature")
 	}
 
+	// Validate Non-existent contract invoke
+	if (tx.To != crypto.Address{}) {
+		// invoke transaction
+		contractAccount, _ := app.state.GetAccount(tx.To)
+		if contractAccount == nil {
+			return code.CodeTypeUnknownError, fmt.Errorf("contract not found")
+		}
+	}
+
 	// Validate gas limit
 	fee, err := tx.GetFee()
 	if err != nil {
