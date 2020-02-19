@@ -49,6 +49,11 @@ func (station *FreeStation) GetPolicy() Policy {
 	return station.policy
 }
 
+// CheckGasPrice of transaction
+func (station *FreeStation) CheckGasPrice(price uint64) bool {
+	return price > 0
+}
+
 // NewFreeStation constructor
 func NewFreeStation(app App) Station {
 	return &FreeStation{

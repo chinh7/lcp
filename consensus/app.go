@@ -164,6 +164,11 @@ func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 		return code.CodeTypeUnknownError, fmt.Errorf("Insufficient fee")
 	}
 
+	// Validate gas price
+	if !app.gasStation.CheckGasPrice(uint64(tx.GasPrice)) {
+		return code.CodeTypeUnknownError, fmt.Errorf("Invalid gas price")
+	}
+
 	// Validate tx data
 	txData := &crypto.TxData{}
 	err = txData.Deserialize(tx.Data)

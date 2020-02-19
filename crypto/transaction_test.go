@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"crypto/rand"
-	"math"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -102,8 +101,8 @@ func TestCreateAddress(t *testing.T) {
 
 func TestTxGetFee(t *testing.T) {
 	type fields struct {
-		GasLimit uint64
-		GasPrice uint64
+		GasLimit uint32
+		GasPrice uint32
 	}
 	tests := []struct {
 		name    string
@@ -120,11 +119,6 @@ func TestTxGetFee(t *testing.T) {
 			name:   "valid fee",
 			fields: fields{GasLimit: 250, GasPrice: 5},
 			want:   250 * 5,
-		},
-		{
-			name:    "fee overflow",
-			fields:  fields{GasLimit: math.MaxUint64, GasPrice: 2},
-			wantErr: "fee overflow",
 		},
 	}
 	for _, tt := range tests {

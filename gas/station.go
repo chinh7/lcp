@@ -10,6 +10,7 @@ import (
 type Station interface {
 	Sufficient(addr crypto.Address, gas uint64) bool
 	Burn(addr crypto.Address, gas uint64) []event.Event
+	CheckGasPrice(price uint64) bool
 	Switch() bool
 	GetPolicy() Policy
 }

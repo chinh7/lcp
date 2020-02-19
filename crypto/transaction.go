@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 
 	cdc "github.com/ethereum/go-ethereum/rlp"
@@ -33,8 +32,8 @@ type Tx struct {
 	From     TxSigner
 	Data     []byte
 	To       Address
-	GasLimit uint64
-	GasPrice uint64
+	GasLimit uint32
+	GasPrice uint32
 }
 
 // Address derived from TxSigner PubKey
@@ -71,13 +70,8 @@ func (tx *Tx) GetFee() (uint64, error) {
 	if tx.GasLimit == 0 || tx.GasPrice == 0 {
 		return 0, nil
 	}
-
-	fee := tx.GasLimit * tx.GasPrice
-	if fee/tx.GasLimit == tx.GasPrice {
-		return fee, nil
-	}
-
-	return 0, errors.New("fee overflow")
+	fee := uint64(tx.GasLimit) * uint64(tx.GasPrice)
+	return fee, nil
 }
 
 // Sign signs a transaction provided a private key
