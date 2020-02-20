@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	cryptoRand "crypto/rand"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -22,6 +23,8 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/trie"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
+
+	"golang.org/x/crypto/ed25519"
 )
 
 func ensureDir(path string) error {
@@ -164,12 +167,17 @@ func TestApp_CheckTx(t *testing.T) {
 	})
 
 	t.Run("Valid tx", func(t *testing.T) {
-		txBytes, err := ioutil.ReadFile("./testdata/deploy_contract_tx.dat")
+		pubkey, prvkey, err := ed25519.GenerateKey(cryptoRand.Reader)
 		if err != nil {
 			panic(err)
 		}
-
-		got := app.CheckTx(types.RequestCheckTx{Tx: txBytes})
+		txData := crypto.TxData{}
+		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize()}
+		err = tx.Sign(prvkey)
+		if err != nil {
+			panic(err)
+		}
+		got := app.CheckTx(types.RequestCheckTx{Tx: tx.Serialize()})
 		want := types.ResponseCheckTx{Code: code.CodeTypeOK}
 
 		if !reflect.DeepEqual(got, want) {
@@ -233,8 +241,14 @@ func TestApp_validateTx(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+	pubkey, prvkey, err := ed25519.GenerateKey(cryptoRand.Reader)
+	if err != nil {
+		panic(err)
+	}
 	nonExistentTx := &crypto.Tx{}
 	_ = json.Unmarshal([]byte(txByte), nonExistentTx)
+	nonExistentTx.From = crypto.TxSigner{PubKey: pubkey}
+	nonExistentTx.Sign(prvkey)
 
 	type args struct {
 		tx     *crypto.Tx
@@ -336,17 +350,17 @@ func TestApp_DeliverTx(t *testing.T) {
 	})
 
 	t.Run("Deploy transaction", func(t *testing.T) {
-		txBytes, err := ioutil.ReadFile("./testdata/deploy_contract_tx.dat")
+		pubkey, prvkey, err := ed25519.GenerateKey(cryptoRand.Reader)
 		if err != nil {
 			panic(err)
 		}
-
-		req := types.RequestDeliverTx{Tx: txBytes}
-		tx := &crypto.Tx{}
-		err = tx.Deserialize(txBytes)
+		txData := crypto.TxData{}
+		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize()}
+		err = tx.Sign(prvkey)
 		if err != nil {
 			panic(err)
 		}
+		req := types.RequestDeliverTx{Tx: tx.Serialize()}
 		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0)
 		got := app.DeliverTx(req)
 
@@ -359,17 +373,17 @@ func TestApp_DeliverTx(t *testing.T) {
 	})
 
 	t.Run("Invoke transaction", func(t *testing.T) {
-		txBytes, err := ioutil.ReadFile("./testdata/invoke_contract_tx.dat")
+		pubkey, prvkey, err := ed25519.GenerateKey(cryptoRand.Reader)
 		if err != nil {
 			panic(err)
 		}
-
-		req := types.RequestDeliverTx{Tx: txBytes}
-		tx := &crypto.Tx{}
-		err = tx.Deserialize(txBytes)
+		txData := crypto.TxData{}
+		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize()}
+		err = tx.Sign(prvkey)
 		if err != nil {
 			panic(err)
 		}
+		req := types.RequestDeliverTx{Tx: tx.Serialize()}
 		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0)
 		got := app.DeliverTx(req)
 
