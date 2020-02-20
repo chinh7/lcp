@@ -9,7 +9,6 @@ import (
 
 	cdc "github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -47,7 +46,7 @@ func (txSigner *TxSigner) Address() Address {
 // CreateAddress create a new contract address based on pubkey and nonce
 func (txSigner *TxSigner) CreateAddress() Address {
 	cloned := &TxSigner{PubKey: txSigner.PubKey, Nonce: txSigner.Nonce}
-	var res = sha3.Sum256(cloned.Serialize())
+	res := blake2b.Sum256(cloned.Serialize())
 	return AddressFromPubKey(res[:])
 }
 
