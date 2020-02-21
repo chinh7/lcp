@@ -14,11 +14,12 @@ type SystemEventCode byte
 
 // DetailEvent emitting when a tx is mined
 type DetailEvent struct {
-	Height uint64
-	From   crypto.Address
-	To     crypto.Address
-	Nonce  uint64
-	Result uint64
+	Height   uint64
+	From     crypto.Address
+	To       crypto.Address
+	Nonce    uint64
+	Result   uint64
+	GasPrice uint64
 }
 
 // DeploymentEvent emitting when contract is deployed
@@ -33,11 +34,12 @@ func LoadDetailEvent(tmEvent types.Event) *DetailEvent {
 	}
 
 	return &DetailEvent{
-		Height: binary.LittleEndian.Uint64(decodedValues[0]),
-		From:   crypto.AddressFromBytes(decodedValues[1]),
-		To:     crypto.AddressFromBytes(decodedValues[2]),
-		Nonce:  binary.LittleEndian.Uint64(decodedValues[3]),
-		Result: binary.LittleEndian.Uint64(decodedValues[4]),
+		Height:   binary.LittleEndian.Uint64(decodedValues[0]),
+		From:     crypto.AddressFromBytes(decodedValues[1]),
+		To:       crypto.AddressFromBytes(decodedValues[2]),
+		Nonce:    binary.LittleEndian.Uint64(decodedValues[3]),
+		Result:   binary.LittleEndian.Uint64(decodedValues[4]),
+		GasPrice: binary.LittleEndian.Uint64(decodedValues[5]),
 	}
 }
 
@@ -79,6 +81,10 @@ var detailEventABI abi.Event = abi.Event{
 		},
 		&abi.Parameter{
 			Name: "result",
+			Type: abi.Uint64,
+		},
+		&abi.Parameter{
+			Name: "gas_price",
 			Type: abi.Uint64,
 		},
 	},

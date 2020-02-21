@@ -39,8 +39,8 @@ func (service *Service) parseTransaction(resultTx *core_types.ResultTx) (*models
 	transaction := &models.Transaction{
 		Hash:     resultTx.Hash.String(),
 		Info:     resultTx.TxResult.Info,
-		GasUsed:  resultTx.TxResult.GetGasUsed(),
-		GasLimit: resultTx.TxResult.GetGasWanted(),
+		GasUsed:  uint32(resultTx.TxResult.GetGasUsed()),
+		GasLimit: uint32(resultTx.TxResult.GetGasWanted()),
 		Code:     resultTx.TxResult.GetCode(),
 		Data:     string(resultTx.TxResult.GetData()),
 		Events:   []*models.Event{},
@@ -81,6 +81,7 @@ func (service *Service) parseEvent(tx *models.Transaction, tmEvent abciTypes.Eve
 			tx.To = detailEvent.To.String()
 			tx.Nonce = detailEvent.Nonce
 			tx.Result = detailEvent.Result
+			tx.GasPrice = uint32(detailEvent.GasPrice)
 		case event.Deployment:
 			tx.Contract = event.LoadDeploymentEvent(tmEvent).Address.String()
 		}

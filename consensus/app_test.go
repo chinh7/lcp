@@ -363,7 +363,8 @@ func TestApp_DeliverTx(t *testing.T) {
 			panic(err)
 		}
 		req := types.RequestDeliverTx{Tx: tx.Serialize()}
-		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0)
+		gasPrice := uint64(18)
+		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0, gasPrice)
 		got := app.DeliverTx(req)
 
 		// Detail event must equal
@@ -386,7 +387,8 @@ func TestApp_DeliverTx(t *testing.T) {
 			panic(err)
 		}
 		req := types.RequestDeliverTx{Tx: tx.Serialize()}
-		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0)
+		gasPrice := uint64(18)
+		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0, gasPrice)
 		got := app.DeliverTx(req)
 
 		// Detail event must equal

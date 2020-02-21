@@ -200,7 +200,8 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 		info = err.Error()
 	}
 	fromAddress := tx.From.Address()
-	detailEvent := event.NewDetailsEvent(app.state.BlockInfo.Height, fromAddress, tx.To, tx.From.Nonce, result)
+	gasPrice := tx.GasPrice
+	detailEvent := event.NewDetailsEvent(app.state.BlockInfo.Height, fromAddress, tx.To, tx.From.Nonce, result, gasPrice)
 	events := append(applyEvents, detailEvent)
 	tmEvents := make([]types.Event, len(events))
 	for index := range events {

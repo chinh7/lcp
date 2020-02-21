@@ -21,8 +21,8 @@ func NewDeploymentEvent(address crypto.Address) Event {
 }
 
 // NewDetailsEvent returns extra transactions details
-func NewDetailsEvent(height uint64, from crypto.Address, to crypto.Address, nonce uint64, result uint64) Event {
-	values, _ := abi.Encode(detailEventABI.Parameters, []interface{}{height, from, to, nonce, result})
+func NewDetailsEvent(height uint64, from crypto.Address, to crypto.Address, nonce uint64, result uint64, gasPrice uint64) Event {
+	values, _ := abi.Encode(detailEventABI.Parameters, []interface{}{height, from, to, nonce, result, gasPrice})
 	return Event{&detailEventABI, values, nil}
 }
 
