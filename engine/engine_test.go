@@ -52,6 +52,7 @@ func TestEngineIgnite(t *testing.T) {
 		args          []string
 		want          uint64
 		wantErr       bool
+		modArgs       []byte
 	}{
 		{
 			name:          "chained ignite",
@@ -119,6 +120,40 @@ func TestEngineIgnite(t *testing.T) {
 			args:          []string{},
 			want:          1,
 		},
+		{
+			name:          "chained ignite with invoke address validation",
+			callee:        loadContract("testdata/math-abi.json", "testdata/math.wasm"),
+			calleeAddress: mathAddress,
+			caller:        loadContract("testdata/util-abi.json", "testdata/util.wasm"),
+			callerAddress: utilAddress,
+			funcName:      "mod_invoke",
+			args:          []string{"LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R"},
+			wantErr:       true,
+		},
+		{
+			name:          "chained ignite with event address validation",
+			callee:        loadContract("testdata/math-abi.json", "testdata/math.wasm"),
+			calleeAddress: mathAddress,
+			caller:        loadContract("testdata/util-abi.json", "testdata/util.wasm"),
+			callerAddress: utilAddress,
+			funcName:      "mod_emit",
+			args:          []string{"LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R"},
+			wantErr:       true,
+		},
+		{
+			name:          "chained ignite with address validation",
+			callee:        loadContract("testdata/math-abi.json", "testdata/math.wasm"),
+			calleeAddress: mathAddress,
+			caller:        loadContract("testdata/util-abi.json", "testdata/util.wasm"),
+			callerAddress: utilAddress,
+			funcName:      "mod_emit",
+			args:          []string{"LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R"},
+			modArgs: []byte{
+				0xe4, 0xa3, 0x00, 0xcf, 0xc6, 0x11, 0xee, 0x4d, 0xf6, 0x43, 0x37, 0x61, 0x58,
+				0x66, 0xb2, 0x62, 0xf5, 0x3e, 0x04, 0xdd, 0x82, 0xa0, 0xfa, 0x1c, 0x4f, 0xff,
+				0x45, 0xdd, 0xcc, 0x8f, 0x55, 0xb9, 0x38, 0x1f, 0xe3, 0x5f, 0xb1},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		fmt.Println(tt.name)
@@ -157,6 +192,9 @@ func TestEngineIgnite(t *testing.T) {
 			args, err := abi.EncodeFromString(function.Parameters, tt.args)
 			if err != nil {
 				panic(err)
+			}
+			if tt.modArgs != nil {
+				args = tt.modArgs
 			}
 			got, err := execEngine.Ignite(tt.funcName, args)
 			if (err != nil) != tt.wantErr {

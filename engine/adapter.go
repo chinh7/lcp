@@ -93,7 +93,10 @@ func (engine *Engine) chainMethodBind(vm *vm.VM, args ...uint64) (uint64, error)
 	if err != nil {
 		return 0, err
 	}
-	contractAddr := crypto.AddressFromBytes(contractAddrBytes)
+	contractAddr, _ := crypto.AddressFromBytes(contractAddrBytes)
+	if err != nil {
+		return 0, err
+	}
 
 	invokedMethodBytes, err := readAt(vm, int(args[1]), int(args[2]))
 	if err != nil {
@@ -189,6 +192,11 @@ func (engine *Engine) handleEmitEvent(abiEvent *abi.Event, vm *vm.VM, args ...ui
 			memValue, err := readAt(vm, paramPtr, size)
 			if err != nil {
 				return 0, err
+			}
+			if param.Type.IsAddress() {
+				if _, err := crypto.AddressFromBytes(memValue); err != nil {
+					return 0, err
+				}
 			}
 			memBytes = append(memBytes, memValue)
 		} else {

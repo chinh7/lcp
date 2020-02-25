@@ -36,6 +36,16 @@ func (t PrimitiveType) IsPointer() bool {
 	}
 }
 
+// IsAddress check if this type is an Address
+func (t PrimitiveType) IsAddress() bool {
+	switch t {
+	case Address:
+		return true
+	default:
+		return false
+	}
+}
+
 func (t PrimitiveType) String() string {
 	return map[PrimitiveType]string{
 		Uint8:   "uint8",
