@@ -93,7 +93,7 @@ func (engine *Engine) chainMethodBind(vm *vm.VM, args ...uint64) (uint64, error)
 	if err != nil {
 		return 0, err
 	}
-	contractAddr, _ := crypto.AddressFromBytes(contractAddrBytes)
+	contractAddr, err := crypto.AddressFromBytes(contractAddrBytes)
 	if err != nil {
 		return 0, err
 	}
