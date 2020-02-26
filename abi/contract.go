@@ -1,6 +1,7 @@
 package abi
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"io"
 
@@ -49,6 +50,6 @@ func (c *Contract) MarshalJSON() ([]byte, error) {
 		Code   string  `json:"code"`
 	}{
 		Header: c.Header,
-		Code:   string(c.Code),
+		Code:   hex.EncodeToString(c.Code),
 	})
 }
