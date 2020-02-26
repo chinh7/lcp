@@ -68,10 +68,14 @@ func AddressFromString(address string) (Address, error) {
 }
 
 // AddressFromBytes return an address given its bytes
-func AddressFromBytes(b []byte) Address {
+func AddressFromBytes(b []byte) (Address, error) {
 	var a Address
+	_, err := decodeAddressBytes(versionByteAccountID, b)
+	if err != nil {
+		return Address{}, err
+	}
 	a.setBytes(b)
-	return a
+	return a, nil
 }
 
 func decodeString(src string) ([]byte, error) {
@@ -92,6 +96,10 @@ func decodeAddress(expected byte, src string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	return decodeAddressBytes(expected, raw)
+}
+
+func decodeAddressBytes(expected byte, raw []byte) ([]byte, error) {
 	version := byte(raw[0])
 	payload := raw[1 : len(raw)-2]
 	checksum := raw[len(raw)-2:]

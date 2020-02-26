@@ -119,6 +119,26 @@ func TestEngineIgnite(t *testing.T) {
 			args:          []string{},
 			want:          1,
 		},
+		{
+			name:          "chained ignite with invoke address validation",
+			callee:        loadContract("testdata/math-abi.json", "testdata/math.wasm"),
+			calleeAddress: mathAddress,
+			caller:        loadContract("testdata/util-abi.json", "testdata/util.wasm"),
+			callerAddress: utilAddress,
+			funcName:      "mod_invoke",
+			args:          []string{"LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R"},
+			wantErr:       true,
+		},
+		{
+			name:          "chained ignite with event address validation",
+			callee:        loadContract("testdata/math-abi.json", "testdata/math.wasm"),
+			calleeAddress: mathAddress,
+			caller:        loadContract("testdata/util-abi.json", "testdata/util.wasm"),
+			callerAddress: utilAddress,
+			funcName:      "mod_emit",
+			args:          []string{"LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R"},
+			wantErr:       true,
+		},
 	}
 	for _, tt := range tests {
 		fmt.Println(tt.name)

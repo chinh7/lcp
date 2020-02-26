@@ -133,10 +133,14 @@ func (engine *Engine) loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.
 		return []uint64{}, fmt.Errorf("arguments byte size exceeds limit")
 	}
 	for i, bytes := range byteArgs {
-		isArray := params[i].IsArray || params[i].Type.String() == "address"
+		isArray := params[i].IsArray || params[i].Type.IsAddress()
 		if isArray {
-			_, err := vm.MemWrite(bytes, offset)
-			if err != nil {
+			if params[i].Type.IsAddress() {
+				if _, err := crypto.AddressFromBytes(bytes); err != nil {
+					return nil, err
+				}
+			}
+			if _, err := vm.MemWrite(bytes, offset); err != nil {
 				return nil, err
 			}
 			args[i] = uint64(offset)
