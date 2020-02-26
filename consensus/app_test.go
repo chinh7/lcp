@@ -174,7 +174,7 @@ func TestApp_CheckTx(t *testing.T) {
 			panic(err)
 		}
 		txData := crypto.TxData{}
-		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize()}
+		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize(), GasPrice: uint32(18)}
 		err = tx.Sign(prvkey)
 		if err != nil {
 			panic(err)
@@ -357,13 +357,14 @@ func TestApp_DeliverTx(t *testing.T) {
 			panic(err)
 		}
 		txData := crypto.TxData{}
-		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize()}
+		gasPrice := uint32(18)
+		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize(), GasPrice: gasPrice}
 		err = tx.Sign(prvkey)
 		if err != nil {
 			panic(err)
 		}
 		req := types.RequestDeliverTx{Tx: tx.Serialize()}
-		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0)
+		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0, gasPrice)
 		got := app.DeliverTx(req)
 
 		// Detail event must equal
@@ -380,13 +381,14 @@ func TestApp_DeliverTx(t *testing.T) {
 			panic(err)
 		}
 		txData := crypto.TxData{}
-		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize()}
+		gasPrice := uint32(18)
+		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize(), GasPrice: gasPrice}
 		err = tx.Sign(prvkey)
 		if err != nil {
 			panic(err)
 		}
 		req := types.RequestDeliverTx{Tx: tx.Serialize()}
-		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0)
+		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0, gasPrice)
 		got := app.DeliverTx(req)
 
 		// Detail event must equal
