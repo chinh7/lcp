@@ -18,7 +18,7 @@ func parseEvent(liquidEvent *event.Event) *models.Event {
 		valueByte, _ := hex.DecodeString(string(tmEvent.Attributes[index].Value))
 		var value string
 		if param.Type == abi.Address {
-			address := crypto.AddressFromBytes(valueByte)
+			address, _ := crypto.AddressFromBytes(valueByte)
 			value = address.String()
 		} else {
 			value = strconv.FormatUint(binary.LittleEndian.Uint64(valueByte), 10)

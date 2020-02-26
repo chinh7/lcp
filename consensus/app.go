@@ -166,6 +166,11 @@ func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 		return code.CodeTypeUnknownError, fmt.Errorf("Insufficient fee")
 	}
 
+	// Validate gas price
+	if !app.gasStation.CheckGasPrice(tx.GasPrice) {
+		return code.CodeTypeUnknownError, fmt.Errorf("Invalid gas price")
+	}
+
 	// Validate tx data
 	txData := &crypto.TxData{}
 	err = txData.Deserialize(tx.Data)
@@ -200,7 +205,7 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 		info = err.Error()
 	}
 	fromAddress := tx.From.Address()
-	detailEvent := event.NewDetailsEvent(app.state.BlockInfo.Height, fromAddress, tx.To, tx.From.Nonce, result)
+	detailEvent := event.NewDetailsEvent(app.state.BlockInfo.Height, fromAddress, tx.To, tx.From.Nonce, result, tx.GasPrice)
 	events := append(applyEvents, detailEvent)
 	tmEvents := make([]types.Event, len(events))
 	for index := range events {

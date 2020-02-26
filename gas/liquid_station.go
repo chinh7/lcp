@@ -5,6 +5,8 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/event"
 )
 
+const minimumGasPrice = uint32(18)
+
 // LiquidStation provide a liquid as a gas station
 type LiquidStation struct {
 	app       App
@@ -44,6 +46,11 @@ func (station *LiquidStation) Switch() bool {
 // GetPolicy for liquid token
 func (station *LiquidStation) GetPolicy() Policy {
 	return station.policy
+}
+
+// CheckGasPrice of transaction
+func (station *LiquidStation) CheckGasPrice(price uint32) bool {
+	return price >= minimumGasPrice
 }
 
 // NewLiquidStation with fee
