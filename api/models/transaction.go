@@ -30,7 +30,7 @@ type Transaction struct {
 
 	GasUsed  uint32 `json:"gasUsed"`
 	GasLimit uint32 `json:"gasLimit"`
-	GasPrice string `json:"gasPrice"`
+	GasPrice uint32 `json:"gasPrice"`
 
 	Result uint64   `json:"result"`
 	Events []*Event `json:"events"`

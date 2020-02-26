@@ -84,6 +84,7 @@ func (service *Service) parseEvent(tx *models.Transaction, tmEvent abciTypes.Eve
 			tx.To = detailEvent.To.String()
 			tx.Nonce = detailEvent.Nonce
 			tx.Result = detailEvent.Result
+			tx.GasPrice = uint32(detailEvent.GasPrice)
 		case event.Deployment:
 			tx.Contract = event.LoadDeploymentEvent(tmEvent).Address.String()
 		}
