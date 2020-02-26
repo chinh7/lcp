@@ -50,7 +50,7 @@ func (station *FreeStation) GetPolicy() Policy {
 }
 
 // CheckGasPrice of transaction
-func (station *FreeStation) CheckGasPrice(price uint64) bool {
+func (station *FreeStation) CheckGasPrice(price uint32) bool {
 	return price > 0
 }
 

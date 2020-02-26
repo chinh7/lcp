@@ -167,7 +167,7 @@ func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 	}
 
 	// Validate gas price
-	if !app.gasStation.CheckGasPrice(uint64(tx.GasPrice)) {
+	if !app.gasStation.CheckGasPrice(tx.GasPrice) {
 		return code.CodeTypeUnknownError, fmt.Errorf("Invalid gas price")
 	}
 
