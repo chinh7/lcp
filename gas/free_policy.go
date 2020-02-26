@@ -23,3 +23,8 @@ func (p *FreePolicy) GetCostForStorage(size int) uint64 {
 func (p *FreePolicy) GetCostForContract(size int) uint64 {
 	return 0
 }
+
+// GetCostForEvent emission
+func (p *FreePolicy) GetCostForEvent(size int) uint64 {
+	return 0
+}

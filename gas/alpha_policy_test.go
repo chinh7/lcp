@@ -13,10 +13,14 @@ func TestAlphaPolicy(t *testing.T) {
 	}
 	cost = policy.GetCostForStorage(100)
 	if cost != 100 {
-		t.Errorf("Expect cost %v, got %v", 0, cost)
+		t.Errorf("Expect cost %v, got %v", 100, cost)
 	}
 	cost = policy.GetCostForContract(100)
 	if cost != 100 {
-		t.Errorf("Expect cost %v, got %v", 0, cost)
+		t.Errorf("Expect cost %v, got %v", 100, cost)
+	}
+	cost = policy.GetCostForEvent(100)
+	if cost != 100 {
+		t.Errorf("Expect cost %v, got %v", 100, cost)
 	}
 }

@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	cryptoRand "crypto/rand"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -12,9 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/event"
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
@@ -22,6 +25,8 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/trie"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
+
+	"golang.org/x/crypto/ed25519"
 )
 
 func ensureDir(path string) error {
@@ -57,25 +62,25 @@ func (tc *TestConfig) CleanData() {
 }
 
 func TestNewApp(t *testing.T) {
-	type args struct {
-		nodeInfo           string
-		dbDir              string
-		gasContractAddress string
+	dbDirname := "test_" + strconv.Itoa(rand.Intn(10000))
+	dbPath := "./testdata/db/" + dbDirname + "/"
+	err := ensureDir(dbDirname)
+	if err != nil {
+		panic(err)
 	}
-	tests := []struct {
-		name string
-		args args
-		want *App
-	}{
-		// TODO: Add test cases.
+
+	blockInfo := &storage.BlockInfo{
+		Height:  uint64(1),
+		AppHash: trie.Hash{},
+		Time:    time.Now(),
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewApp(tt.args.nodeInfo, tt.args.dbDir, tt.args.gasContractAddress); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewApp() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	bytes, _ := rlp.EncodeToBytes(blockInfo)
+	infoDB := db.NewRocksDB(filepath.Join(dbPath, "info.db"))
+	infoDB.Put([]byte("lastBlockInfo"), bytes)
+	infoDB.Close()
+
+	app := NewApp("testapp", dbPath, "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
+	assert.NotNil(t, app)
 }
 
 func TestApp_BeginBlock(t *testing.T) {
@@ -164,12 +169,17 @@ func TestApp_CheckTx(t *testing.T) {
 	})
 
 	t.Run("Valid tx", func(t *testing.T) {
-		txBytes, err := ioutil.ReadFile("./testdata/deploy_contract_tx.dat")
+		pubkey, prvkey, err := ed25519.GenerateKey(cryptoRand.Reader)
 		if err != nil {
 			panic(err)
 		}
-
-		got := app.CheckTx(types.RequestCheckTx{Tx: txBytes})
+		txData := crypto.TxData{}
+		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize()}
+		err = tx.Sign(prvkey)
+		if err != nil {
+			panic(err)
+		}
+		got := app.CheckTx(types.RequestCheckTx{Tx: tx.Serialize()})
 		want := types.ResponseCheckTx{Code: code.CodeTypeOK}
 
 		if !reflect.DeepEqual(got, want) {
@@ -233,8 +243,14 @@ func TestApp_validateTx(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+	pubkey, prvkey, err := ed25519.GenerateKey(cryptoRand.Reader)
+	if err != nil {
+		panic(err)
+	}
 	nonExistentTx := &crypto.Tx{}
 	_ = json.Unmarshal([]byte(txByte), nonExistentTx)
+	nonExistentTx.From = crypto.TxSigner{PubKey: pubkey}
+	nonExistentTx.Sign(prvkey)
 
 	type args struct {
 		tx     *crypto.Tx
@@ -336,17 +352,17 @@ func TestApp_DeliverTx(t *testing.T) {
 	})
 
 	t.Run("Deploy transaction", func(t *testing.T) {
-		txBytes, err := ioutil.ReadFile("./testdata/deploy_contract_tx.dat")
+		pubkey, prvkey, err := ed25519.GenerateKey(cryptoRand.Reader)
 		if err != nil {
 			panic(err)
 		}
-
-		req := types.RequestDeliverTx{Tx: txBytes}
-		tx := &crypto.Tx{}
-		err = tx.Deserialize(txBytes)
+		txData := crypto.TxData{}
+		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize()}
+		err = tx.Sign(prvkey)
 		if err != nil {
 			panic(err)
 		}
+		req := types.RequestDeliverTx{Tx: tx.Serialize()}
 		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0)
 		got := app.DeliverTx(req)
 
@@ -359,17 +375,17 @@ func TestApp_DeliverTx(t *testing.T) {
 	})
 
 	t.Run("Invoke transaction", func(t *testing.T) {
-		txBytes, err := ioutil.ReadFile("./testdata/invoke_contract_tx.dat")
+		pubkey, prvkey, err := ed25519.GenerateKey(cryptoRand.Reader)
 		if err != nil {
 			panic(err)
 		}
-
-		req := types.RequestDeliverTx{Tx: txBytes}
-		tx := &crypto.Tx{}
-		err = tx.Deserialize(txBytes)
+		txData := crypto.TxData{}
+		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize()}
+		err = tx.Sign(prvkey)
 		if err != nil {
 			panic(err)
 		}
+		req := types.RequestDeliverTx{Tx: tx.Serialize()}
 		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0)
 		got := app.DeliverTx(req)
 

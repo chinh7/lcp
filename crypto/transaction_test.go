@@ -93,7 +93,7 @@ func TestCreateAddress(t *testing.T) {
 	pubkey := prvkey[32:]
 	txSigner := TxSigner{Nonce: 7, PubKey: pubkey}
 	generatedAddress := txSigner.CreateAddress()
-	expected := "LDHQUGBKYJDMIBQPAJGU6M3XRGV32W4XCUPHH42SGDTAIO4DL3KSG6WJ"
+	expected := "LD6QC6YFHIZ6DCN452PJULI5WHVKYRCNIJHKRQUOF6QOKQ6WPFGT5CYW"
 	if generatedAddress.String() != expected {
 		t.Errorf("CreateAddress = %v, want %v", generatedAddress.String(), expected)
 	}

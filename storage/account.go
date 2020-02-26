@@ -4,7 +4,7 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/trie"
-	"golang.org/x/crypto/sha3"
+	"golang.org/x/crypto/blake2b"
 )
 
 // Account stores information related to the account
@@ -54,6 +54,6 @@ func (account *Account) GetCreator() crypto.Address {
 
 func (account *Account) setContract(contract []byte) {
 	account.contract = contract
-	contractHash := sha3.Sum256(contract)
+	contractHash := blake2b.Sum256(contract)
 	account.ContractHash = contractHash[:]
 }
