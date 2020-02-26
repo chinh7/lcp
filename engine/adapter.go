@@ -203,6 +203,13 @@ func (engine *Engine) handleEmitEvent(abiEvent *abi.Event, vm *vm.VM, args ...ui
 	if err != nil {
 		return 0, err
 	}
+
+	cost := engine.gasPolicy.GetCostForEvent(len(values))
+	err = vm.BurnGas(cost)
+	if err != nil {
+		return 0, err
+	}
+
 	engine.pushEvent(event.NewCustomEvent(abiEvent, values, address))
 	return 0, nil
 }
