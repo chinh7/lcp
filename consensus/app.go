@@ -53,8 +53,10 @@ func NewApp(nodeInfo string, dbDir string, gasContractAddress string) *App {
 	bytes := app.InfoDB.Get([]byte("lastBlockInfo"))
 
 	if len(bytes) > 0 {
-		var blockInfo *storage.BlockInfo
-		rlp.DecodeBytes(bytes, blockInfo)
+		blockInfo := &storage.BlockInfo{}
+		if err := rlp.DecodeBytes(bytes, blockInfo); err != nil {
+			panic(err)
+		}
 		app.loadState(blockInfo)
 	}
 
@@ -203,7 +205,7 @@ func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 		info = err.Error()
 	}
 	fromAddress := tx.From.Address()
-	detailEvent := event.NewDetailsEvent(fromAddress, tx.To, tx.From.Nonce, result)
+	detailEvent := event.NewDetailsEvent(app.state.BlockInfo.Height, fromAddress, tx.To, tx.From.Nonce, result)
 	events := append(applyEvents, detailEvent)
 	tmEvents := make([]types.Event, len(events))
 	for index := range events {
@@ -227,8 +229,8 @@ func (app *App) Commit() types.ResponseCommit {
 		log.Println("cannot encode block info")
 	} else {
 		app.InfoDB.Put([]byte("lastBlockInfo"), bytes)
-
 	}
+
 	return types.ResponseCommit{Data: appHash[:]}
 }
 

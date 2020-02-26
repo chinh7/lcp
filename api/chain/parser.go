@@ -3,7 +3,9 @@ package chain
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"strconv"
 
+	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/api/models"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/event"
@@ -58,7 +60,10 @@ func (service *Service) parseTransaction(resultTx *core_types.ResultTx) (*models
 }
 
 func parseEventName(name []byte) (*crypto.Address, uint32, error) {
-	address := crypto.AddressFromBytes(name[0:crypto.AddressLength])
+	address, err := crypto.AddressFromBytes(name[0:crypto.AddressLength])
+	if err != nil {
+		return nil, 0, err
+	}
 	index := binary.LittleEndian.Uint32(name[crypto.AddressLength:])
 	return &address, index, nil
 }
@@ -113,10 +118,21 @@ func (service *Service) parseEvent(tx *models.Transaction, tmEvent abciTypes.Eve
 		result.Name = abiEvent.Name
 		result.Contract = contractAddress.String()
 		for index, param := range abiEvent.Parameters {
+			valueByte, _ := hex.DecodeString(string(tmEvent.Attributes[index].Value))
+			var value string
+			if param.Type == abi.Address {
+				address, err := crypto.AddressFromBytes(valueByte)
+				if err != nil {
+					return nil, err
+				}
+				value = address.String()
+			} else {
+				value = strconv.FormatUint(binary.LittleEndian.Uint64(valueByte), 10)
+			}
 			result.Attributes = append(result.Attributes, models.EventAttribute{
 				Key:   param.Name,
 				Type:  param.Type.String(),
-				Value: hex.EncodeToString(tmEvent.Attributes[index].Value),
+				Value: value,
 			})
 		}
 	}

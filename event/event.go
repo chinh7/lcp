@@ -21,8 +21,8 @@ func NewDeploymentEvent(address crypto.Address) Event {
 }
 
 // NewDetailsEvent returns extra transactions details
-func NewDetailsEvent(from crypto.Address, to crypto.Address, nonce uint64, result uint64) Event {
-	values, _ := abi.Encode(detailEventABI.Parameters, []interface{}{from, to, nonce, result})
+func NewDetailsEvent(height uint64, from crypto.Address, to crypto.Address, nonce uint64, result uint64) Event {
+	values, _ := abi.Encode(detailEventABI.Parameters, []interface{}{height, from, to, nonce, result})
 	return Event{&detailEventABI, values, nil}
 }
 
@@ -33,7 +33,10 @@ func NewCustomEvent(event *abi.Event, values []byte, contract crypto.Address) Ev
 
 // ParseCustomEventName return the crypto.Adress and index of an event name
 func ParseCustomEventName(name []byte) (*crypto.Address, uint32, error) {
-	address := crypto.AddressFromBytes(name[0:crypto.AddressLength])
+	address, err := crypto.AddressFromBytes(name[0:crypto.AddressLength])
+	if err != nil {
+		return nil, 0, err
+	}
 	index := binary.LittleEndian.Uint32(name[crypto.AddressLength:])
 	return &address, index, nil
 }

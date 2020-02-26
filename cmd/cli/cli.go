@@ -30,6 +30,8 @@ func broadcast(endpoint, serializedTx string) {
 	if len(endpoint) > 0 {
 		var result chain.BroadcastResult
 		postJSON(endpoint, "chain.Broadcast", chain.BroadcastParams{RawTransaction: serializedTx}, &result)
+		log.Printf("Code: %d\n", result.Code)
+		log.Printf("Log: %s\n", result.Log)
 		log.Printf("Transaction hash: %s\n", result.TransactionHash)
 	} else {
 		log.Println(serializedTx)

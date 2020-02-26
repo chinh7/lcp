@@ -213,3 +213,8 @@ func (p *AlphaPolicy) GetCostForStorage(size int) uint64 {
 func (p *AlphaPolicy) GetCostForContract(size int) uint64 {
 	return uint64(size)
 }
+
+// GetCostForEvent emission
+func (p *AlphaPolicy) GetCostForEvent(size int) uint64 {
+	return uint64(size)
+}
