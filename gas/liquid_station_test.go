@@ -93,3 +93,25 @@ func TestBurn(t *testing.T) {
 	}()
 	station.Burn(otherAddress, 10000)
 }
+
+func TestCheckGasPrice(t *testing.T) {
+	app := &MockApp{}
+	contractAddress, _ := crypto.AddressFromString(contractAddressStr)
+	station := NewLiquidStation(app, contractAddress)
+
+	if station.CheckGasPrice(0) {
+		t.Error("Expected return false")
+	}
+
+	if station.CheckGasPrice(17) {
+		t.Error("Expected return false")
+	}
+
+	if !station.CheckGasPrice(18) {
+		t.Error("Expected return true")
+	}
+
+	if !station.CheckGasPrice(100) {
+		t.Error("Expected return true")
+	}
+}

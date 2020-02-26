@@ -98,3 +98,16 @@ func TestFreeBurn(t *testing.T) {
 		t.Error("Expected return nil")
 	}
 }
+
+func TestFreeCheckGasPrice(t *testing.T) {
+	app := &MockFreeAppNoToken{}
+	station := NewFreeStation(app)
+
+	if station.CheckGasPrice(0) {
+		t.Error("Expected return false")
+	}
+
+	if !station.CheckGasPrice(10) {
+		t.Error("Expected return true")
+	}
+}

@@ -17,7 +17,7 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) (uint6
 	if (tx.To == crypto.Address{}) {
 		contractSize := len(tx.Data)
 		gasUsed := policy.GetCostForContract(contractSize)
-		if gasLimit < gasUsed {
+		if uint64(gasLimit) < gasUsed {
 			return 0, nil, 0, errors.New("out of gas")
 		}
 		contractAddress := tx.From.CreateAddress()
@@ -25,7 +25,7 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) (uint6
 		if err != nil {
 			return 0, nil, 0, err
 		}
-		gasEvents := gasStation.Burn(tx.From.Address(), gasUsed*tx.GasPrice)
+		gasEvents := gasStation.Burn(tx.From.Address(), uint64(gasUsed)*uint64(tx.GasPrice))
 		events := append([]event.Event{event.NewDeploymentEvent(contractAddress)}, gasEvents...)
 		state.Commit()
 		return 0, events, gasUsed, nil
@@ -50,7 +50,7 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) (uint6
 	nonce := fromAccount.Nonce
 	fromAccount.SetNonce(nonce + 1)
 
-	execEngine := engine.NewEngine(state, contractAccount, tx.From.Address(), policy, gasLimit)
+	execEngine := engine.NewEngine(state, contractAccount, tx.From.Address(), policy, uint64(gasLimit))
 	result, err := execEngine.Ignite(data.Method, data.Params)
 	engineEvents := []event.Event{}
 	if err != nil {
@@ -60,7 +60,7 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) (uint6
 	}
 
 	gasUsed := execEngine.GetGasUsed()
-	gasEvents := gasStation.Burn(tx.From.Address(), gasUsed)
+	gasEvents := gasStation.Burn(tx.From.Address(), uint64(gasUsed)*uint64(tx.GasPrice))
 	events := append(engineEvents, gasEvents...)
 	state.Commit()
 	return result, events, gasUsed, err
