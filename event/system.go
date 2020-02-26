@@ -32,11 +32,12 @@ func LoadDetailEvent(tmEvent types.Event) *DetailEvent {
 	for index, attribute := range tmEvent.GetAttributes() {
 		decodedValues[index], _ = hex.DecodeString(string(attribute.Value))
 	}
-
+	fromAddress, _ := crypto.AddressFromBytes(decodedValues[1])
+	toAddress, _ := crypto.AddressFromBytes(decodedValues[2])
 	return &DetailEvent{
 		Height:   binary.LittleEndian.Uint64(decodedValues[0]),
-		From:     crypto.AddressFromBytes(decodedValues[1]),
-		To:       crypto.AddressFromBytes(decodedValues[2]),
+		From:     fromAddress,
+		To:       toAddress,
 		Nonce:    binary.LittleEndian.Uint64(decodedValues[3]),
 		Result:   binary.LittleEndian.Uint64(decodedValues[4]),
 		GasPrice: binary.LittleEndian.Uint64(decodedValues[5]),
@@ -45,8 +46,9 @@ func LoadDetailEvent(tmEvent types.Event) *DetailEvent {
 
 func LoadDeploymentEvent(tmEvent types.Event) *DeploymentEvent {
 	addressByte, _ := hex.DecodeString(string(tmEvent.Attributes[0].Value))
+	address, _ := crypto.AddressFromBytes(addressByte)
 	return &DeploymentEvent{
-		Address: crypto.AddressFromBytes(addressByte),
+		Address: address,
 	}
 }
 

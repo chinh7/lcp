@@ -33,7 +33,10 @@ func NewCustomEvent(event *abi.Event, values []byte, contract crypto.Address) Ev
 
 // ParseCustomEventName return the crypto.Adress and index of an event name
 func ParseCustomEventName(name []byte) (*crypto.Address, uint32, error) {
-	address := crypto.AddressFromBytes(name[0:crypto.AddressLength])
+	address, err := crypto.AddressFromBytes(name[0:crypto.AddressLength])
+	if err != nil {
+		return nil, 0, err
+	}
 	index := binary.LittleEndian.Uint32(name[crypto.AddressLength:])
 	return &address, index, nil
 }

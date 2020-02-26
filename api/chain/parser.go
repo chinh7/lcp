@@ -60,7 +60,10 @@ func (service *Service) parseTransaction(resultTx *core_types.ResultTx) (*models
 }
 
 func parseEventName(name []byte) (*crypto.Address, uint32, error) {
-	address := crypto.AddressFromBytes(name[0:crypto.AddressLength])
+	address, err := crypto.AddressFromBytes(name[0:crypto.AddressLength])
+	if err != nil {
+		return nil, 0, err
+	}
 	index := binary.LittleEndian.Uint32(name[crypto.AddressLength:])
 	return &address, index, nil
 }
@@ -119,7 +122,10 @@ func (service *Service) parseEvent(tx *models.Transaction, tmEvent abciTypes.Eve
 			valueByte, _ := hex.DecodeString(string(tmEvent.Attributes[index].Value))
 			var value string
 			if param.Type == abi.Address {
-				address := crypto.AddressFromBytes(valueByte)
+				address, err := crypto.AddressFromBytes(valueByte)
+				if err != nil {
+					return nil, err
+				}
 				value = address.String()
 			} else {
 				value = strconv.FormatUint(binary.LittleEndian.Uint64(valueByte), 10)
