@@ -17,7 +17,7 @@ type BroadcastResult struct {
 	Log             string `json:"log"`
 }
 
-// Broadcast delivers transction to blockchain
+// Broadcast delivers transaction to blockchain
 func (service *Service) Broadcast(r *http.Request, params *BroadcastParams, result *BroadcastResult) error {
 	bytes, err := base64.StdEncoding.DecodeString(params.RawTransaction)
 	if err != nil {

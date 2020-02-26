@@ -1,6 +1,7 @@
 package abi
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"testing"
 
@@ -32,9 +33,10 @@ func TestDecodeContract(t *testing.T) {
 
 func TestMarshalJSON(t *testing.T) {
 	h, _ := LoadHeaderFromFile("../test/testdata/token-abi.json")
+	code, _ := hex.DecodeString("1")
 	contract := Contract{
 		Header: h,
-		Code:   []byte{1},
+		Code:   code,
 	}
 	jsonBytes, _ := contract.MarshalJSON()
 
