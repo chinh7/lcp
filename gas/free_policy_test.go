@@ -19,4 +19,8 @@ func TestFreePolicy(t *testing.T) {
 	if cost != 0 {
 		t.Errorf("Expect cost %v, got %v", 0, cost)
 	}
+	cost = policy.GetCostForEvent(100)
+	if cost != 0 {
+		t.Errorf("Expect cost %v, got %v", 0, cost)
+	}
 }
