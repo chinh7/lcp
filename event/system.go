@@ -85,7 +85,7 @@ var detailEventABI abi.Event = abi.Event{
 		},
 		&abi.Parameter{
 			Name: "gas_price",
-			Type: abi.Uint64,
+			Type: abi.Uint32,
 		},
 	},
 }
