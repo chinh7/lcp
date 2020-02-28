@@ -19,7 +19,7 @@ type DetailEvent struct {
 	To       crypto.Address
 	Nonce    uint64
 	Result   uint64
-	GasPrice uint64
+	GasPrice uint32
 }
 
 // DeploymentEvent emitting when contract is deployed
@@ -40,7 +40,7 @@ func LoadDetailEvent(tmEvent types.Event) *DetailEvent {
 		To:       toAddress,
 		Nonce:    binary.LittleEndian.Uint64(decodedValues[3]),
 		Result:   binary.LittleEndian.Uint64(decodedValues[4]),
-		GasPrice: binary.LittleEndian.Uint64(decodedValues[5]),
+		GasPrice: binary.LittleEndian.Uint32(decodedValues[5]),
 	}
 }
 
