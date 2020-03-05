@@ -55,12 +55,11 @@ func applyInvokeTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) 
 
 	policy := gasStation.GetPolicy()
 	execEngine := engine.NewEngine(state, contractAccount, tx.From.Address(), policy, uint64(tx.GasLimit))
-
 	data := &crypto.TxData{}
 	_ = data.Deserialize(tx.Data) // deserialize error is already checked in checkTx
-	result, err := execEngine.Ignite(data.Method, data.Params)
+	result, igniteErr := execEngine.Ignite(data.Method, data.Params)
 	engineEvents := []event.Event{}
-	if err != nil {
+	if igniteErr != nil {
 		state.Revert()
 	} else {
 		engineEvents = execEngine.GetEvents()
@@ -75,9 +74,8 @@ func applyInvokeTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) 
 	gasUsed := execEngine.GetGasUsed()
 	gasEvents := gasStation.Burn(tx.From.Address(), gasUsed*uint64(tx.GasPrice))
 	events := append(engineEvents, gasEvents...)
-
 	state.Commit()
-	return result, events, gasUsed, err
+	return result, events, gasUsed, igniteErr
 }
 
 func increaseNonce(state *storage.State, address crypto.Address) error {
