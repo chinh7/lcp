@@ -29,45 +29,39 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
-func ensureDir(path string) error {
-	newpath := filepath.Join("./testdata/db/", path)
-	return os.MkdirAll(newpath, os.ModePerm)
+type TestResource struct {
+	app   *App
+	dbDir string
 }
 
-func removeDir(foldername string) error {
-	newpath := filepath.Join("./testdata/db/", foldername)
-	return os.RemoveAll(newpath)
-}
-
-type TestConfig struct {
-	app       *App
-	dbDirname string
-}
-
-func NewTestConfig() *TestConfig {
-	dbDirname := "test_" + strconv.Itoa(rand.Intn(10000))
-	err := ensureDir(dbDirname)
+func NewTestResource() *TestResource {
+	rand.Seed(time.Now().UTC().UnixNano())
+	dbDir := "./testdata/db/test_" + strconv.Itoa(rand.Intn(10000)) + "/"
+	err := os.MkdirAll(dbDir, os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
-	app := NewApp("testapp", "./testdata/db/"+dbDirname+"/", "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
-	return &TestConfig{app, dbDirname}
+	app := NewApp("testapp", dbDir, "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
+	return &TestResource{app, dbDir}
 }
 
-func (tc *TestConfig) CleanData() {
-	err := removeDir(tc.dbDirname)
+func (tc *TestResource) CleanData() {
+	err := os.RemoveAll(tc.dbDir)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func TestNewApp(t *testing.T) {
-	dbDirname := "test_" + strconv.Itoa(rand.Intn(10000))
-	dbPath := "./testdata/db/" + dbDirname + "/"
-	err := ensureDir(dbDirname)
+	rand.Seed(time.Now().UTC().UnixNano())
+	dbDir := "./testdata/db/test_" + strconv.Itoa(rand.Intn(10000)) + "/"
+	err := os.MkdirAll(dbDir, os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
+	defer func() {
+		_ = os.RemoveAll(dbDir)
+	}()
 
 	blockInfo := &storage.BlockInfo{
 		Height:  uint64(1),
@@ -75,17 +69,17 @@ func TestNewApp(t *testing.T) {
 		Time:    time.Now(),
 	}
 	bytes, _ := rlp.EncodeToBytes(blockInfo)
-	infoDB := db.NewRocksDB(filepath.Join(dbPath, "info.db"))
+	infoDB := db.NewRocksDB(filepath.Join(dbDir, "info.db"))
 	infoDB.Put([]byte("lastBlockInfo"), bytes)
 	infoDB.Close()
 
-	app := NewApp("testapp", dbPath, "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
+	app := NewApp("testapp", dbDir, "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
 	assert.NotNil(t, app)
 }
 
 func TestApp_BeginBlock(t *testing.T) {
 	t.Run("Should load state", func(t *testing.T) {
-		tc := NewTestConfig()
+		tc := NewTestResource()
 		defer tc.CleanData()
 		app := tc.app
 
@@ -106,7 +100,7 @@ func TestApp_BeginBlock(t *testing.T) {
 }
 
 func TestApp_Info(t *testing.T) {
-	tc := NewTestConfig()
+	tc := NewTestResource()
 	defer tc.CleanData()
 
 	t.Run("Should return valid response", func(t *testing.T) {
@@ -128,7 +122,7 @@ func TestApp_Info(t *testing.T) {
 }
 
 func TestApp_CheckTx(t *testing.T) {
-	tc := NewTestConfig()
+	tc := NewTestResource()
 	defer tc.CleanData()
 	app := tc.app
 	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
@@ -189,7 +183,7 @@ func TestApp_CheckTx(t *testing.T) {
 }
 
 func TestApp_validateTx(t *testing.T) {
-	tc := NewTestConfig()
+	tc := NewTestResource()
 	defer tc.CleanData()
 	app := tc.app
 	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
@@ -267,19 +261,19 @@ func TestApp_validateTx(t *testing.T) {
 			"Invalid size",
 			app,
 			args{&crypto.Tx{}, 1024*1024 + 1},
-			code.CodeTypeUnknownError,
+			CodeTypeExceedTransactionSize,
 			errors.New("Transaction size exceed 1048576B"),
 		}, {
 			"Invalid nonce",
 			app,
 			args{invalidNonceTx, len(invalidNonceTxBytes)},
-			code.CodeTypeBadNonce,
+			CodeTypeBadNonce,
 			errors.New("Invalid nonce. Expected 0, got 10"),
 		}, {
 			"Invalid signature",
 			app,
 			args{invalidSigTx, len(invalidSigTxBytes)},
-			code.CodeTypeUnknownError,
+			CodeTypeInvalidSignature,
 			errors.New("Invalid signature"),
 			// }, {
 			// 	"Insufficient fee",
@@ -291,8 +285,8 @@ func TestApp_validateTx(t *testing.T) {
 			"non-existent contract",
 			app,
 			args{nonExistentTx, len(txByte)},
-			code.CodeTypeUnknownError,
-			errors.New("contract not found"),
+			CodeTypeContractNotFound,
+			errors.New("Contract not found"),
 		},
 	}
 	for _, tt := range tests {
@@ -311,7 +305,7 @@ func TestApp_validateTx(t *testing.T) {
 }
 
 func TestApp_DeliverTx(t *testing.T) {
-	tc := NewTestConfig()
+	tc := NewTestResource()
 	defer tc.CleanData()
 	app := tc.app
 	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
@@ -401,7 +395,7 @@ func TestApp_DeliverTx(t *testing.T) {
 }
 
 func TestApp_Commit(t *testing.T) {
-	tc := NewTestConfig()
+	tc := NewTestResource()
 	defer tc.CleanData()
 	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
 	tc.app.loadState(blockInfo)
@@ -414,14 +408,14 @@ func TestApp_Commit(t *testing.T) {
 }
 
 func TestApp_GetGasContractToken(t *testing.T) {
-	tc := NewTestConfig()
+	tc := NewTestResource()
 	defer tc.CleanData()
 	a := tc.app
 	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
 	a.loadState(blockInfo)
 
-	tc2 := NewTestConfig()
-	defer tc.CleanData()
+	tc2 := NewTestResource()
+	defer tc2.CleanData()
 	contractHex, err := ioutil.ReadFile("./testdata/contract_hex.txt")
 	if err != nil {
 		panic(err)

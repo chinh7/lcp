@@ -2,8 +2,10 @@ package storage
 
 import (
 	"encoding/hex"
+	"errors"
 	"net/http"
 
+	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/api/models"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/storage"
@@ -28,19 +30,28 @@ func (service *Service) GetAccount(r *http.Request, params *GetAccountParams, re
 	if err != nil {
 		return err
 	}
+
 	address, err := crypto.AddressFromString(params.Address)
 	if err != nil {
 		return err
 	}
+
 	account, err := state.GetAccount(address)
 	if err != nil {
 		return err
 	}
-
-	contract, err := account.GetContract()
-	if err != nil {
-		return err
+	if account == nil {
+		return errors.New("Account not exist")
 	}
+
+	var contract *abi.Contract
+	if len(account.ContractHash) > 0 {
+		contract, err = account.GetContract()
+		if err != nil {
+			return err
+		}
+	}
+
 	result.Account = &models.Account{
 		Nonce:        account.Nonce,
 		ContractHash: hex.EncodeToString(account.ContractHash),

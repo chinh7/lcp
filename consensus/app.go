@@ -16,7 +16,6 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/trie"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
 
 	"github.com/ethereum/go-ethereum/rlp"
@@ -69,7 +68,7 @@ func (app *App) loadState(blockInfo *storage.BlockInfo) {
 		panic(err)
 	}
 	app.state.BlockInfo = blockInfo
-	// Keep moving forward
+	// Keep switching until a desire gasStation is meet
 	for app.gasStation.Switch() {
 	}
 }
@@ -120,14 +119,14 @@ func (app *App) CheckTx(req types.RequestCheckTx) types.ResponseCheckTx {
 		}
 	}
 
-	return types.ResponseCheckTx{Code: code.CodeTypeOK}
+	return types.ResponseCheckTx{Code: CodeTypeOK}
 }
 
 func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 	// Validate tx size
 	if txSize > constant.MaxTransactionSize {
 		err := fmt.Errorf("Transaction size exceed %dB", constant.MaxTransactionSize)
-		return code.CodeTypeUnknownError, err
+		return CodeTypeExceedTransactionSize, err
 	}
 
 	nonce := uint64(0)
@@ -140,12 +139,12 @@ func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 	// Validate tx nonce
 	if tx.From.Nonce != nonce {
 		err := fmt.Errorf("Invalid nonce. Expected %v, got %v", nonce, tx.From.Nonce)
-		return code.CodeTypeBadNonce, err
+		return CodeTypeBadNonce, err
 	}
 
 	// Validate tx signature
 	if !tx.SigVerified() {
-		return code.CodeTypeUnknownError, fmt.Errorf("Invalid signature")
+		return CodeTypeInvalidSignature, fmt.Errorf("Invalid signature")
 	}
 
 	// Validate Non-existent contract invoke
@@ -153,32 +152,32 @@ func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 		// invoke transaction
 		contractAccount, _ := app.state.GetAccount(tx.To)
 		if contractAccount == nil {
-			return code.CodeTypeUnknownError, fmt.Errorf("contract not found")
+			return CodeTypeContractNotFound, fmt.Errorf("Contract not found")
 		}
 	}
 
 	// Validate gas limit
 	fee, err := tx.GetFee()
 	if err != nil {
-		return code.CodeTypeUnknownError, err
+		return CodeTypeUnknownError, err
 	}
 	if !app.gasStation.Sufficient(address, fee) {
-		return code.CodeTypeUnknownError, fmt.Errorf("Insufficient fee")
+		return CodeTypeInsufficientFee, fmt.Errorf("Insufficient fee")
 	}
 
 	// Validate gas price
 	if !app.gasStation.CheckGasPrice(tx.GasPrice) {
-		return code.CodeTypeUnknownError, fmt.Errorf("Invalid gas price")
+		return CodeTypeUnknownError, fmt.Errorf("Invalid gas price")
 	}
 
 	// Validate tx data
 	txData := &crypto.TxData{}
 	err = txData.Deserialize(tx.Data)
 	if err != nil {
-		return code.CodeTypeUnknownError, err
+		return CodeTypeInvalidData, err
 	}
 
-	return code.CodeTypeOK, nil
+	return CodeTypeOK, nil
 }
 
 //DeliverTx executes the submitted transaction

@@ -11,28 +11,34 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/gorilla/rpc/v2/json2"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ed25519"
 
-	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/api/chain"
 	"github.com/QuoineFinancial/liquid-chain/api/storage"
+	"github.com/QuoineFinancial/liquid-chain/consensus"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/util"
 )
 
-func broadcast(endpoint, serializedTx string) {
-	log.Println("Signed Transaction Len:", len(serializedTx))
-	msg, _ := hex.DecodeString(serializedTx)
-	serializedTx = base64.StdEncoding.EncodeToString(msg)
+func broadcast(endpoint string, hexTx []byte) {
+	log.Println("Signed Transaction Len:", len(hexTx))
+	serializedTx := base64.StdEncoding.EncodeToString(hexTx)
 	log.Println("Params Len:", len(serializedTx))
 	if len(endpoint) > 0 {
 		var result chain.BroadcastResult
 		postJSON(endpoint, "chain.Broadcast", chain.BroadcastParams{RawTransaction: serializedTx}, &result)
-		log.Printf("Code: %d\n", result.Code)
-		log.Printf("Log: %s\n", result.Log)
-		log.Printf("Transaction hash: %s\n", result.TransactionHash)
+
+		if result.Code == consensus.CodeTypeOK {
+			log.Println("Broadcast SUCCESS")
+			log.Printf("Code: %d\n", result.Code)
+			log.Printf("Transaction hash: %s\n", result.TransactionHash)
+		} else {
+			log.Println("Broadcast FAIL")
+			log.Printf("Code: %d\n", result.Code)
+			log.Printf("Log: %s\n", result.Log)
+		}
 	} else {
 		log.Println(serializedTx)
 	}
@@ -40,10 +46,12 @@ func broadcast(endpoint, serializedTx string) {
 
 func loadPrivateKey(path string) ed25519.PrivateKey {
 	dat, err := ioutil.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+
 	stringData := strings.TrimSuffix(string(dat), "\n")
-
 	parsed, err := hex.DecodeString(stringData)
-
 	if err != nil {
 		panic(err)
 	}
@@ -54,29 +62,17 @@ func deploy(cmd *cobra.Command, args []string) {
 	seedPath, endpoint, nonce, gas, price, _ := parseFlags(cmd)
 	privateKey := loadPrivateKey(seedPath)
 
-	code, err := ioutil.ReadFile(args[0])
-	if err != nil {
-		panic(err)
-	}
-	encodedHeader, err := abi.EncodeHeaderToBytes(args[1])
-	if err != nil {
-		panic(err)
-	}
-
-	header, err := abi.DecodeHeader(encodedHeader)
-	if err != nil {
-		panic(err)
-	}
-
-	data, err := rlp.EncodeToBytes(&abi.Contract{Header: header, Code: code})
+	data, err := util.BuildDeployTxData(args[0], args[1])
 	if err != nil {
 		panic(err)
 	}
 
 	signer := crypto.TxSigner{Nonce: uint64(nonce)}
 	tx := &crypto.Tx{Data: data, From: signer, GasLimit: gas, GasPrice: price}
-	tx.Sign(privateKey)
-	broadcast(endpoint, hex.EncodeToString(tx.Serialize()))
+	if err = tx.Sign(privateKey); err != nil {
+		panic(err)
+	}
+	broadcast(endpoint, tx.Serialize())
 }
 
 func invoke(cmd *cobra.Command, args []string) {
@@ -89,25 +85,16 @@ func invoke(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	header, err := abi.LoadHeaderFromFile(args[1])
+	data, err := util.BuildInvokeTxData(args[1], args[2], args[3:])
 	if err != nil {
 		panic(err)
 	}
+	tx := &crypto.Tx{Data: data, From: signer, To: to, GasLimit: gas, GasPrice: price}
 
-	function, err := header.GetFunction(args[2])
-	if err != nil {
+	if err = tx.Sign(privateKey); err != nil {
 		panic(err)
 	}
-	encodedArgs, err := abi.EncodeFromString(function.Parameters, args[3:])
-	if err != nil {
-		panic(err)
-	}
-
-	txData := crypto.TxData{Method: args[2], Params: encodedArgs}
-	tx := &crypto.Tx{Data: txData.Serialize(), From: signer, To: to, GasLimit: gas, GasPrice: price}
-
-	tx.Sign(privateKey)
-	broadcast(endpoint, hex.EncodeToString(tx.Serialize()))
+	broadcast(endpoint, tx.Serialize())
 }
 
 func call(cmd *cobra.Command, args []string) {

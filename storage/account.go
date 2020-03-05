@@ -53,7 +53,10 @@ func (account *Account) GetCreator() crypto.Address {
 }
 
 func (account *Account) setContract(contract []byte) {
+	account.dirty = true
 	account.contract = contract
-	contractHash := blake2b.Sum256(contract)
-	account.ContractHash = contractHash[:]
+	if len(account.contract) > 0 {
+		contractHash := blake2b.Sum256(contract)
+		account.ContractHash = contractHash[:]
+	}
 }
