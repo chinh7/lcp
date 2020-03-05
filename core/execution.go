@@ -12,19 +12,6 @@ import (
 
 // ApplyTx executes a transaction by either deploying the contract code or invoking a contract method call
 func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) (uint64, []event.Event, uint64, error) {
-	var err error
-	fromAddress := tx.From.Address()
-	fromAccount, _ := state.GetAccount(fromAddress)
-	// Make sure fromAccount is created
-	if fromAccount == nil {
-		fromAccount, err = state.CreateAccount(fromAddress, fromAddress, nil)
-		if err != nil {
-			return 0, nil, 0, err
-		}
-	}
-	fromAccount.SetNonce(fromAccount.Nonce + 1)
-	state.Commit()
-
 	if (tx.To == crypto.Address{}) {
 		return applyDeployContractTx(state, tx, gasStation)
 	}
@@ -42,6 +29,12 @@ func applyDeployContractTx(state *storage.State, tx *crypto.Tx, gasStation gas.S
 	// Create contract account
 	contractAddress := tx.From.CreateAddress()
 	_, err := state.CreateAccount(tx.From.Address(), contractAddress, tx.Data)
+	if err != nil {
+		return 0, nil, 0, err
+	}
+
+	// Create account for creator and increase nonce by 1
+	err = increaseNonce(state, tx.From.Address())
 	if err != nil {
 		return 0, nil, 0, err
 	}
@@ -73,9 +66,31 @@ func applyInvokeTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) 
 		engineEvents = execEngine.GetEvents()
 	}
 
+	// Create/get account for creator and increase nonce by 1
+	err = increaseNonce(state, tx.From.Address())
+	if err != nil {
+		return 0, nil, 0, err
+	}
+
 	gasUsed := execEngine.GetGasUsed()
 	gasEvents := gasStation.Burn(tx.From.Address(), gasUsed*uint64(tx.GasPrice))
 	events := append(engineEvents, gasEvents...)
+
 	state.Commit()
 	return result, events, gasUsed, err
+}
+
+func increaseNonce(state *storage.State, address crypto.Address) error {
+	var err error
+	fromAccount, _ := state.GetAccount(address)
+	// Make sure fromAccount is created
+	if fromAccount == nil {
+		fromAccount, err = state.CreateAccount(address, address, nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	fromAccount.SetNonce(fromAccount.Nonce + 1)
+	return nil
 }
