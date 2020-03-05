@@ -111,7 +111,7 @@ func TestApplyTx(t *testing.T) {
 			events:     nil,
 			gasUsed:    0,
 			wantErr:    true,
-			wantErrObj: nil,
+			wantErrObj: errors.New("out of gas"),
 		},
 		{
 			name:       "valid deploy tx",
@@ -138,15 +138,19 @@ func TestApplyTx(t *testing.T) {
 			events:     make([]event.Event, 0),
 			gasUsed:    0,
 			wantErr:    true,
-			wantErrObj: errors.New("invalid memory address or nil pointer dereference"),
+			wantErrObj: errors.New("EOF"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, events, gasUsed, err := ApplyTx(tt.args.state, tt.args.tx, tt.args.gasStation)
-			if (err != nil) != tt.wantErr && tt.wantErrObj.Error() == err.Error() {
-				t.Errorf("%s: applyTx() error = %v, wantErr %v", tt.name, err, tt.wantErr)
-				return
+			if tt.wantErr && (err == nil) {
+				t.Errorf("%s: applyTx() error = %v, wantErr %v", tt.name, err, tt.wantErrObj.Error())
+			}
+			if tt.wantErr && (err != nil) {
+				if tt.wantErrObj.Error() != err.Error() {
+					t.Errorf("%s: applyTx() error = %v, wantErr %v", tt.name, err, tt.wantErrObj.Error())
+				}
 			}
 			if result != tt.result {
 				t.Errorf("%s: applyTx() result = %v, want %v", tt.name, result, tt.result)
