@@ -56,7 +56,11 @@ func applyInvokeTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) 
 	policy := gasStation.GetPolicy()
 	execEngine := engine.NewEngine(state, contractAccount, tx.From.Address(), policy, uint64(tx.GasLimit))
 	data := &crypto.TxData{}
-	_ = data.Deserialize(tx.Data) // deserialize error is already checked in checkTx
+	err = data.Deserialize(tx.Data)
+	if err != nil {
+		return 0, nil, 0, err
+	}
+
 	result, igniteErr := execEngine.Ignite(data.Method, data.Params)
 	engineEvents := []event.Event{}
 	if igniteErr != nil {
