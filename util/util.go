@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"io/ioutil"
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
@@ -30,7 +31,7 @@ func BuildInvokeTxData(headerPath string, methodName string, params []string) ([
 }
 
 // BuildDeployTxData build data for deploy transaction
-func BuildDeployTxData(codePath string, headerPath string) ([]byte, error) {
+func BuildDeployTxData(codePath string, headerPath string, initFuncName string, params []string) ([]byte, error) {
 	code, err := ioutil.ReadFile(codePath)
 	if err != nil {
 		return nil, err
@@ -46,10 +47,24 @@ func BuildDeployTxData(codePath string, headerPath string) ([]byte, error) {
 		return nil, err
 	}
 
-	data, err := rlp.EncodeToBytes(&abi.Contract{Header: header, Code: code})
+	contractCode, err := rlp.EncodeToBytes(&abi.Contract{Header: header, Code: code})
 	if err != nil {
 		return nil, err
 	}
 
-	return data, nil
+	txData := crypto.TxData{ContractCode: contractCode}
+
+	function, err := header.GetFunction(initFuncName)
+	if err == nil {
+		encodedArgs, err := abi.EncodeFromString(function.Parameters, params)
+		if err != nil {
+			panic(err)
+		}
+		txData.Method = initFuncName
+		txData.Params = encodedArgs
+	} else if err.Error() != fmt.Sprintf("function %s not found", initFuncName) {
+		panic(err)
+	}
+
+	return txData.Serialize(), nil
 }

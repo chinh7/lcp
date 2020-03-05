@@ -78,7 +78,7 @@ func createDeployTx() string {
 	var (
 		err           error
 		code          []byte
-		data          []byte
+		contractCode  []byte
 		encodedHeader []byte
 		header        *abi.Header
 	)
@@ -95,12 +95,13 @@ func createDeployTx() string {
 		panic(err)
 	}
 
-	if data, err = rlp.EncodeToBytes(&abi.Contract{Header: header, Code: code}); err != nil {
+	if contractCode, err = rlp.EncodeToBytes(&abi.Contract{Header: header, Code: code}); err != nil {
 		panic(err)
 	}
 
+	txData := crypto.TxData{ContractCode: contractCode}
 	signer := crypto.TxSigner{Nonce: uint64(0)}
-	tx := &crypto.Tx{Data: data, From: signer, GasLimit: 1, GasPrice: 1}
+	tx := &crypto.Tx{Data: txData.Serialize(), From: signer, GasLimit: 1, GasPrice: 1}
 
 	privKey := loadPrivateKey(SEED)
 	if err = tx.Sign(privKey); err != nil {
@@ -166,7 +167,7 @@ func TestBroadcastTx(t *testing.T) {
 			name:   "Broadcast",
 			method: "chain.Broadcast",
 			params: fmt.Sprintf(`{"rawTx": "%s"}`, createDeployTx()),
-			result: `{"jsonrpc":"2.0","result":{"hash":"BFCE61306BC9D8611AFC4371CFBEE4A06369B5AD0484213CD12A1D76A8CB5749","code":0,"log":""},"id":1}`,
+			result: `{"jsonrpc":"2.0","result":{"hash":"53E3715C74FCFCC008AA9E2D7E99C51F109FFCC4EFBFA524D9BA6469EF4F5453","code":0,"log":""},"id":1}`,
 		},
 	}
 

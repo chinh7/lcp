@@ -52,7 +52,7 @@ func TestApplyTx(t *testing.T) {
 
 	// Setup deploy contract transaction
 	signer := crypto.TxSigner{Nonce: uint64(0)}
-	data, err := util.BuildDeployTxData("./testdata/contract.wasm", "./testdata/contract-abi.json")
+	data, err := util.BuildDeployTxData("./testdata/contract.wasm", "./testdata/contract-abi.json", InitFunctionName, []string{})
 	if err != nil {
 		panic(err)
 	}

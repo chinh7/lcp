@@ -26,7 +26,7 @@ func TestTxDataSerialization(t *testing.T) {
 	params := []byte{0, 0, 1, 1, 0, 1, 1}
 	var txDataRecouped TxData
 
-	txData := TxData{Method: "method", Params: params}
+	txData := TxData{Method: "method", Params: params, ContractCode: []byte{}}
 	txDataRecouped.Deserialize(txData.Serialize())
 	if diff := cmp.Diff(txData, txDataRecouped); diff != "" {
 		t.Errorf("Decoding of %v is incorrect, expected: %v, got: %v, diff: %v", txData, txData, txDataRecouped, diff)
