@@ -23,6 +23,7 @@ func ApplyTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) (uint6
 		}
 	}
 	fromAccount.SetNonce(fromAccount.Nonce + 1)
+	state.Commit()
 
 	if (tx.To == crypto.Address{}) {
 		return applyDeployContractTx(state, tx, gasStation)
