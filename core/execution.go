@@ -82,15 +82,15 @@ func applyInvokeTx(state *storage.State, tx *crypto.Tx, gasStation gas.Station) 
 
 func increaseNonce(state *storage.State, address crypto.Address) error {
 	var err error
-	fromAccount, _ := state.GetAccount(address)
-	// Make sure fromAccount is created
-	if fromAccount == nil {
-		fromAccount, err = state.CreateAccount(address, address, nil)
+	account, _ := state.GetAccount(address)
+	// Make sure account is created
+	if account == nil {
+		account, err = state.CreateAccount(address, address, nil)
 		if err != nil {
 			return err
 		}
 	}
 
-	fromAccount.SetNonce(fromAccount.Nonce + 1)
+	account.SetNonce(account.Nonce + 1)
 	return nil
 }
