@@ -15,10 +15,9 @@ import (
 
 	"golang.org/x/crypto/ed25519" // This is used in place of crypto/ed25519 to support older version of Go
 
-	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/api"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/QuoineFinancial/liquid-chain/util"
 	"github.com/google/go-cmp/cmp"
 	"github.com/tendermint/tendermint/config"
 )
@@ -74,34 +73,13 @@ func (ts *testServer) stopNode() {
 	time.Sleep(500 * time.Millisecond)
 }
 
-func createDeployTx() string {
-	var (
-		err           error
-		code          []byte
-		contractCode  []byte
-		encodedHeader []byte
-		header        *abi.Header
-	)
-
-	if code, err = ioutil.ReadFile("./testdata/contract.wasm"); err != nil {
+func createDeployTx(codePath string, headerPath string, initFuncName string, params []string) string {
+	serializedTxData, err := util.BuildDeployTxData(codePath, headerPath, initFuncName, params)
+	if err != nil {
 		panic(err)
 	}
-
-	if encodedHeader, err = abi.EncodeHeaderToBytes("./testdata/contract-abi.json"); err != nil {
-		panic(err)
-	}
-
-	if header, err = abi.DecodeHeader(encodedHeader); err != nil {
-		panic(err)
-	}
-
-	if contractCode, err = rlp.EncodeToBytes(&abi.Contract{Header: header, Code: code}); err != nil {
-		panic(err)
-	}
-
-	txData := crypto.TxData{ContractCode: contractCode}
 	signer := crypto.TxSigner{Nonce: uint64(0)}
-	tx := &crypto.Tx{Data: txData.Serialize(), From: signer, GasLimit: 1, GasPrice: 1}
+	tx := &crypto.Tx{Data: serializedTxData, From: signer, GasLimit: 1, GasPrice: 1}
 
 	privKey := loadPrivateKey(SEED)
 	if err = tx.Sign(privKey); err != nil {
@@ -110,30 +88,18 @@ func createDeployTx() string {
 	return base64.StdEncoding.EncodeToString(tx.Serialize())
 }
 
-func createInvokeTx(contractAddress string, nonce uint64, functionName string, params []string) string {
+func createInvokeTx(contractAddress string, nonce uint64, headerPath string, functionName string, params []string) string {
 	to, err := crypto.AddressFromString(contractAddress)
 	if err != nil {
 		panic(err)
 	}
 
-	header, err := abi.LoadHeaderFromFile("./testdata/contract-abi.json")
+	serializedTxData, err := util.BuildInvokeTxData(headerPath, functionName, params)
 	if err != nil {
 		panic(err)
 	}
-
-	function, err := header.GetFunction(functionName)
-	if err != nil {
-		panic(err)
-	}
-
-	encodedArgs, err := abi.EncodeFromString(function.Parameters, params)
-	if err != nil {
-		panic(err)
-	}
-
 	signer := crypto.TxSigner{Nonce: uint64(nonce)}
-	txData := crypto.TxData{Method: functionName, Params: encodedArgs}
-	tx := &crypto.Tx{Data: txData.Serialize(), From: signer, To: to, GasLimit: 1, GasPrice: 1}
+	tx := &crypto.Tx{Data: serializedTxData, From: signer, To: to, GasLimit: 1, GasPrice: 1}
 
 	privKey := loadPrivateKey(SEED)
 	if err = tx.Sign(privKey); err != nil {
@@ -166,7 +132,7 @@ func TestBroadcastTx(t *testing.T) {
 		{
 			name:   "Broadcast",
 			method: "chain.Broadcast",
-			params: fmt.Sprintf(`{"rawTx": "%s"}`, createDeployTx()),
+			params: fmt.Sprintf(`{"rawTx": "%s"}`, createDeployTx("./testdata/contract.wasm", "./testdata/contract-abi.json", "init", []string{})),
 			result: `{"jsonrpc":"2.0","result":{"hash":"53E3715C74FCFCC008AA9E2D7E99C51F109FFCC4EFBFA524D9BA6469EF4F5453","code":0,"log":""},"id":1}`,
 		},
 	}

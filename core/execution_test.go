@@ -58,6 +58,12 @@ func TestApplyTx(t *testing.T) {
 	}
 	deployTx := &crypto.Tx{From: signer, Data: data, To: crypto.Address{}, GasLimit: 0, GasPrice: 0}
 
+	contractWithInitTxData, err := util.BuildDeployTxData("./testdata/contract-with-init.wasm", "./testdata/contract-with-init-abi.json", InitFunctionName, []string{"100"})
+	if err != nil {
+		panic(err)
+	}
+	deployWithInitTx := &crypto.Tx{From: signer, Data: contractWithInitTxData, To: crypto.Address{}, GasLimit: 100000, GasPrice: 18}
+
 	// Setup result events after deploy contract
 	contractAddress := deployTx.From.CreateAddress()
 	deployContractEvents := []event.Event{event.NewDeploymentEvent(contractAddress)}
@@ -116,6 +122,15 @@ func TestApplyTx(t *testing.T) {
 		{
 			name:       "valid deploy tx",
 			args:       args{state, deployTx, gas.NewFreeStation(nil)},
+			result:     0,
+			events:     deployContractEvents,
+			gasUsed:    0,
+			wantErr:    false,
+			wantErrObj: nil,
+		},
+		{
+			name:       "valid deploy init contract tx",
+			args:       args{state, deployWithInitTx, gas.NewFreeStation(nil)},
 			result:     0,
 			events:     deployContractEvents,
 			gasUsed:    0,
