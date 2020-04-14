@@ -5,6 +5,8 @@ import (
 	"log"
 	"path/filepath"
 
+	"golang.org/x/crypto/ed25519"
+
 	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/core"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
@@ -67,6 +69,7 @@ func (app *App) loadState(blockInfo *storage.BlockInfo) {
 	if app.state, err = storage.New(gethCommon.BytesToHash(blockInfo.AppHash[:]), app.StateDB); err != nil {
 		panic(err)
 	}
+
 	app.state.BlockInfo = blockInfo
 	// Keep switching until a desire gasStation is meet
 	for app.gasStation.Switch() {
@@ -131,7 +134,11 @@ func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 
 	nonce := uint64(0)
 	address := tx.From.Address()
-	account, _ := app.state.GetAccount(address)
+	account, err := app.state.GetAccount(address)
+	// Ignore ErrAccountNotExist since to account can be nil
+	if err != nil && err != storage.ErrAccountNotExist {
+		return CodeTypeUnknownError, err
+	}
 	if account != nil {
 		nonce = account.Nonce
 	}
@@ -143,16 +150,33 @@ func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 	}
 
 	// Validate tx signature
-	if !tx.SigVerified() {
-		return CodeTypeInvalidSignature, fmt.Errorf("Invalid signature")
+	err = tx.VerifySignature()
+	if err != nil {
+		switch err {
+		case crypto.ErrInvalidPubKeyLength:
+			err := fmt.Errorf("Invalid public key. Expected size of %vB, got %vB", ed25519.PublicKeySize, len(tx.From.PubKey))
+			return CodeTypeInvalidPubKey, err
+		case crypto.ErrInvalidSignature:
+			return CodeTypeInvalidSignature, fmt.Errorf("Invalid signature")
+		default:
+			return CodeTypeUnknownError, err
+		}
 	}
 
 	// Validate Non-existent contract invoke
 	if (tx.To != crypto.Address{}) {
 		// invoke transaction
-		contractAccount, _ := app.state.GetAccount(tx.To)
-		if contractAccount == nil {
-			return CodeTypeContractNotFound, fmt.Errorf("Contract not found")
+		account, err := app.state.GetAccount(tx.To)
+		if err != nil {
+			switch err {
+			case storage.ErrAccountNotExist:
+				return CodeTypeAccountNotExist, err
+			default:
+				return CodeTypeUnknownError, err
+			}
+		}
+		if !account.IsContract() {
+			return CodeTypeNonContractAccount, fmt.Errorf("Invoke a non-contract account")
 		}
 	}
 
@@ -161,13 +185,14 @@ func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
 	if err != nil {
 		return CodeTypeUnknownError, err
 	}
+
 	if !app.gasStation.Sufficient(address, fee) {
 		return CodeTypeInsufficientFee, fmt.Errorf("Insufficient fee")
 	}
 
 	// Validate gas price
 	if !app.gasStation.CheckGasPrice(tx.GasPrice) {
-		return CodeTypeUnknownError, fmt.Errorf("Invalid gas price")
+		return CodeTypeInvalidGasPrice, fmt.Errorf("Invalid gas price")
 	}
 
 	// Validate tx data
@@ -247,11 +272,14 @@ func (app *App) GetGasContractToken() gas.Token {
 		}
 		contract, err := app.state.GetAccount(address)
 		if err != nil {
-			panic(err)
+			switch err {
+			case storage.ErrAccountNotExist:
+				return nil
+			default:
+				panic(err)
+			}
 		}
-		if contract != nil {
-			return token.NewToken(app.state, contract)
-		}
+		return token.NewToken(app.state, contract)
 	}
 	return nil
 }

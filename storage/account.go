@@ -36,6 +36,11 @@ func (account *Account) GetAddress() crypto.Address {
 	return account.address
 }
 
+// IsContract check whether this is an contract account or a normal account
+func (account *Account) IsContract() bool {
+	return len(account.ContractHash) > 0
+}
+
 // GetContract retrieves contract code for account state
 func (account *Account) GetContract() (*abi.Contract, error) {
 	return abi.DecodeContract(account.contract)

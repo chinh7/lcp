@@ -2,7 +2,7 @@ package consensus
 
 import (
 	cryptoRand "crypto/rand"
-	"encoding/json"
+	"encoding/hex"
 	"errors"
 	"io/ioutil"
 	"math/rand"
@@ -29,6 +29,8 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
+const SEED = "0c61093a4983f5ba8cf83939efc6719e0c61093a4983f5ba8cf83939efc6719e"
+
 type TestResource struct {
 	app   *App
 	dbDir string
@@ -41,7 +43,27 @@ func NewTestResource() *TestResource {
 	if err != nil {
 		panic(err)
 	}
-	app := NewApp("testapp", dbDir, "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
+	app := NewApp("testapp", dbDir, "")
+	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
+	app.loadState(blockInfo)
+
+	// Manually deploy contract
+	address, err := crypto.AddressFromString("LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
+	if err != nil {
+		panic(err)
+	}
+	// This file can be construct using liquid-chain-js
+	contract, err := ioutil.ReadFile("./testdata/deploy-contract.dat")
+	if err != nil {
+		panic(err)
+	}
+	_, err = app.state.CreateAccount(address, address, contract)
+	if err != nil {
+		panic(err)
+	}
+	_ = app.state.Commit()
+	app.gasContractAddress = "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7"
+
 	return &TestResource{app, dbDir}
 }
 
@@ -50,6 +72,14 @@ func (tc *TestResource) CleanData() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func loadPrivateKey(SEED string) ed25519.PrivateKey {
+	hexSeed, err := hex.DecodeString(SEED)
+	if err != nil {
+		panic(err)
+	}
+	return ed25519.NewKeyFromSeed(hexSeed)
 }
 
 func TestNewApp(t *testing.T) {
@@ -73,19 +103,18 @@ func TestNewApp(t *testing.T) {
 	infoDB.Put([]byte("lastBlockInfo"), bytes)
 	infoDB.Close()
 
-	app := NewApp("testapp", dbDir, "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
+	app := NewApp("testapp", dbDir, "")
 	assert.NotNil(t, app)
 }
 
 func TestApp_BeginBlock(t *testing.T) {
 	t.Run("Should load state", func(t *testing.T) {
-		tc := NewTestResource()
-		defer tc.CleanData()
-		app := tc.app
-
-		reqHeight := int64(1)
-		reqAppHash := trie.Hash{}
-		req := types.RequestBeginBlock{Header: types.Header{Height: reqHeight, AppHash: reqAppHash[:]}}
+		tr := NewTestResource()
+		defer tr.CleanData()
+		app := tr.app
+		appHash := tr.app.state.Commit()
+		reqHeight := int64(0)
+		req := types.RequestBeginBlock{Header: types.Header{Height: reqHeight, AppHash: appHash.Bytes()}}
 		got := app.BeginBlock(req)
 		want := types.ResponseBeginBlock{}
 		if !reflect.DeepEqual(got, want) {
@@ -95,18 +124,18 @@ func TestApp_BeginBlock(t *testing.T) {
 		// loadState() should be called
 		assert.NotNil(t, app.state)
 		assert.Equal(t, app.state.BlockInfo.Height, uint64(reqHeight))
-		assert.Equal(t, app.state.BlockInfo.AppHash, reqAppHash)
+		assert.Equal(t, app.state.BlockInfo.AppHash, appHash)
 	})
 }
 
 func TestApp_Info(t *testing.T) {
-	tc := NewTestResource()
-	defer tc.CleanData()
+	tr := NewTestResource()
+	defer tr.CleanData()
 
 	t.Run("Should return valid response", func(t *testing.T) {
-		app := tc.app
-		blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
-
+		app := tr.app
+		appHash := tr.app.state.Commit()
+		blockInfo := &storage.BlockInfo{Height: 2, AppHash: appHash, Time: time.Now()}
 		app.loadState(blockInfo)
 		got := app.Info(types.RequestInfo{})
 		want := types.ResponseInfo{
@@ -122,10 +151,11 @@ func TestApp_Info(t *testing.T) {
 }
 
 func TestApp_CheckTx(t *testing.T) {
-	tc := NewTestResource()
-	defer tc.CleanData()
-	app := tc.app
-	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
+	tr := NewTestResource()
+	defer tr.CleanData()
+	app := tr.app
+	appHash := tr.app.state.Commit()
+	blockInfo := &storage.BlockInfo{Height: 1, AppHash: appHash, Time: time.Now()}
 	app.loadState(blockInfo)
 
 	t.Run("Deserialize tx error", func(t *testing.T) {
@@ -183,132 +213,228 @@ func TestApp_CheckTx(t *testing.T) {
 }
 
 func TestApp_validateTx(t *testing.T) {
-	tc := NewTestResource()
-	defer tc.CleanData()
-	app := tc.app
-	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
-	app.loadState(blockInfo)
+	// invalid tx size
+	t.Run("invalid size", func(t *testing.T) {
+		tr := NewTestResource()
+		defer tr.CleanData()
+		tx := &crypto.Tx{}
+		txSize := 1024*1024 + 1 // set to large number to produce error
+		wantErr := errors.New("Transaction size exceed 1048576B")
+		wantErrCode := CodeTypeExceedTransactionSize
 
-	contractHex, err := ioutil.ReadFile("./testdata/contract_hex.txt")
-	if err != nil {
-		panic(err)
-	}
-	address, _ := crypto.AddressFromString("LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
-	app.SetGasStation(gas.NewLiquidStation(app, address))
-	_, err = app.state.CreateAccount(address, address, contractHex)
-	if err != nil {
-		panic(err)
-	}
-	app.state.Commit()
+		got, err := tr.app.validateTx(tx, txSize)
+		if err == nil || wantErr.Error() != err.Error() {
+			t.Errorf("App.validateTx() error = %v, wantErr %v", err, wantErr)
+			return
+		}
+		if got != wantErrCode {
+			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
+		}
+	})
 
-	invalidNonceTxBytes, err := ioutil.ReadFile("./testdata/invalid_nonce_tx.dat")
-	if err != nil {
-		panic(err)
-	}
-	invalidNonceTx := &crypto.Tx{}
-	err = invalidNonceTx.Deserialize(invalidNonceTxBytes)
-	if err != nil {
-		panic(err)
-	}
+	// invalid tx nonce
+	t.Run("invalid nonce", func(t *testing.T) {
+		tr := NewTestResource()
+		defer tr.CleanData()
+		signer := crypto.TxSigner{Nonce: uint64(10)} // Set nonce to any number but not 0 to trigger error
+		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 1, GasPrice: 1}
+		wantErr := errors.New("Invalid nonce. Expected 0, got 10")
+		wantErrCode := CodeTypeBadNonce
 
-	invalidSigTxBytes, err := ioutil.ReadFile("./testdata/invalid_sig_tx.dat")
-	if err != nil {
-		panic(err)
-	}
-	invalidSigTx := &crypto.Tx{}
-	err = invalidSigTx.Deserialize(invalidSigTxBytes)
-	// Change tx so that sigHash is not the same as origin
-	invalidSigTx.GasLimit = 10
-	if err != nil {
-		panic(err)
-	}
+		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
+		if err == nil || wantErr.Error() != err.Error() {
+			t.Errorf("App.validateTx() error = %v, wantErr %v", err, wantErr)
+			return
+		}
+		if got != wantErrCode {
+			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
+		}
+	})
 
-	txBytes, err := ioutil.ReadFile("./testdata/invoke_contract_tx.dat")
-	if err != nil {
-		panic(err)
-	}
-	tx := &crypto.Tx{}
-	err = tx.Deserialize(txBytes)
-	if err != nil {
-		panic(err)
-	}
-	// non-existent contract
-	txByte, err := ioutil.ReadFile("./testdata/non_existent_contract.json")
-	if err != nil {
-		panic(err)
-	}
-	pubkey, prvkey, err := ed25519.GenerateKey(cryptoRand.Reader)
-	if err != nil {
-		panic(err)
-	}
-	nonExistentTx := &crypto.Tx{}
-	_ = json.Unmarshal([]byte(txByte), nonExistentTx)
-	nonExistentTx.From = crypto.TxSigner{PubKey: pubkey}
-	nonExistentTx.Sign(prvkey)
+	// invalid public key
+	t.Run("invalid public key", func(t *testing.T) {
+		tr := NewTestResource()
+		defer tr.CleanData()
+		signer := crypto.TxSigner{Nonce: uint64(0)} // add signer without signature to trigger error
+		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 1, GasPrice: 1}
+		wantErr := errors.New("Invalid public key. Expected size of 32B, got 0B")
+		wantErrCode := CodeTypeInvalidPubKey
 
-	type args struct {
-		tx     *crypto.Tx
-		txSize int
-	}
-	tests := []struct {
-		name    string
-		app     *App
-		args    args
-		want    uint32
-		wantErr error
-	}{
-		{
-			"Invalid size",
-			app,
-			args{&crypto.Tx{}, 1024*1024 + 1},
-			CodeTypeExceedTransactionSize,
-			errors.New("Transaction size exceed 1048576B"),
-		}, {
-			"Invalid nonce",
-			app,
-			args{invalidNonceTx, len(invalidNonceTxBytes)},
-			CodeTypeBadNonce,
-			errors.New("Invalid nonce. Expected 0, got 10"),
-		}, {
-			"Invalid signature",
-			app,
-			args{invalidSigTx, len(invalidSigTxBytes)},
-			CodeTypeInvalidSignature,
-			errors.New("Invalid signature"),
-			// }, {
-			// 	"Insufficient fee",
-			// 	app,
-			// 	args{tx, len(txBytes)},
-			// 	code.CodeTypeUnknownError,
-			// 	errors.New("Insufficient fee"),
-		}, {
-			"non-existent contract",
-			app,
-			args{nonExistentTx, len(txByte)},
-			CodeTypeContractNotFound,
-			errors.New("Contract not found"),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			app := tc.app
-			got, err := app.validateTx(tt.args.tx, tt.args.txSize)
-			if err != nil && tt.wantErr.Error() != err.Error() {
-				t.Errorf("App.validateTx() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("App.validateTx() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
+		if err == nil || wantErr.Error() != err.Error() {
+			t.Errorf("App.validateTx() error = %v, wantErr %v", err, wantErr)
+			return
+		}
+		if got != wantErrCode {
+			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
+		}
+	})
+
+	// invalid signature
+	t.Run("invalid signature", func(t *testing.T) {
+		tr := NewTestResource()
+		defer tr.CleanData()
+		signer := crypto.TxSigner{Nonce: uint64(0)}          // add signer without signature to trigger error
+		_, priv, _ := ed25519.GenerateKey(cryptoRand.Reader) // generate random privkey to sign
+		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 1, GasPrice: 1}
+		// This step mainly to populate valid publickey
+		if err := tx.Sign(priv); err != nil {
+			panic(err)
+		}
+		tx.From.Signature = []byte{} // Remove valid private key to trigger error
+		wantErr := errors.New("Invalid signature")
+		wantErrCode := CodeTypeInvalidSignature
+
+		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
+		if err == nil || wantErr.Error() != err.Error() {
+			t.Errorf("App.validateTx() error = %v, wantErr %v", err, wantErr)
+			return
+		}
+		if got != wantErrCode {
+			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
+		}
+	})
+
+	// insufficient fee
+	t.Run("insufficient fee", func(t *testing.T) {
+		tr := NewTestResource()
+		defer tr.CleanData()
+
+		tr.app.SetGasStation(gas.NewDummyStation(tr.app)) // Set to dummy station to trigger insufficient fee check
+		signer := crypto.TxSigner{Nonce: uint64(0)}
+		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 0, GasPrice: 0}
+		privKey := loadPrivateKey(SEED)
+		if err := tx.Sign(privKey); err != nil {
+			panic(err)
+		}
+		wantErr := errors.New("Insufficient fee")
+		wantErrCode := CodeTypeInsufficientFee
+
+		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
+		if got != wantErrCode {
+			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
+		}
+		if err == nil || wantErr.Error() != err.Error() {
+			t.Errorf("App.validateTx() error = %+v, wantErr %v", err, wantErr)
+			return
+		}
+	})
+
+	// invalid gas fee
+	t.Run("invalid gas price", func(t *testing.T) {
+		tr := NewTestResource()
+		defer tr.CleanData()
+
+		tr.app.SetGasStation(gas.NewDummyStation(tr.app)) // Set to dummy station to trigger check gas price check
+		signer := crypto.TxSigner{Nonce: uint64(0)}
+		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 1, GasPrice: 1}
+		privKey := loadPrivateKey(SEED)
+		if err := tx.Sign(privKey); err != nil {
+			panic(err)
+		}
+		wantErr := errors.New("Invalid gas price")
+		wantErrCode := CodeTypeInvalidGasPrice
+
+		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
+		if got != wantErrCode {
+			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
+		}
+		if err == nil || wantErr.Error() != err.Error() {
+			t.Errorf("App.validateTx() error = %+v, wantErr %v", err, wantErr)
+			return
+		}
+	})
+
+	// invalid data
+	t.Run("invalid data", func(t *testing.T) {
+		tr := NewTestResource()
+		defer tr.CleanData()
+		signer := crypto.TxSigner{Nonce: uint64(0)}
+		// Provide un-deserialize-able data to trigger error
+		tx := &crypto.Tx{Data: []byte{0}, From: signer, GasLimit: 1000, GasPrice: 1000}
+		privKey := loadPrivateKey(SEED)
+		if err := tx.Sign(privKey); err != nil {
+			panic(err)
+		}
+		wantErrCode := CodeTypeInvalidData
+
+		got, _ := tr.app.validateTx(tx, len(tx.Serialize()))
+		if got != wantErrCode {
+			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
+		}
+	})
+
+	// non-existent contract account
+	t.Run("non-existent contract account", func(t *testing.T) {
+		tr := NewTestResource()
+		defer tr.CleanData()
+		// Create a random address
+		pub, _, _ := ed25519.GenerateKey(cryptoRand.Reader)
+		toAddr := crypto.AddressFromPubKey(pub)
+
+		// Create a sign tx
+		signer := crypto.TxSigner{Nonce: uint64(0)}
+		// Set To to non-exist account address to trigger error
+		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 1, GasPrice: 1, To: toAddr}
+		privKey := loadPrivateKey(SEED)
+		err := tx.Sign(privKey)
+		if err != nil {
+			panic(err)
+		}
+		wantErr := errors.New("contract account not exist")
+		wantErrCode := CodeTypeAccountNotExist
+
+		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
+		if err == nil || wantErr.Error() != err.Error() {
+			t.Errorf("App.validateTx() error = %v, wantErr %v", err, wantErr)
+			return
+		}
+		if got != wantErrCode {
+			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
+		}
+	})
+
+	// account exist but contains empty contract
+	t.Run("empty contract account", func(t *testing.T) {
+		tr := NewTestResource()
+		defer tr.CleanData()
+		// Create a random address
+		pub, _, _ := ed25519.GenerateKey(cryptoRand.Reader)
+		toAddr := crypto.AddressFromPubKey(pub)
+		_, err := tr.app.state.CreateAccount(toAddr, toAddr, []byte{})
+		if err != nil {
+			panic(err)
+		}
+
+		// Create a sign tx
+		signer := crypto.TxSigner{Nonce: uint64(0)} // add signer without signature to trigger error
+		// Set To to exist account but not contains a contract to trigger error
+		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 1, GasPrice: 1, To: toAddr}
+		privKey := loadPrivateKey(SEED)
+		err = tx.Sign(privKey)
+		if err != nil {
+			panic(err)
+		}
+		wantErr := errors.New("Invoke a non-contract account")
+		wantErrCode := CodeTypeNonContractAccount
+
+		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
+		if err == nil || wantErr.Error() != err.Error() {
+			t.Errorf("App.validateTx() error = %v, wantErr %v", err, wantErr)
+			return
+		}
+		if got != wantErrCode {
+			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
+		}
+	})
 }
 
 func TestApp_DeliverTx(t *testing.T) {
-	tc := NewTestResource()
-	defer tc.CleanData()
-	app := tc.app
-	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
+	tr := NewTestResource()
+	defer tr.CleanData()
+	app := tr.app
+	appHash := tr.app.state.Commit()
+	blockInfo := &storage.BlockInfo{Height: 1, AppHash: appHash, Time: time.Now()}
 	app.loadState(blockInfo)
 
 	t.Run("Deserialize tx error", func(t *testing.T) {
@@ -395,52 +521,68 @@ func TestApp_DeliverTx(t *testing.T) {
 }
 
 func TestApp_Commit(t *testing.T) {
-	tc := NewTestResource()
-	defer tc.CleanData()
-	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
-	tc.app.loadState(blockInfo)
-	got := tc.app.Commit()
-	want := types.ResponseCommit{Data: []byte{69, 176, 207, 194, 32, 206, 236, 91, 124, 28, 98, 196, 212, 25, 61, 56, 228, 235, 164, 142, 136, 21, 114, 156, 231, 95, 156, 10, 176, 228, 193, 192}}
+	tr := NewTestResource()
+	defer tr.CleanData()
+	appHash := tr.app.state.Commit()
+	blockInfo := &storage.BlockInfo{Height: 1, AppHash: appHash, Time: time.Now()}
+	tr.app.loadState(blockInfo)
 
+	got := tr.app.Commit()
+	want := types.ResponseCommit{Data: appHash.Bytes()}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("App.Commit() = %v, want %v", got, want)
 	}
 }
 
 func TestApp_GetGasContractToken(t *testing.T) {
-	tc := NewTestResource()
-	defer tc.CleanData()
-	a := tc.app
+	// test config for gasContractAddress not exist & gasContractAddress exist, contract not exist
+	rand.Seed(time.Now().UTC().UnixNano())
+	dbDir := "./testdata/db/test_" + strconv.Itoa(rand.Intn(10000)) + "/"
+	err := os.MkdirAll(dbDir, os.ModePerm)
+	defer os.RemoveAll(dbDir)
+	if err != nil {
+		panic(err)
+	}
+
+	// init app and loadState without switching gas station
+	app := NewApp("testapp", dbDir, "")
 	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
-	a.loadState(blockInfo)
+	app.loadState(blockInfo)
 
-	tc2 := NewTestResource()
-	defer tc2.CleanData()
-	contractHex, err := ioutil.ReadFile("./testdata/contract_hex.txt")
-	if err != nil {
-		panic(err)
-	}
+	// Set gasContractAddress to trigger panic
+	app.gasContractAddress = "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7"
+
+	// test config for gasContractAddress exist, contract exist
+	tr2 := NewTestResource()
+	defer tr2.CleanData()
 	address, _ := crypto.AddressFromString("LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
-	a2 := tc2.app
-	a2.loadState(blockInfo)
-	account, err := a2.state.CreateAccount(address, address, contractHex)
-	_ = a2.state.Commit()
+	// Get gasContractAccount to create a dummy token
+	account, err := tr2.app.state.GetAccount(address)
 	if err != nil {
 		panic(err)
 	}
-
-	token := token.NewToken(a2.state, account)
+	token := token.NewToken(tr2.app.state, account)
 	tests := []struct {
-		name string
-		app  *App
-		want gas.Token
+		name    string
+		app     *App
+		want    gas.Token
+		wantErr error
 	}{
-		{"gasContractAddress not exist", &App{}, nil},
-		{"gasContractAddress exist, contract not exist", a, nil},
-		{"gasContractAddress exist, contract exist", a2, token},
+		{"gasContractAddress not exist", &App{}, nil, nil},
+		{"gasContractAddress exist, contract not exist", app, nil, storage.ErrAccountNotExist},
+		{"gasContractAddress exist, contract exist", tr2.app, token, nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					err := r.(error)
+					if err != tt.wantErr {
+						t.Errorf("App.GetGasContractToken() got error = %v, want error %v", err, tt.wantErr)
+					}
+				}
+			}()
+
 			app := tt.app
 			if got := app.GetGasContractToken(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("App.GetGasContractToken() = %v, want %v", got, tt.want)

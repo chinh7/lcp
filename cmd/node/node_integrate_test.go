@@ -15,10 +15,9 @@ import (
 
 	"golang.org/x/crypto/ed25519" // This is used in place of crypto/ed25519 to support older version of Go
 
-	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/api"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/QuoineFinancial/liquid-chain/util"
 	"github.com/google/go-cmp/cmp"
 	"github.com/tendermint/tendermint/config"
 )
@@ -44,7 +43,7 @@ func (ts *testServer) startNode() {
 	conf := config.ResetTestRoot(blockchainTestName)
 	fmt.Println("Init node config data...")
 
-	ts.node = New(conf.RootDir, gasContractAddress)
+	ts.node = New(conf.RootDir, "")
 	conf, err := ts.node.parseConfig()
 	if err != nil {
 		panic(err)
@@ -75,27 +74,8 @@ func (ts *testServer) stopNode() {
 }
 
 func createDeployTx() string {
-	var (
-		err           error
-		code          []byte
-		data          []byte
-		encodedHeader []byte
-		header        *abi.Header
-	)
-
-	if code, err = ioutil.ReadFile("./testdata/contract.wasm"); err != nil {
-		panic(err)
-	}
-
-	if encodedHeader, err = abi.EncodeHeaderToBytes("./testdata/contract-abi.json"); err != nil {
-		panic(err)
-	}
-
-	if header, err = abi.DecodeHeader(encodedHeader); err != nil {
-		panic(err)
-	}
-
-	if data, err = rlp.EncodeToBytes(&abi.Contract{Header: header, Code: code}); err != nil {
+	data, err := util.BuildDeployTxData("./testdata/contract.wasm", "./testdata/contract-abi.json")
+	if err != nil {
 		panic(err)
 	}
 
@@ -115,24 +95,12 @@ func createInvokeTx(contractAddress string, nonce uint64, functionName string, p
 		panic(err)
 	}
 
-	header, err := abi.LoadHeaderFromFile("./testdata/contract-abi.json")
-	if err != nil {
-		panic(err)
-	}
-
-	function, err := header.GetFunction(functionName)
-	if err != nil {
-		panic(err)
-	}
-
-	encodedArgs, err := abi.EncodeFromString(function.Parameters, params)
-	if err != nil {
-		panic(err)
-	}
-
 	signer := crypto.TxSigner{Nonce: uint64(nonce)}
-	txData := crypto.TxData{Method: functionName, Params: encodedArgs}
-	tx := &crypto.Tx{Data: txData.Serialize(), From: signer, To: to, GasLimit: 1, GasPrice: 1}
+	txData, err := util.BuildInvokeTxData("./testdata/contract-abi.json", functionName, params)
+	if err != nil {
+		panic(err)
+	}
+	tx := &crypto.Tx{Data: txData, From: signer, To: to, GasLimit: 1, GasPrice: 1}
 
 	privKey := loadPrivateKey(SEED)
 	if err = tx.Sign(privKey); err != nil {

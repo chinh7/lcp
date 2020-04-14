@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 
 	"golang.org/x/crypto/blake2b"
@@ -13,6 +14,13 @@ import (
 const (
 	// MethodNameByteLength is number of bytes preservered for method name
 	MethodNameByteLength = 64
+)
+
+var (
+	// ErrInvalidPubKeyLength happens when public key length is not equal ed25519.PublicKeySize
+	ErrInvalidPubKeyLength = errors.New("crypto: invalid public key length")
+	// ErrInvalidSignature happens when signature of message by publicKey is invalid
+	ErrInvalidSignature = errors.New("crypto: invalid signature")
 )
 
 // TxData data for contract deploy/invoke
@@ -94,14 +102,23 @@ func (tx *Tx) Sign(privKey ed25519.PrivateKey) error {
 	return nil
 }
 
-// SigVerified checks if transaction signature is correct
-func (tx *Tx) SigVerified() bool {
+// VerifySignature returns error when transaction signature is incorrect
+func (tx *Tx) VerifySignature() error {
 	signature := tx.From.Signature
 	sigHash, err := tx.GetSigHash()
 	if err != nil {
-		return false
+		return err
 	}
-	return ed25519.Verify(tx.From.PubKey, sigHash, signature)
+
+	if len(tx.From.PubKey) != ed25519.PublicKeySize {
+		return ErrInvalidPubKeyLength
+	}
+
+	if !ed25519.Verify(tx.From.PubKey, sigHash, signature) {
+		return ErrInvalidSignature
+	}
+
+	return nil
 }
 
 // Serialize a Tx to bytes

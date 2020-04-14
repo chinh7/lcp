@@ -9,7 +9,10 @@ const (
 	CodeTypeUnknownError          uint32 = 4
 	CodeTypeExceedTransactionSize uint32 = 5
 	CodeTypeInvalidSignature      uint32 = 6
-	CodeTypeContractNotFound      uint32 = 7
+	CodeTypeAccountNotExist       uint32 = 7
 	CodeTypeInsufficientFee       uint32 = 8
 	CodeTypeInvalidData           uint32 = 9
+	CodeTypeNonContractAccount    uint32 = 10
+	CodeTypeInvalidGasPrice       uint32 = 11
+	CodeTypeInvalidPubKey         uint32 = 12
 )

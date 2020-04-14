@@ -3,6 +3,7 @@ package abi
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 
 	"github.com/ethereum/go-ethereum/rlp"
@@ -14,8 +15,15 @@ type Contract struct {
 	Code   []byte
 }
 
+// ErrDecodeEmptyContract return when decode an empty contract
+var ErrDecodeEmptyContract = errors.New("abi: cannot decode empty contract")
+
 // DecodeContract decode []byte into contract
 func DecodeContract(b []byte) (*Contract, error) {
+	if len(b) <= 0 {
+		return nil, ErrDecodeEmptyContract
+	}
+
 	var contract struct {
 		Header []byte
 		Code   []byte

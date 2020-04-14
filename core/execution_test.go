@@ -138,7 +138,7 @@ func TestApplyTx(t *testing.T) {
 			events:     make([]event.Event, 0),
 			gasUsed:    0,
 			wantErr:    true,
-			wantErrObj: errors.New("EOF"),
+			wantErrObj: errors.New("abi: cannot decode empty contract"),
 		},
 	}
 	for _, tt := range tests {

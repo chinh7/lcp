@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"time"
 
 	"github.com/QuoineFinancial/liquid-chain/crypto"
@@ -25,6 +26,9 @@ type State struct {
 	accounts   map[crypto.Address]*Account
 }
 
+// ErrAccountNotExist returns when loadAccount returns nil
+var ErrAccountNotExist = errors.New("contract account not exist")
+
 // New returns a state database
 func New(root trie.Hash, db db.Database) (*State, error) {
 	t, err := trie.New(root, db)
@@ -45,10 +49,10 @@ func (state *State) LoadAccount(address crypto.Address) (*Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	if raw == nil {
+	var account Account
+	if len(raw) <= 0 {
 		return nil, nil
 	}
-	var account Account
 	if err := rlp.DecodeBytes(raw, &account); err != nil {
 		return nil, err
 	}
@@ -66,6 +70,9 @@ func (state *State) GetAccount(address crypto.Address) (*Account, error) {
 		loadedAccount, err := state.LoadAccount(address)
 		if err != nil {
 			return nil, err
+		}
+		if loadedAccount == nil {
+			return nil, ErrAccountNotExist
 		}
 		state.accounts[address] = loadedAccount
 	}

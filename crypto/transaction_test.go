@@ -53,18 +53,27 @@ func TestTxSignature(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		want   bool
+		want   error
 		prvkey ed25519.PrivateKey
+		pubkey ed25519.PublicKey
 	}{
 		{
 			name:   "valid private key",
 			prvkey: prvkey,
-			want:   true,
+			pubkey: pubkey,
+			want:   nil,
 		},
 		{
 			name:   "invalid private key",
 			prvkey: invalidPrv,
-			want:   false,
+			pubkey: pubkey,
+			want:   ErrInvalidSignature,
+		},
+		{
+			name:   "invalid public key length",
+			prvkey: prvkey,
+			pubkey: []byte{},
+			want:   ErrInvalidPubKeyLength,
 		},
 	}
 
@@ -78,9 +87,10 @@ func TestTxSignature(t *testing.T) {
 			if err := tx.Sign(tt.prvkey); err != nil {
 				panic(err)
 			}
-			tx.From.PubKey = pubkey
-			if tx.SigVerified() != tt.want {
-				t.Errorf("Tx.SigVerified() = %v, want %v", tx.SigVerified(), tt.want)
+			tx.From.PubKey = tt.pubkey
+			err = tx.VerifySignature()
+			if err != tt.want {
+				t.Errorf("Tx.VerifySignature() = %v, want %v", tx.VerifySignature(), tt.want)
 			}
 		})
 	}
