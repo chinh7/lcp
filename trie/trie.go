@@ -201,6 +201,7 @@ func (tree *Trie) get(currentNode Node, key []byte, position int) (value []byte,
 			// Given key mismatched node
 			return nil, node, false, nil
 		}
+
 		value, newNode, reachedHashNode, err = tree.get(node.Value, key, position+len(node.Key))
 		if err == nil && reachedHashNode {
 			node = node.copy()

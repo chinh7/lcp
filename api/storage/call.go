@@ -51,7 +51,7 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 	}
 	account, err := state.GetAccount(address)
 	if err != nil {
-		return fmt.Errorf("Account not found for address %s", params.Address)
+		return err
 	}
 
 	contract, err := account.GetContract()

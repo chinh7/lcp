@@ -2,7 +2,6 @@ package storage
 
 import (
 	"encoding/hex"
-	"errors"
 	"net/http"
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
@@ -39,9 +38,6 @@ func (service *Service) GetAccount(r *http.Request, params *GetAccountParams, re
 	account, err := state.GetAccount(address)
 	if err != nil {
 		return err
-	}
-	if account == nil {
-		return errors.New("Account not exist")
 	}
 
 	var contract *abi.Contract

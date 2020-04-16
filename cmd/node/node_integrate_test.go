@@ -43,7 +43,7 @@ func (ts *testServer) startNode() {
 	conf := config.ResetTestRoot(blockchainTestName)
 	fmt.Println("Init node config data...")
 
-	ts.node = New(conf.RootDir, gasContractAddress)
+	ts.node = New(conf.RootDir, "")
 	conf, err := ts.node.parseConfig()
 	if err != nil {
 		panic(err)
