@@ -18,6 +18,7 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/api/chain"
 	"github.com/QuoineFinancial/liquid-chain/api/storage"
 	"github.com/QuoineFinancial/liquid-chain/consensus"
+	"github.com/QuoineFinancial/liquid-chain/core"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/util"
 )
@@ -62,7 +63,7 @@ func deploy(cmd *cobra.Command, args []string) {
 	seedPath, endpoint, nonce, gas, price, _ := parseFlags(cmd)
 	privateKey := loadPrivateKey(seedPath)
 
-	data, err := util.BuildDeployTxData(args[0], args[1])
+	data, err := util.BuildDeployTxData(args[0], args[1], core.InitFunctionName, args[2:])
 	if err != nil {
 		panic(err)
 	}

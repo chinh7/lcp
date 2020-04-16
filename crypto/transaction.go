@@ -25,8 +25,9 @@ var (
 
 // TxData data for contract deploy/invoke
 type TxData struct {
-	Method string
-	Params []byte
+	ContractCode []byte
+	Method       string
+	Params       []byte
 }
 
 // TxSigner information about transaction signer
