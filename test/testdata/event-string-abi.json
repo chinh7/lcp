@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "events": [
+    {
+      "name": "Say",
+      "parameters": [
+        {
+          "name": "message",
+          "type": "lparray"
+        }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "name": "say",
+      "parameters": [
+        {
+          "is_array": false,
+          "type": "int32"
+        }
+      ]
+    }
+  ]
+}

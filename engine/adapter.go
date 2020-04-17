@@ -12,6 +12,8 @@ import (
 	"github.com/vertexdlt/vertexvm/vm"
 )
 
+const pointerSize = int(4)
+
 func readAt(vm *vm.VM, ptr, size int) ([]byte, error) {
 	data := make([]byte, size)
 	_, err := vm.MemRead(data, ptr)
@@ -184,9 +186,23 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 func (engine *Engine) handleEmitEvent(abiEvent *abi.Event, vm *vm.VM, args ...uint64) (uint64, error) {
 	address := engine.account.GetAddress()
 	var memBytes [][]byte
-
 	for i, param := range abiEvent.Parameters {
-		if param.Type.IsPointer() {
+		if param.Type == abi.LPArray {
+			paramPointer := int(uint32(args[i]))
+
+			sizeMem, err := readAt(vm, paramPointer, pointerSize)
+			size := int(binary.LittleEndian.Uint32(sizeMem))
+
+			valuePointerBytes, err := readAt(vm, paramPointer+pointerSize, pointerSize)
+			valuePointer := int(binary.LittleEndian.Uint32(valuePointerBytes))
+			value, err := readAt(vm, valuePointer, size)
+
+			if err != nil {
+				return 0, err
+			}
+
+			memBytes = append(memBytes, value)
+		} else if param.Type.IsPointer() {
 			paramPtr := int(uint32(args[i]))
 			size := param.Type.GetMemorySize()
 			memValue, err := readAt(vm, paramPtr, size)

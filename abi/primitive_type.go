@@ -24,12 +24,15 @@ const (
 	Float32 PrimitiveType = 0x8
 	Float64 PrimitiveType = 0x9
 	Address PrimitiveType = 0xa
+	LPArray PrimitiveType = 0xb
 )
 
 // IsPointer return whether p is pointer or not
 func (t PrimitiveType) IsPointer() bool {
 	switch t {
 	case Address:
+		return true
+	case LPArray:
 		return true
 	default:
 		return false
@@ -54,6 +57,7 @@ func (t PrimitiveType) String() string {
 		Float32: "float32",
 		Float64: "float64",
 		Address: "address",
+		LPArray: "lparray",
 	}[t]
 }
 

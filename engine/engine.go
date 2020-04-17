@@ -17,9 +17,6 @@ import (
 const (
 	// ExportSecDataEnd is wasm export section key for __data_end
 	ExportSecDataEnd = "__data_end"
-
-	// EventPrefix is prefix of Type for all events emitting by engine
-	EventPrefix = "engine."
 )
 
 type foreignMethod struct {

@@ -32,6 +32,8 @@ type HeaderFile struct {
 func parsePrimitiveTypeFromString(t string) (PrimitiveType, error) {
 	var primitiveType PrimitiveType
 	switch t {
+	case "lparray":
+		primitiveType = LPArray
 	case "address":
 		primitiveType = Address
 	case "uint8":
@@ -187,6 +189,8 @@ func parseArgFromString(t PrimitiveType, value string) (interface{}, error) {
 	var result interface{}
 	value = strings.TrimSpace(value)
 	switch t {
+	case LPArray:
+		return string(value), nil
 	case Address:
 		return crypto.AddressFromString(value)
 	case Uint8:
