@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/core"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
@@ -17,7 +18,6 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/token"
 	"github.com/QuoineFinancial/liquid-chain/trie"
 
-	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/tendermint/tendermint/abci/types"
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
@@ -66,7 +66,7 @@ func NewApp(nodeInfo string, dbDir string, gasContractAddress string) *App {
 
 func (app *App) loadState(blockInfo *storage.BlockInfo) {
 	var err error
-	if app.state, err = storage.New(gethCommon.BytesToHash(blockInfo.AppHash[:]), app.StateDB); err != nil {
+	if app.state, err = storage.New(common.BytesToHash(blockInfo.AppHash[:]), app.StateDB); err != nil {
 		panic(err)
 	}
 

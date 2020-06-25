@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/db"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 func newEmpty() *Trie {

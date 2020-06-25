@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/db"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 // Trie is Merkle Patricia Trie
@@ -14,16 +14,13 @@ type Trie struct {
 	root Node
 }
 
-// Hash represents the Keccak-256 hash with 32 byte length
-type Hash = common.Hash
-
 // New returns a Trie based
-func New(rootHash Hash, db db.Database) (*Trie, error) {
+func New(rootHash common.Hash, db db.Database) (*Trie, error) {
 	if db == nil {
 		panic("Could not run trie.New without db.")
 	}
 	trie := &Trie{db: db}
-	if (rootHash != Hash{}) {
+	if (rootHash != common.Hash{}) {
 		rootNode, err := trie.loadNode(rootHash[:])
 		if err != nil {
 			return nil, err
@@ -163,10 +160,10 @@ func (tree *Trie) Hash() common.Hash {
 }
 
 // Commit returns the root hash and write to disk db
-func (tree *Trie) Commit() (Hash, error) {
+func (tree *Trie) Commit() (common.Hash, error) {
 	hash, cached, err := tree.hashRoot(tree.db)
 	if err != nil {
-		return Hash{}, err
+		return common.Hash{}, err
 	}
 	tree.root = cached
 	return common.BytesToHash(hash.(hashNode)), nil
