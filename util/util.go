@@ -6,7 +6,7 @@ import (
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 )
 
 // BuildInvokeTxData build data for invoke transaction

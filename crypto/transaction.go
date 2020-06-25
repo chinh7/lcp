@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
-	cdc "github.com/ethereum/go-ethereum/rlp"
+	cdc "github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"golang.org/x/crypto/ed25519"
 )
 

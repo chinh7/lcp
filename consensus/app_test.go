@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/QuoineFinancial/liquid-chain/crypto"

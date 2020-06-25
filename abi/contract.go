@@ -6,7 +6,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 )
 
 // Contract contains header and wasm code
