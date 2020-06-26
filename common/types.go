@@ -2,7 +2,9 @@
 
 package common
 
-import "encoding/hex"
+import (
+	"encoding/hex"
+)
 
 const (
 	// HashLength is the expected length of the hash
@@ -30,6 +32,13 @@ func HexToHash(s string) Hash {
 	return BytesToHash(b)
 }
 
+// HashToHex encodes b as a hex string
+func HashToHex(b []byte) string {
+	enc := make([]byte, len(b)*2)
+	hex.Encode(enc, b)
+	return string(enc)
+}
+
 // SetBytes sets the hash to the value of b.
 // If b is larger than len(h), b will be cropped from the left.
 func (h *Hash) SetBytes(b []byte) {
@@ -39,3 +48,12 @@ func (h *Hash) SetBytes(b []byte) {
 
 	copy(h[HashLength-len(b):], b)
 }
+
+// String implements the stringer interface and is used also by the logger when
+// doing full logging into a file.
+func (h Hash) String() string {
+	return HashToHex(h[:])
+}
+
+// Bytes gets the byte representation of the underlying hash.
+func (h Hash) Bytes() []byte { return h[:] }

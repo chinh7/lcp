@@ -9,12 +9,12 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/event"
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
-	"github.com/QuoineFinancial/liquid-chain/trie"
 	"github.com/QuoineFinancial/liquid-chain/util"
 )
 
@@ -30,7 +30,7 @@ func NewTestResource() *TestResource {
 		panic(err)
 	}
 	stateDB := db.NewRocksDB(filepath.Join(dbDir, "storage.db"))
-	state, err := storage.New(trie.Hash{}, stateDB)
+	state, err := storage.New(common.Hash{}, stateDB)
 	if err != nil {
 		panic(err)
 	}

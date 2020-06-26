@@ -10,7 +10,7 @@ import (
 
 func newEmpty() *Trie {
 	db := db.NewMemoryDB()
-	trie, _ := New(Hash{}, db)
+	trie, _ := New(common.Hash{}, db)
 	return trie
 }
 

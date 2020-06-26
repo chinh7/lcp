@@ -16,7 +16,6 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/QuoineFinancial/liquid-chain/token"
-	"github.com/QuoineFinancial/liquid-chain/trie"
 
 	"github.com/tendermint/tendermint/abci/types"
 
@@ -78,7 +77,7 @@ func (app *App) loadState(blockInfo *storage.BlockInfo) {
 
 // BeginBlock begins new block
 func (app *App) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock {
-	var trieHash trie.Hash
+	var trieHash common.Hash
 	copy(trieHash[:], req.Header.AppHash)
 	blockInfo := &storage.BlockInfo{
 		Height:  uint64(req.Header.Height),

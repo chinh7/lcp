@@ -8,13 +8,13 @@ import (
 
 	"testing"
 
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
-	"github.com/QuoineFinancial/liquid-chain/trie"
-	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 )
 
 func loadContract(abiPath, wasmPath string) *abi.Contract {
@@ -39,7 +39,7 @@ func TestEngineIgnite(t *testing.T) {
 	mathAddress, _ := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
 	utilAddress, _ := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
 	database := db.NewMemoryDB()
-	state, _ := storage.New(trie.Hash{}, database)
+	state, _ := storage.New(common.Hash{}, database)
 	state.BlockInfo = &storage.BlockInfo{Height: 1, Time: time.Unix(1578905663, 0)}
 
 	tests := []struct {

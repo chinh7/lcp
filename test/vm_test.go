@@ -5,13 +5,13 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
-	"github.com/QuoineFinancial/liquid-chain/trie"
-	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 
 	"github.com/QuoineFinancial/liquid-chain/engine"
 )
@@ -24,7 +24,7 @@ func TestVM(t *testing.T) {
 	contractAddress, _ := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
 
 	database := db.NewMemoryDB()
-	state, _ := storage.New(trie.Hash{}, database)
+	state, _ := storage.New(common.Hash{}, database)
 
 	accountState, _ := state.CreateAccount(caller, contractAddress, contractBytes)
 	execEngine := engine.NewEngine(state, accountState, caller, &gas.FreePolicy{}, 0)
