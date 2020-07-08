@@ -6,12 +6,12 @@ import (
 	"testing"
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/storage"
-	"github.com/QuoineFinancial/liquid-chain/trie"
 
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 )
 
 const contractAddressStr = "LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53"
@@ -24,7 +24,7 @@ const otherBalance = uint64(10000)
 
 func setup() *Token {
 	db := db.NewMemoryDB()
-	state, err := storage.New(trie.Hash{}, db)
+	state, err := storage.New(common.Hash{}, db)
 	if err != nil {
 		panic(err)
 	}

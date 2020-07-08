@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 )
 
 // Encode return []byte from an inputted params and values pair

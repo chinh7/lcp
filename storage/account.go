@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/trie"
 	"golang.org/x/crypto/blake2b"
@@ -11,7 +12,7 @@ import (
 type Account struct {
 	Nonce        uint64
 	ContractHash []byte
-	StorageHash  trie.Hash // merkle root of the storage trie
+	StorageHash  common.Hash // merkle root of the storage trie
 	Creator      crypto.Address
 
 	dirty    bool

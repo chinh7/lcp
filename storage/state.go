@@ -4,16 +4,17 @@ import (
 	"errors"
 	"time"
 
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/trie"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // BlockInfo contains essential block information
 type BlockInfo struct {
 	Height  uint64
-	AppHash trie.Hash
+	AppHash common.Hash
 	Time    time.Time
 }
 
@@ -22,7 +23,7 @@ type State struct {
 	BlockInfo  *BlockInfo
 	db         db.Database
 	trie       *trie.Trie
-	checkpoint trie.Hash
+	checkpoint common.Hash
 	accounts   map[crypto.Address]*Account
 }
 
@@ -30,7 +31,7 @@ type State struct {
 var ErrAccountNotExist = errors.New("contract account not exist")
 
 // New returns a state database
-func New(root trie.Hash, db db.Database) (*State, error) {
+func New(root common.Hash, db db.Database) (*State, error) {
 	t, err := trie.New(root, db)
 	if err != nil {
 		return nil, err
@@ -81,7 +82,7 @@ func (state *State) GetAccount(address crypto.Address) (*Account, error) {
 
 // CreateAccount create a new account state for addr
 func (state *State) CreateAccount(creator crypto.Address, address crypto.Address, contract []byte) (*Account, error) {
-	storage, err := trie.New(trie.Hash{}, state.db)
+	storage, err := trie.New(common.Hash{}, state.db)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +103,7 @@ func (state *State) CreateAccount(creator crypto.Address, address crypto.Address
 }
 
 // Commit stores all dirty Accounts to state.trie
-func (state *State) Commit() trie.Hash {
+func (state *State) Commit() common.Hash {
 	var err error
 	for _, account := range state.accounts {
 		if account == nil || !account.dirty {

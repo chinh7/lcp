@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
+	"github.com/QuoineFinancial/liquid-chain/common"
 )
 
 // Node is the unit of trie
@@ -142,7 +143,7 @@ func decodeBranchNode(hash, elements []byte) (*branchNode, error) {
 	return node, nil
 }
 
-const hashLen = len(Hash{})
+const hashLen = len(common.Hash{})
 
 func decodeRef(buf []byte) (Node, []byte, error) {
 	kind, value, rest, err := rlp.Split(buf)

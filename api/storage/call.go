@@ -6,11 +6,11 @@ import (
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/api/models"
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/engine"
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 // CallParams is params to execute Call

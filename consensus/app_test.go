@@ -13,16 +13,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/event"
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/QuoineFinancial/liquid-chain/token"
-	"github.com/QuoineFinancial/liquid-chain/trie"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
 
@@ -44,7 +44,7 @@ func NewTestResource() *TestResource {
 		panic(err)
 	}
 	app := NewApp("testapp", dbDir, "")
-	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
+	blockInfo := &storage.BlockInfo{Height: 1, AppHash: common.Hash{}, Time: time.Now()}
 	app.loadState(blockInfo)
 
 	// Manually deploy contract
@@ -95,7 +95,7 @@ func TestNewApp(t *testing.T) {
 
 	blockInfo := &storage.BlockInfo{
 		Height:  uint64(1),
-		AppHash: trie.Hash{},
+		AppHash: common.Hash{},
 		Time:    time.Now(),
 	}
 	bytes, _ := rlp.EncodeToBytes(blockInfo)
@@ -546,7 +546,7 @@ func TestApp_GetGasContractToken(t *testing.T) {
 
 	// init app and loadState without switching gas station
 	app := NewApp("testapp", dbDir, "")
-	blockInfo := &storage.BlockInfo{Height: 1, AppHash: trie.Hash{}, Time: time.Now()}
+	blockInfo := &storage.BlockInfo{Height: 1, AppHash: common.Hash{}, Time: time.Now()}
 	app.loadState(blockInfo)
 
 	// Set gasContractAddress to trigger panic

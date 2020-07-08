@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/core"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
@@ -15,12 +16,10 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/QuoineFinancial/liquid-chain/token"
-	"github.com/QuoineFinancial/liquid-chain/trie"
 
-	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/tendermint/tendermint/abci/types"
 
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 )
 
 // App basic Tendermint base app
@@ -66,7 +65,7 @@ func NewApp(nodeInfo string, dbDir string, gasContractAddress string) *App {
 
 func (app *App) loadState(blockInfo *storage.BlockInfo) {
 	var err error
-	if app.state, err = storage.New(gethCommon.BytesToHash(blockInfo.AppHash[:]), app.StateDB); err != nil {
+	if app.state, err = storage.New(common.BytesToHash(blockInfo.AppHash[:]), app.StateDB); err != nil {
 		panic(err)
 	}
 
@@ -78,7 +77,7 @@ func (app *App) loadState(blockInfo *storage.BlockInfo) {
 
 // BeginBlock begins new block
 func (app *App) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock {
-	var trieHash trie.Hash
+	var trieHash common.Hash
 	copy(trieHash[:], req.Header.AppHash)
 	blockInfo := &storage.BlockInfo{
 		Height:  uint64(req.Header.Height),

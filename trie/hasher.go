@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/QuoineFinancial/liquid-chain/db"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"golang.org/x/crypto/blake2b"
 )
 
