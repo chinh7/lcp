@@ -1,4 +1,4 @@
-FROM golang:1.12-alpine
+FROM golang:1.14-alpine
 
 RUN echo "@testing http://nl.alpinelinux.org/alpine/latest-stable/main" >>/etc/apk/repositories
 RUN apk add --upda`te --no-cache build-base linux-headers git cmake bash #wget mercurial g++ autoconf libgflags-dev cmake bash

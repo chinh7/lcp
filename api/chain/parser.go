@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"strconv"
+	"strings"
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/api/models"
@@ -27,8 +28,20 @@ func (service *Service) parseBlockMeta(resultBlockMeta *types.BlockMeta) *models
 	}
 }
 
+func (service *Service) parseBlockHeader(header *types.Header) *models.Block {
+	return &models.Block{
+		Time:              header.Time,
+		Height:            header.Height,
+		AppHash:           header.AppHash.String(),
+		ConsensusHash:     header.ConsensusHash.String(),
+		PreviousBlockHash: header.LastBlockID.Hash.String(),
+	}
+}
+
 func (service *Service) parseBlock(resultBlock *core_types.ResultBlock) *models.Block {
-	block := service.parseBlockMeta(resultBlock.BlockMeta)
+	block := service.parseBlockHeader(&resultBlock.Block.Header)
+	block.Hash = resultBlock.BlockID.Hash.String()
+
 	for _, tx := range resultBlock.Block.Data.Txs {
 		block.TxHashes = append(block.TxHashes, hex.EncodeToString(tx.Hash()))
 	}
@@ -37,13 +50,14 @@ func (service *Service) parseBlock(resultBlock *core_types.ResultBlock) *models.
 
 func (service *Service) parseTransaction(resultTx *core_types.ResultTx) (*models.Transaction, error) {
 	transaction := &models.Transaction{
-		Hash:     resultTx.Hash.String(),
-		Info:     resultTx.TxResult.Info,
-		GasUsed:  uint32(resultTx.TxResult.GetGasUsed()),
-		GasLimit: uint32(resultTx.TxResult.GetGasWanted()),
-		Code:     resultTx.TxResult.GetCode(),
-		Data:     string(resultTx.TxResult.GetData()),
-		Events:   []*models.Event{},
+		BlockHeight: resultTx.Height,
+		Hash:        strings.ToUpper(resultTx.Hash.String()),
+		Info:        resultTx.TxResult.Info,
+		GasUsed:     uint32(resultTx.TxResult.GetGasUsed()),
+		GasLimit:    uint32(resultTx.TxResult.GetGasWanted()),
+		Code:        resultTx.TxResult.GetCode(),
+		Data:        string(resultTx.TxResult.GetData()),
+		Events:      []*models.Event{},
 	}
 
 	for _, e := range resultTx.TxResult.GetEvents() {
@@ -89,53 +103,53 @@ func (service *Service) parseEvent(tx *models.Transaction, tmEvent abciTypes.Eve
 			tx.Contract = event.LoadDeploymentEvent(tmEvent).Address.String()
 		}
 		return nil, nil
-	} else {
-		contractAddress, index, err := event.ParseCustomEventName(name)
-		if err != nil {
-			return nil, err
-		}
+	}
 
-		status, _ := service.tAPI.Status()
-		appHash := common.BytesToHash(status.SyncInfo.LatestAppHash)
-		state, err := storage.New(appHash, service.database)
-		if err != nil {
-			return nil, err
-		}
-		account, err := state.GetAccount(*contractAddress)
-		if err != nil {
-			return nil, err
-		}
+	contractAddress, index, err := event.ParseCustomEventName(name)
+	if err != nil {
+		return nil, err
+	}
 
-		contract, err := account.GetContract()
-		if err != nil {
-			return nil, err
-		}
+	status, _ := service.tAPI.Status()
+	appHash := common.BytesToHash(status.SyncInfo.LatestAppHash)
+	state, err := storage.New(appHash, service.database)
+	if err != nil {
+		return nil, err
+	}
+	account, err := state.GetAccount(*contractAddress)
+	if err != nil {
+		return nil, err
+	}
 
-		abiEvent, err := contract.Header.GetEventByIndex(index)
-		if err != nil {
-			return nil, err
-		}
+	contract, err := account.GetContract()
+	if err != nil {
+		return nil, err
+	}
 
-		result.Name = abiEvent.Name
-		result.Contract = contractAddress.String()
-		for index, param := range abiEvent.Parameters {
-			valueByte, _ := hex.DecodeString(string(tmEvent.Attributes[index].Value))
-			var value string
-			if param.Type == abi.Address {
-				address, err := crypto.AddressFromBytes(valueByte)
-				if err != nil {
-					return nil, err
-				}
-				value = address.String()
-			} else {
-				value = strconv.FormatUint(binary.LittleEndian.Uint64(valueByte), 10)
+	abiEvent, err := contract.Header.GetEventByIndex(index)
+	if err != nil {
+		return nil, err
+	}
+
+	result.Name = abiEvent.Name
+	result.Contract = contractAddress.String()
+	for index, param := range abiEvent.Parameters {
+		valueByte, _ := hex.DecodeString(string(tmEvent.Attributes[index].Value))
+		var value string
+		if param.Type == abi.Address {
+			address, err := crypto.AddressFromBytes(valueByte)
+			if err != nil {
+				return nil, err
 			}
-			result.Attributes = append(result.Attributes, models.EventAttribute{
-				Key:   param.Name,
-				Type:  param.Type.String(),
-				Value: value,
-			})
+			value = address.String()
+		} else {
+			value = strconv.FormatUint(binary.LittleEndian.Uint64(valueByte), 10)
 		}
+		result.Attributes = append(result.Attributes, models.EventAttribute{
+			Key:   param.Name,
+			Type:  param.Type.String(),
+			Value: value,
+		})
 	}
 	return &result, nil
 }

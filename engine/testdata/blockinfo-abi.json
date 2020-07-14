@@ -1,1 +1,11 @@
-{"version":1,"events":[],"functions":[{"name":"block_height","parameters":[]},{"name":"block_time","parameters":[]}]}
+{
+  "version": 1,
+  "events": [],
+  "functions": [{
+    "name": "block_height",
+    "parameters": []
+  }, {
+    "name": "block_time",
+    "parameters": []
+  }]
+}

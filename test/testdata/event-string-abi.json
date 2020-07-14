@@ -16,7 +16,6 @@
       "name": "say",
       "parameters": [
         {
-          "is_array": false,
           "type": "int32"
         }
       ]

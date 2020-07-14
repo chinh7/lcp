@@ -109,7 +109,7 @@ func (api *API) Serve() error {
 	return err
 }
 
-// This will immediately stop the server without waiting for any active connection to complete
+// Close will immediately stop the server without waiting for any active connection to complete
 // For gracefully shutdown please implement another function and use Server.Shutdown()
 func (api *API) Close() {
 	log.Println("Closing server")

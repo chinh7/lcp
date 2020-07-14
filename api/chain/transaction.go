@@ -71,16 +71,15 @@ func (service *Service) GetTx(
 	result *GetTxResult,
 ) error {
 	hash, _ := hex.DecodeString(params.Hash)
-	if tx, err := service.tAPI.Tx(hash, false); err != nil {
+	tx, err := service.tAPI.Tx(hash, false)
+	if err != nil {
 		return err
-	} else if block, err := service.tAPI.Block(&tx.Height); err != nil {
-		return err
-	} else {
-		if result.Transaction, err = service.parseTransaction(tx); err != nil {
-			return err
-		}
-		result.Transaction.Block = service.parseBlock(block)
 	}
+	parsedTransaction, err := service.parseTransaction(tx)
+	if err != nil {
+		return err
+	}
+	result.Transaction = parsedTransaction
 	return nil
 }
 
@@ -122,6 +121,7 @@ func (service *Service) GetAccountTxs(
 	return service.searchTransaction(query, params.Page, result)
 }
 
+// GetEventTxs search for transactions based on an event
 func (service *Service) GetEventTxs(
 	r *http.Request,
 	params *GetEventTxsParams,
@@ -178,7 +178,7 @@ func (service *Service) searchTransaction(query string, page *int, result *Searc
 	if page != nil {
 		p = *page
 	}
-	searchResult, err := service.tAPI.TxSearch(query, false, p, defaultTransactionPerPage)
+	searchResult, err := service.tAPI.TxSearch(query, false, p, defaultTransactionPerPage, "desc")
 	if err != nil {
 		return err
 	}
@@ -188,12 +188,11 @@ func (service *Service) searchTransaction(query string, page *int, result *Searc
 		Total:       searchResult.TotalCount,
 	}
 	for _, tx := range searchResult.Txs {
-		if transaction, err := service.parseTransaction(tx); err != nil {
+		parsedTransaction, err := service.parseTransaction(tx)
+		if err != nil {
 			return err
-		} else {
-			result.Transactions = append(result.Transactions, transaction)
 		}
-
+		result.Transactions = append(result.Transactions, parsedTransaction)
 	}
 
 	return nil

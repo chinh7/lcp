@@ -5,15 +5,15 @@ import (
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/kv"
 )
 
 // ToTMEvent convert vertex event to tendermint event
 func (event *Event) ToTMEvent() types.Event {
-	attributes := []common.KVPair{}
+	attributes := []kv.Pair{}
 	decodedParams, _ := abi.DecodeToBytes(event.Event.Parameters, event.Values)
 	for index, param := range decodedParams {
-		attributes = append(attributes, common.KVPair{
+		attributes = append(attributes, kv.Pair{
 			Key:   []byte(hex.EncodeToString([]byte{byte(index)})),
 			Value: []byte(hex.EncodeToString(param)),
 		})

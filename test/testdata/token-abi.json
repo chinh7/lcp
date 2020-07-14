@@ -1,10 +1,8 @@
 {
   "version": 1,
-  "events": [
-    {
+  "events": [{
       "name": "Transfer",
-      "parameters": [
-        {
+      "parameters": [{
           "name": "from",
           "type": "address"
         },
@@ -20,8 +18,7 @@
     },
     {
       "name": "Mint",
-      "parameters": [
-        {
+      "parameters": [{
           "name": "to",
           "type": "address"
         },
@@ -32,34 +29,24 @@
       ]
     }
   ],
-  "functions": [
-    {
+  "functions": [{
       "name": "mint",
-      "parameters": [
-        {
-          "is_array": false,
-          "type": "uint64"
-        }
-      ]
+      "parameters": [{
+        "type": "uint64"
+      }]
     },
     {
       "name": "get_balance",
-      "parameters": [
-        {
-          "is_array": false,
-          "type": "address"
-        }
-      ]
+      "parameters": [{
+        "type": "address"
+      }]
     },
     {
       "name": "transfer",
-      "parameters": [
-        {
-          "is_array": false,
+      "parameters": [{
           "type": "address"
         },
         {
-          "is_array": false,
           "type": "uint64"
         }
       ]

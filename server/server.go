@@ -8,11 +8,12 @@ import (
 	"sync"
 
 	"github.com/tendermint/tendermint/abci/types"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	tmNet "github.com/tendermint/tendermint/libs/net"
+	tmService "github.com/tendermint/tendermint/libs/service"
 )
 
 type SocketServer struct {
-	cmn.BaseService
+	tmService.BaseService
 
 	proto    string
 	addr     string
@@ -26,8 +27,9 @@ type SocketServer struct {
 	app    types.Application
 }
 
-func NewSocketServer(protoAddr string, app types.Application) cmn.Service {
-	proto, addr := cmn.ProtocolAndAddress(protoAddr)
+// NewSocketServer returns NewSocketServer
+func NewSocketServer(protoAddr string, app types.Application) *SocketServer {
+	proto, addr := tmNet.ProtocolAndAddress(protoAddr)
 	s := &SocketServer{
 		proto:    proto,
 		addr:     addr,
@@ -35,7 +37,7 @@ func NewSocketServer(protoAddr string, app types.Application) cmn.Service {
 		app:      app,
 		conns:    make(map[int]net.Conn),
 	}
-	s.BaseService = *cmn.NewBaseService(nil, "ABCIServer", s)
+	s.BaseService = *tmService.NewBaseService(nil, "ABCIServer", s)
 	return s
 }
 

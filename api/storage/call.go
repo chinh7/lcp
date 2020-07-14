@@ -38,7 +38,7 @@ func (service *Service) Call(r *http.Request, params *CallParams, result *CallRe
 		if err != nil {
 			return fmt.Errorf("Block %d not found", params.Height)
 		}
-		appHash = common.BytesToHash(block.BlockMeta.Header.AppHash)
+		appHash = common.BytesToHash(block.Block.Header.AppHash)
 	}
 
 	state, err := storage.New(appHash, service.database)

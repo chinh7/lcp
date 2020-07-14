@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/tendermint/tendermint/cmd/tendermint/commands"
-	"github.com/tendermint/tendermint/libs/common"
 	tmLog "github.com/tendermint/tendermint/libs/log"
+	tmos "github.com/tendermint/tendermint/libs/os"
 	"github.com/tendermint/tendermint/lite/proxy"
 	"github.com/tendermint/tendermint/rpc/client"
+	rpcHttp "github.com/tendermint/tendermint/rpc/client/http"
 )
 
 // TendermintAPI is client to interact with Tendermint RPC
@@ -50,15 +50,15 @@ func NewTendermintAPI(homeDir, nodeURL string, attempt int) TendermintAPI {
 	defer tendermintLoggerFile.Close()
 	logger := tmLog.NewTMLogger(tmLog.NewSyncWriter(tendermintLoggerFile))
 	cacheSize := 10
-	nodeURL, err := commands.EnsureAddrHasSchemeOrDefaultToTCP(nodeURL)
+	node, err := rpcHttp.New(nodeURL, "/websocket")
 	if err != nil {
-		common.Exit(err.Error())
+		tmos.Exit(err.Error())
 	}
-	node := client.NewHTTP(nodeURL, "/websocket")
+
 	cert, err := proxy.NewVerifier(chainID, homeDir, node, logger, cacheSize)
 	if err != nil {
 		if attempt >= maxConnectionAttempt {
-			common.Exit(err.Error())
+			tmos.Exit(err.Error())
 		} else {
 			return NewTendermintAPI(homeDir, nodeURL, attempt+1)
 		}
