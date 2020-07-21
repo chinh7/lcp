@@ -110,8 +110,6 @@ func (state *State) Commit() common.Hash {
 			continue
 		}
 
-		// Add source code
-
 		// Update account storage
 		if account.StorageHash, err = account.storage.Commit(); err != nil {
 			panic(err)
