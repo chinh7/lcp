@@ -8,8 +8,10 @@ type Event struct {
 
 // TransactionReceipt reflects corresponding Transaction execution result
 type TransactionReceipt struct {
-	TransactionHash string
-	Result          uint64
-	GasUsed         uint64
-	Events          []*Event
+	Result  uint64
+	GasUsed uint64
+	Events  []*Event
+
+	txIndex         int
+	transactionHash string
 }
