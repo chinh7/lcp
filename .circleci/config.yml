@@ -5,7 +5,6 @@ jobs:
       CC_TEST_REPORTER_ID: c15d7b2d5edf0ca5a041a71d52900f892e781bf9cc01c3232ac1ce545edb2044
     working_directory: ~/liquid
     docker:
-      # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
       - image: quoine/rocksdb:latest
         environment:
           GO111MODULE: "on"
@@ -19,9 +18,6 @@ jobs:
           name: "Create a temp directory for artifacts"
           command: mkdir -p /tmp/artifacts
       - run:
-          name: Install goveralls # For coveralls
-          command: go get -v github.com/mattn/goveralls
-      - run:
           name: Install deps
           command: go mod download
       - run:
@@ -33,6 +29,10 @@ jobs:
             go test ./... -coverprofile=c.out
             go tool cover -html=c.out -o coverage.html
             mv coverage.html /tmp/artifacts
+      - run:
+          name: Upload coverage # Will upload coverage result to Coveralls
+          command: |
+            go get -v github.com/mattn/goveralls
             $GOPATH/bin/goveralls -coverprofile=c.out -service=circle-ci -repotoken=$COVERALLS_REPO_TOKEN
       - save_cache: # Store cache in the /go/pkg directory
           key: v1-pkg-cache
