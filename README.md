@@ -1,6 +1,6 @@
-# Vertex
+# Liquid-Chain
 
-Vertex is a replicated state machine that enables execution and storage of arbitrary functional programs in various languages targeting LLVM IR.
+Liquid-chain is a replicated state machine that enables execution and storage of arbitrary functional programs in various languages targeting LLVM IR.
 This repo is the official Golang implementation.
 
 ### Storage
@@ -21,7 +21,6 @@ This repo is the official Golang implementation.
     ```
 
 
-
 ## Docker
 
 ```
@@ -33,4 +32,3 @@ docker-compose run --service-ports node start --api
 ```
 docker-compose run node unsafe_reset_all
 ```
-
