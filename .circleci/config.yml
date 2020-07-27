@@ -22,9 +22,7 @@ jobs:
           command: mkdir -p /tmp/artifacts
       - run:
           name: Install nodejs # For coveralls orb
-          command: |
-            curl -sL https://deb.nodesource.com/setup_12.x | bash -
-            apt-get install -y nodejs
+          command: apk add --update nodejs npm
       - run:
           name: Install deps
           command: go mod download
