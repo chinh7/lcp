@@ -1,10 +1,14 @@
 version: 2.1
+orbs:
+  coveralls: coveralls/coveralls@1.0.6
 jobs:
   test:
     environment:
       CC_TEST_REPORTER_ID: c15d7b2d5edf0ca5a041a71d52900f892e781bf9cc01c3232ac1ce545edb2044
     working_directory: ~/liquid
     docker:
+      # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
+      - image: circleci/golang:1.12
       - image: quoine/rocksdb:latest
         environment:
           GO111MODULE: "on"
@@ -21,27 +25,24 @@ jobs:
           name: Install deps
           command: go mod download
       - run:
-          name: Setup test reporter
-          command: |
-            apk add curl && apk upgrade
-            curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
-            chmod +x ./cc-test-reporter
-      - run:
           name: Build
           command: cd cmd && go build -o /liquid .
       - run:
           name: Test
           command: |
-            ./cc-test-reporter before-build
             go test ./... -coverprofile=c.out
             go tool cover -html=c.out -o coverage.html
             mv coverage.html /tmp/artifacts
-            ./cc-test-reporter after-build --prefix github.com/QuoineFinancial/liquid-chain/ --coverage-input-type gocov --exit-code $?
+      - coveralls/upload:
+          path_to_lcov: ./c.out
+          verbose: true
       - save_cache: # Store cache in the /go/pkg directory
           key: v1-pkg-cache
           paths:
             - "/go/pkg"
       - store_artifacts:
+          path: /tmp/artifacts
+      - store_test_results: # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
           path: /tmp/artifacts
 
 workflows:
