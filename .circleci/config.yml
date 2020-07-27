@@ -20,7 +20,7 @@ jobs:
           command: mkdir -p /tmp/artifacts
       - run:
           name: Install goveralls # For coveralls
-          command: go get github.com/mattn/goveralls
+          command: go get -v github.com/mattn/goveralls
       - run:
           name: Install deps
           command: go mod download
@@ -33,7 +33,7 @@ jobs:
             go test ./... -coverprofile=c.out
             go tool cover -html=c.out -o coverage.html
             mv coverage.html /tmp/artifacts
-            ~/go/bin/goveralls -coverprofile=c.out -service=circle-ci -repotoken=$COVERALLS_REPO_TOKEN
+            $GOPATH/bin/goveralls -coverprofile=c.out -service=circle-ci -repotoken=$COVERALLS_REPO_TOKEN
       - save_cache: # Store cache in the /go/pkg directory
           key: v1-pkg-cache
           paths:
