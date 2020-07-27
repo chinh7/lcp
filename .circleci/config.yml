@@ -1,6 +1,4 @@
 version: 2.1
-orbs:
-  coveralls: coveralls/coveralls@1.0.6
 jobs:
   test:
     environment:
@@ -21,8 +19,8 @@ jobs:
           name: "Create a temp directory for artifacts"
           command: mkdir -p /tmp/artifacts
       - run:
-          name: Install nodejs # For coveralls orb
-          command: apk add --update nodejs npm
+          name: Install goveralls # For coveralls
+          command: go get github.com/mattn/goveralls
       - run:
           name: Install deps
           command: go mod download
@@ -35,9 +33,7 @@ jobs:
             go test ./... -coverprofile=c.out
             go tool cover -html=c.out -o coverage.html
             mv coverage.html /tmp/artifacts
-      - coveralls/upload:
-          path_to_lcov: ./c.out
-          verbose: true
+            ~/go/bin/goveralls -coverprofile=c.out -service=circle-ci -repotoken=$COVERALLS_REPO_TOKEN
       - save_cache: # Store cache in the /go/pkg directory
           key: v1-pkg-cache
           paths:
