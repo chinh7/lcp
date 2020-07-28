@@ -1,6 +1,6 @@
 # Liquid-Chain
 ![CircleCI](https://img.shields.io/circleci/build/github/QuoineFinancial/liquid-chain?token=e85c411e0b51db1e0abac60f493c5fb59333c8c1)
-
+[![Coverage Status](https://coveralls.io/repos/github/QuoineFinancial/liquid-chain/badge.svg?branch=master&t=GijoWa)](https://coveralls.io/github/QuoineFinancial/liquid-chain?branch=master)
 
 Liquid-chain is a replicated state machine that enables execution and storage of arbitrary functional programs in various languages targeting LLVM IR.
 This repo is the official Golang implementation.
