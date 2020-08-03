@@ -3,6 +3,7 @@ package node
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/QuoineFinancial/liquid-chain/api"
 	"github.com/QuoineFinancial/liquid-chain/consensus"
@@ -11,8 +12,8 @@ import (
 	"github.com/tendermint/tendermint/cmd/tendermint/commands"
 	"github.com/tendermint/tendermint/config"
 	tmFlags "github.com/tendermint/tendermint/libs/cli/flags"
-	"github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
+	tmos "github.com/tendermint/tendermint/libs/os"
 	tmNode "github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/privval"
@@ -20,30 +21,14 @@ import (
 )
 
 func (node *LiquidNode) newTendermintNode(config *config.Config, logger log.Logger) (*tmNode.Node, error) {
-	node.app = consensus.NewApp(config.DBDir(), node.gasContractAddress)
+	node.app = consensus.NewApp(filepath.Join(config.DBDir(), "liquid"), node.gasContractAddress)
 	nodeKey, err := p2p.LoadOrGenNodeKey(config.NodeKeyFile())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load or gen node key %s: %w", config.NodeKeyFile(), err)
 	}
 
-	oldPrivVal := config.OldPrivValidatorFile()
-	newPrivValKey := config.PrivValidatorKeyFile()
-	newPrivValState := config.PrivValidatorStateFile()
-
-	if _, err := os.Stat(oldPrivVal); !os.IsNotExist(err) {
-		oldPV, err := privval.LoadOldFilePV(oldPrivVal)
-		if err != nil {
-			return nil, fmt.Errorf("Error reading OldPrivValidator from %v: %v", oldPrivVal, err)
-		}
-		logger.Info("Upgrading PrivValidator file",
-			"old", oldPrivVal,
-			"newKey", newPrivValKey,
-			"newState", newPrivValState,
-		)
-		oldPV.Upgrade(newPrivValKey, newPrivValState)
-	}
 	return tmNode.NewNode(config,
-		privval.LoadOrGenFilePV(newPrivValKey, newPrivValState),
+		privval.LoadOrGenFilePV(config.PrivValidatorKeyFile(), config.PrivValidatorStateFile()),
 		nodeKey,
 		proxy.NewLocalClientCreator(node.app),
 		tmNode.DefaultGenesisDocProviderFunc(config),
@@ -83,7 +68,7 @@ func (node *LiquidNode) startTendermintNode(conf *config.Config) error {
 	node.tmNode = n
 
 	// Stop upon receiving SIGTERM or CTRL-C.
-	common.TrapSignal(logger, func() {
+	tmos.TrapSignal(logger, func() {
 		node.stopNode()
 	})
 

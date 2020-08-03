@@ -20,8 +20,7 @@ func New(rootHash common.Hash, db db.Database) (*Trie, error) {
 		panic("Could not run trie.New without db.")
 	}
 	trie := &Trie{db: db}
-	if (rootHash != common.Hash{}) {
-		fmt.Println("root", rootHash)
+	if rootHash != common.EmptyHash {
 		rootNode, err := trie.loadNode(rootHash[:])
 		if err != nil {
 			return nil, err

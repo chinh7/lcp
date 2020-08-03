@@ -3,6 +3,7 @@ package consensus
 import (
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/QuoineFinancial/liquid-chain/common"
@@ -33,7 +34,9 @@ type App struct {
 
 // NewApp initializes a new app
 func NewApp(dbDir string, gasContractAddress string) *App {
-	fmt.Println("Đang new app")
+	if _, err := os.Stat(dbDir); os.IsNotExist(err) {
+		os.Mkdir(dbDir, os.ModePerm)
+	}
 	app := &App{
 		BlockDB:            db.NewRocksDB(filepath.Join(dbDir, "block.db")),
 		StateDB:            db.NewRocksDB(filepath.Join(dbDir, "state.db")),
@@ -64,10 +67,14 @@ func (app *App) BeginBlock(req abciTypes.RequestBeginBlock) abciTypes.ResponseBe
 	var previousBlockHash common.Hash
 	copy(previousBlockHash[:], req.Header.AppHash)
 
-	previousBlock := crypto.MustDecodeBlock(app.BlockDB.Get(previousBlockHash[:]))
-	app.LoadState(previousBlock.Header)
+	if previousBlockHash == common.EmptyHash {
+		app.LoadState(&crypto.GenesisBlock)
+	} else {
+		rawBlock := app.BlockDB.Get(previousBlockHash[:])
+		previousBlock := crypto.MustDecodeBlock(rawBlock)
+		app.LoadState(previousBlock.Header)
+	}
 	app.block = crypto.NewEmptyBlock(previousBlockHash, uint64(req.Header.GetHeight()), req.Header.GetTime())
-
 	return abciTypes.ResponseBeginBlock{}
 }
 

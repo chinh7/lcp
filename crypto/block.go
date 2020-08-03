@@ -13,9 +13,9 @@ import (
 var GenesisBlock = BlockHeader{
 	Height:          0,
 	Time:            time.Unix(0, 0),
-	Parent:          common.Hash{},
-	StateRoot:       common.Hash{},
-	TransactionRoot: common.Hash{},
+	Parent:          common.EmptyHash,
+	StateRoot:       common.EmptyHash,
+	TransactionRoot: common.EmptyHash,
 }
 
 // BlockHeader contains basic info and root hash of storage, transactions and receipts
@@ -52,7 +52,7 @@ func NewEmptyBlock(parent common.Hash, height uint64, blockTime time.Time) *Bloc
 
 // Encode returns bytes array of block
 func (block *Block) Encode() ([]byte, error) {
-	return rlp.EncodeToBytes(block.Header)
+	return rlp.EncodeToBytes(block)
 }
 
 // DecodeBlock returns block from encoded byte array
