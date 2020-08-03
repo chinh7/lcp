@@ -33,6 +33,7 @@ type App struct {
 
 // NewApp initializes a new app
 func NewApp(dbDir string, gasContractAddress string) *App {
+	fmt.Println("Đang new app")
 	app := &App{
 		BlockDB:            db.NewRocksDB(filepath.Join(dbDir, "block.db")),
 		StateDB:            db.NewRocksDB(filepath.Join(dbDir, "state.db")),

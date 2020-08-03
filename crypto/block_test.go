@@ -26,14 +26,14 @@ func TestBlock_Hash(t *testing.T) {
 				TransactionRoot: common.HexToHash("3e2e21d19f5c3491ea8d5416b44256c401596b184638e63d8ac34f073a686544"),
 			},
 		},
-		want: common.HexToHash("6b3aa16d238cbd342434d56c344cbd32ac4d4232522d30548921ff4e748c3f79"),
+		want: common.HexToHash("145eb771aa5c5f66132971083bcc5a2db139d83fa6b4ebf441f446c8b3ee0bef"),
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			block := &Block{
 				Header: tt.fields.header,
 			}
-			if got := block.Hash(); !reflect.DeepEqual(got, tt.want) {
+			if got := block.Header.Hash(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Block.Hash() = %v, want %v", got, tt.want)
 			}
 		})

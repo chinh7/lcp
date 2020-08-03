@@ -1,13 +1,8 @@
 package storage
 
 import (
-	"encoding/hex"
 	"net/http"
 
-	"github.com/QuoineFinancial/liquid-chain/abi"
-	"github.com/QuoineFinancial/liquid-chain/api/models"
-	"github.com/QuoineFinancial/liquid-chain/common"
-	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/storage"
 )
 
@@ -18,40 +13,11 @@ type GetAccountParams struct {
 
 // GetAccountResult is result of GetAccount
 type GetAccountResult struct {
-	Account *models.Account `json:"account"`
+	Account *storage.Account `json:"account"`
 }
 
 // GetAccount delivers transaction to blockchain
 func (service *Service) GetAccount(r *http.Request, params *GetAccountParams, result *GetAccountResult) error {
-	status, _ := service.tAPI.Status()
-	appHash := common.BytesToHash(status.SyncInfo.LatestAppHash)
-	state, err := storage.New(appHash, service.database)
-	if err != nil {
-		return err
-	}
-
-	address, err := crypto.AddressFromString(params.Address)
-	if err != nil {
-		return err
-	}
-
-	account, err := state.GetAccount(address)
-	if err != nil {
-		return err
-	}
-
-	var contract *abi.Contract
-	if len(account.ContractHash) > 0 {
-		contract, err = account.GetContract()
-		if err != nil {
-			return err
-		}
-	}
-
-	result.Account = &models.Account{
-		Nonce:        account.Nonce,
-		ContractHash: hex.EncodeToString(account.ContractHash),
-		Contract:     contract,
-	}
+	// TODO: Add GetAccount API
 	return nil
 }

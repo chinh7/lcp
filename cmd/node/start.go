@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/cmd/tendermint/commands"
 	"github.com/tendermint/tendermint/config"
-	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
+	tmFlags "github.com/tendermint/tendermint/libs/cli/flags"
 	"github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
 	tmNode "github.com/tendermint/tendermint/node"
@@ -71,7 +71,7 @@ func (node *LiquidNode) parseConfig() (*config.Config, error) {
 
 func (node *LiquidNode) startTendermintNode(conf *config.Config) error {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-	logger, err := tmflags.ParseLogLevel(conf.LogLevel, logger, config.DefaultLogLevel())
+	logger, err := tmFlags.ParseLogLevel(conf.LogLevel, logger, config.DefaultLogLevel())
 	if err != nil {
 		return err
 	}
@@ -95,18 +95,18 @@ func (node *LiquidNode) startTendermintNode(conf *config.Config) error {
 }
 
 func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
-	err := node.startTendermintNode(conf)
-	if err != nil {
+	if err := node.startTendermintNode(conf); err != nil {
 		return err
 	}
 
 	if apiFlag {
-		node.vertexApi = api.NewAPI(":5555", api.Config{
+		fmt.Println("API")
+		node.vertexAPI = api.NewAPI(":5555", api.Config{
 			HomeDir: node.rootDir,
 			NodeURL: "tcp://localhost:26657",
 			App:     node.app,
 		})
-		err := node.vertexApi.Serve()
+		err := node.vertexAPI.Serve()
 		if err != nil {
 			return err
 		}
@@ -116,8 +116,8 @@ func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
 }
 
 func (node *LiquidNode) stopNode() {
-	if node.vertexApi != nil {
-		node.vertexApi.Close()
+	if node.vertexAPI != nil {
+		node.vertexAPI.Close()
 	}
 
 	if node.tmNode.IsRunning() {

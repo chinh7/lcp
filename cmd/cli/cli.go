@@ -78,7 +78,7 @@ func deploy(cmd *cobra.Command, args []string) {
 		GasLimit: gas,
 		GasPrice: price,
 	}
-	dataToSign := crypto.GetSigningHash(tx)
+	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign[:])
 
 	if rawTx, err := tx.Serialize(); err != nil {
@@ -112,7 +112,7 @@ func invoke(cmd *cobra.Command, args []string) {
 		GasLimit: gas,
 		GasPrice: price,
 	}
-	dataToSign := crypto.GetSigningHash(tx)
+	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign[:])
 
 	if rawTx, err := tx.Serialize(); err != nil {

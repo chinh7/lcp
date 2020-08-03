@@ -37,11 +37,10 @@ func Encode(params []*Parameter, values []interface{}) ([]byte, error) {
 	return result, nil
 }
 
-// DecodeToBytes returns uint64 array compatible with VM
-func DecodeToBytes(params []*Parameter, bytes []byte) ([][]byte, error) {
+// DecodeBytes returns uint64 array compatible with VM
+func DecodeBytes(params []*Parameter, bytes []byte) ([][]byte, error) {
 	var decoded []interface{}
-	err := rlp.DecodeBytes(bytes, &decoded)
-	if err != nil {
+	if err := rlp.DecodeBytes(bytes, &decoded); err != nil {
 		return nil, err
 	}
 
@@ -62,8 +61,8 @@ func DecodeToBytes(params []*Parameter, bytes []byte) ([][]byte, error) {
 	return result, nil
 }
 
-// EncodeFromBytes encodes arguments in byte format - an inverse of DecodeToBytes
-func EncodeFromBytes(params []*Parameter, bytes [][]byte) ([]byte, error) {
+// EncodeToBytes encodes arguments in byte format - an inverse of DecodeToBytes
+func EncodeToBytes(params []*Parameter, bytes [][]byte) ([]byte, error) {
 	var rlpCompatibleArgs []interface{}
 
 	for index, param := range params {
@@ -88,10 +87,5 @@ func EncodeFromBytes(params []*Parameter, bytes [][]byte) ([]byte, error) {
 			rlpCompatibleArgs = append(rlpCompatibleArgs, bytes[index])
 		}
 	}
-	result, err := rlp.EncodeToBytes(rlpCompatibleArgs)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return rlp.EncodeToBytes(rlpCompatibleArgs)
 }

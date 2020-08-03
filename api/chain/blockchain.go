@@ -19,12 +19,5 @@ type BlockchainResult struct {
 
 // GetBlockchain return the block by height
 func (service *Service) GetBlockchain(r *http.Request, params *BlockchainParams, result *BlockchainResult) error {
-	tBlockchain, err := service.tAPI.BlockchainInfo(params.Min, params.Max)
-	if err != nil {
-		return err
-	}
-	for _, blockMeta := range tBlockchain.BlockMetas {
-		result.Blocks = append(result.Blocks, service.parseBlockMeta(blockMeta))
-	}
 	return nil
 }

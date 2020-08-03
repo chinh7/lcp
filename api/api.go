@@ -12,7 +12,7 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/api/chain"
 	"github.com/QuoineFinancial/liquid-chain/api/resource"
 	"github.com/QuoineFinancial/liquid-chain/api/storage"
-	"github.com/QuoineFinancial/liquid-chain/db"
+	"github.com/QuoineFinancial/liquid-chain/consensus"
 )
 
 // API contains all info to serve an api server
@@ -23,23 +23,23 @@ type API struct {
 	server *rpc.Server
 	Router *mux.Router
 
-	tmAPI    resource.TendermintAPI
-	database db.Database
+	tmAPI resource.TendermintAPI
+	app   *consensus.App
 }
 
 // Config to modify the API
 type Config struct {
 	HomeDir string
 	NodeURL string
-	DB      db.Database
+	App     *consensus.App
 }
 
 // NewAPI return an new instance of API
 func NewAPI(url string, config Config) *API {
 	api := &API{
-		url:      url,
-		config:   config,
-		database: config.DB,
+		url:    url,
+		config: config,
+		app:    config.App,
 	}
 	api.setupExternalAPIs()
 	api.setupServer()
@@ -76,11 +76,11 @@ func (api *API) registerServices() {
 	if api.server == nil {
 		panic("api.registerServices call without api.server")
 	}
-	err := api.server.RegisterService(chain.NewService(api.tmAPI, api.database), "chain")
+	err := api.server.RegisterService(chain.NewService(api.tmAPI, api.app), "chain")
 	if err != nil {
 		panic(err)
 	}
-	err = api.server.RegisterService(storage.NewService(api.tmAPI, api.database), "storage")
+	err = api.server.RegisterService(storage.NewService(api.tmAPI, api.app), "storage")
 	if err != nil {
 		panic(err)
 	}
@@ -109,7 +109,7 @@ func (api *API) Serve() error {
 	return err
 }
 
-// This will immediately stop the server without waiting for any active connection to complete
+// Close will immediately stop the server without waiting for any active connection to complete
 // For gracefully shutdown please implement another function and use Server.Shutdown()
 func (api *API) Close() {
 	log.Println("Closing server")
