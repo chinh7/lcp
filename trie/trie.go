@@ -21,6 +21,7 @@ func New(rootHash common.Hash, db db.Database) (*Trie, error) {
 	}
 	trie := &Trie{db: db}
 	if (rootHash != common.Hash{}) {
+		fmt.Println("root", rootHash)
 		rootNode, err := trie.loadNode(rootHash[:])
 		if err != nil {
 			return nil, err

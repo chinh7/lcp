@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
-	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/storage"
@@ -24,7 +23,7 @@ const otherBalance = uint64(10000)
 
 func setup() *Token {
 	db := db.NewMemoryDB()
-	state, err := storage.New(common.Hash{}, db)
+	state, err := storage.NewState(&crypto.GenesisBlock, db)
 	if err != nil {
 		panic(err)
 	}
@@ -111,8 +110,8 @@ func TestTransferOK(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	if len(events) != 1 || events[0].Name != "Transfer" {
-		t.Errorf("Expect %v transfer event, got %v", 0, len(events))
+	if len(events) != 1 {
+		t.Errorf("Expect %v transfer event, got %v", 1, len(events))
 	}
 	ret, err := token.GetBalance(caller)
 	if ret != otherBalance-amount {

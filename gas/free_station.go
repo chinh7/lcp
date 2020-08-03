@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/QuoineFinancial/liquid-chain/event"
 )
 
 // FreeStation provide a free gas station
@@ -19,7 +18,7 @@ func (station *FreeStation) Sufficient(addr crypto.Address, gas uint64) bool {
 }
 
 // Burn gas, do nothing
-func (station *FreeStation) Burn(addr crypto.Address, gas uint64) []event.Event {
+func (station *FreeStation) Burn(addr crypto.Address, gas uint64) []*crypto.TxEvent {
 	return nil
 }
 

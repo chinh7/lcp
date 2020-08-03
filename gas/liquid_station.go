@@ -2,7 +2,6 @@ package gas
 
 import (
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/QuoineFinancial/liquid-chain/event"
 )
 
 const minimumGasPrice = uint32(18)
@@ -25,7 +24,7 @@ func (station *LiquidStation) Sufficient(addr crypto.Address, fee uint64) bool {
 }
 
 // Burn gas
-func (station *LiquidStation) Burn(addr crypto.Address, fee uint64) []event.Event {
+func (station *LiquidStation) Burn(addr crypto.Address, fee uint64) []*crypto.TxEvent {
 	token := station.app.GetGasContractToken()
 	// Move to gas owner
 	if fee > 0 {

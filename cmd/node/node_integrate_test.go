@@ -74,7 +74,7 @@ func (ts *testServer) stopNode() {
 }
 
 func createDeployTx(codePath string, headerPath string, initFuncName string, params []string) string {
-	serializedTxData, err := util.BuildDeployTxData(codePath, headerPath, initFuncName, params)
+	serializedTxData, err := util.BuildDeployTxPayload(codePath, headerPath, initFuncName, params)
 	if err != nil {
 		panic(err)
 	}

@@ -10,7 +10,6 @@ import (
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/abi"
-	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/gas"
@@ -39,8 +38,10 @@ func TestEngineIgnite(t *testing.T) {
 	mathAddress, _ := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
 	utilAddress, _ := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
 	database := db.NewMemoryDB()
-	state, _ := storage.New(common.Hash{}, database)
-	state.BlockInfo = &storage.BlockInfo{Height: 1, Time: time.Unix(1578905663, 0)}
+	state, _ := storage.NewState(&crypto.BlockHeader{
+		Height: 1,
+		Time:   time.Unix(1578905663, 0),
+	}, database)
 
 	tests := []struct {
 		name          string

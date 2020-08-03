@@ -20,7 +20,7 @@ import (
 )
 
 func (node *LiquidNode) newTendermintNode(config *config.Config, logger log.Logger) (*tmNode.Node, error) {
-	node.app = consensus.NewApp(config.Moniker, config.DBDir(), node.gasContractAddress)
+	node.app = consensus.NewApp(config.DBDir(), node.gasContractAddress)
 	nodeKey, err := p2p.LoadOrGenNodeKey(config.NodeKeyFile())
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
 		node.vertexApi = api.NewAPI(":5555", api.Config{
 			HomeDir: node.rootDir,
 			NodeURL: "tcp://localhost:26657",
-			DB:      node.app.StateDB,
+			App:     node.app,
 		})
 		err := node.vertexApi.Serve()
 		if err != nil {

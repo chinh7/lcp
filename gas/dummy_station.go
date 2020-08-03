@@ -2,7 +2,6 @@ package gas
 
 import (
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/QuoineFinancial/liquid-chain/event"
 )
 
 // DummyStation provide a dummy gas station only for testing purpose
@@ -17,7 +16,7 @@ func (station *DummyStation) Sufficient(addr crypto.Address, gas uint64) bool {
 }
 
 // Burn gas, do nothing
-func (station *DummyStation) Burn(addr crypto.Address, gas uint64) []event.Event {
+func (station *DummyStation) Burn(addr crypto.Address, gas uint64) []*crypto.TxEvent {
 	return nil
 }
 

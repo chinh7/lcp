@@ -6,8 +6,10 @@ import (
 	"encoding/binary"
 	"log"
 
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/crc16"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -114,4 +116,12 @@ func decodeAddressBytes(expected byte, raw []byte) ([]byte, error) {
 		return nil, err
 	}
 	return payload, nil
+}
+
+// NewDeploymentAddress returns new contract deployment address
+func NewDeploymentAddress(senderAddress Address, senderNonce uint64) Address {
+	senderBytes, _ := rlp.EncodeToBytes([]interface{}{senderAddress, senderNonce})
+	res := blake2b.Sum256(senderBytes)
+	address := AddressFromPubKey(res[:])
+	return address
 }

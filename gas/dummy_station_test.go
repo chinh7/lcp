@@ -8,7 +8,6 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/QuoineFinancial/liquid-chain/event"
 )
 
 func TestDummyStation_Sufficient(t *testing.T) {
@@ -42,7 +41,7 @@ func TestDummyStation_Burn(t *testing.T) {
 	}
 	pub, _, _ := ed25519.GenerateKey(cryptoRand.Reader)
 	addr := crypto.AddressFromPubKey(pub)
-	var want []event.Event
+	var want []*crypto.TxEvent
 	if got := station.Burn(addr, uint64(0)); !reflect.DeepEqual(got, want) {
 		t.Errorf("DummyStation.Burn() = %v, want %v", got, want)
 	}

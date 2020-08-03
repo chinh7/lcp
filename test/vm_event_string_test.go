@@ -1,13 +1,11 @@
 package test
 
 import (
-	"encoding/hex"
 	"log"
 	"testing"
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/abi"
-	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/engine"
@@ -22,7 +20,7 @@ func TestVMEvent(t *testing.T) {
 	contractAddress, _ := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
 
 	database := db.NewMemoryDB()
-	state, _ := storage.New(common.Hash{}, database)
+	state, _ := storage.NewState(&crypto.GenesisBlock, database)
 
 	accountState, _ := state.CreateAccount(caller, contractAddress, contractBytes)
 	execEngine := engine.NewEngine(state, accountState, caller, &gas.FreePolicy{}, 0)
@@ -47,7 +45,10 @@ func TestVMEvent(t *testing.T) {
 	}
 
 	expectedMessage := "Checking"
-	if message, _ := hex.DecodeString(string(events[0].ToTMEvent().Attributes[0].GetValue())); string(message) != expectedMessage {
-		t.Errorf("Expected message %v, got %v", expectedMessage, message)
+	event, _ := contract.Header.GetEvent("Say")
+	messages, _ := abi.DecodeBytes(event.Parameters, events[0].Data)
+
+	if message := messages[0]; string(message) != expectedMessage {
+		t.Errorf("Expected message %v, got %v", expectedMessage, string(message))
 	}
 }
