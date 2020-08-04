@@ -1,0 +1,221 @@
+package consensus
+
+import (
+	"crypto/ed25519"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"math/rand"
+	"os"
+	"strconv"
+	"testing"
+
+	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/gas"
+	"github.com/QuoineFinancial/liquid-chain/util"
+)
+
+type TestResource struct {
+	app   *App
+	dbDir string
+}
+
+func newTestResource() *TestResource {
+	dbDir := "./execution_testdata/db/test_" + strconv.Itoa(rand.Intn(10000))
+	err := os.MkdirAll(dbDir, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+	app := NewApp(dbDir, "")
+	app.LoadState(&crypto.GenesisBlock)
+	return &TestResource{
+		app:   app,
+		dbDir: dbDir,
+	}
+}
+
+func (tr *TestResource) cleanData() {
+	err := os.RemoveAll(tr.dbDir)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestApplyTx(t *testing.T) {
+	tr := newTestResource()
+	defer tr.cleanData()
+
+	seed := make([]byte, 32)
+	rand.Read(seed)
+
+	// Setup deploy contract transaction
+	sender := crypto.TxSender{
+		Nonce:     uint64(0),
+		PublicKey: ed25519.NewKeyFromSeed(seed).Public().(ed25519.PublicKey),
+	}
+
+	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
+
+	data, err := util.BuildDeployTxPayload("./execution_testdata/contract.wasm", "./execution_testdata/contract-abi.json", InitFunctionName, []string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployTx := &crypto.Transaction{
+		Sender:   &sender,
+		Payload:  data,
+		Receiver: nil,
+		GasLimit: 0,
+		GasPrice: 0,
+	}
+
+	contractWithInitTxData, err := util.BuildDeployTxPayload("./execution_testdata/contract-with-init.wasm", "./execution_testdata/contract-with-init-abi.json", InitFunctionName, []string{"100"})
+	if err != nil {
+		panic(err)
+	}
+	deployWithInitTx := &crypto.Transaction{
+		Sender:   &sender,
+		Payload:  contractWithInitTxData,
+		Receiver: nil,
+		GasLimit: 100000,
+		GasPrice: 18,
+	}
+
+	// Setup result events after deploy contract
+	contractAddress := crypto.NewDeploymentAddress(senderAddress, sender.Nonce)
+
+	// Setup invoke contract transaction
+	sender2 := crypto.TxSender{Nonce: uint64(1)}
+	invokeData, err := util.BuildInvokeTxData("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
+	if err != nil {
+		panic(err)
+	}
+	invokeTx := &crypto.Transaction{
+		Sender:   &sender2,
+		Receiver: &contractAddress,
+		Payload:  invokeData,
+		GasLimit: 0,
+		GasPrice: 0,
+	}
+
+	// Setup falsy tx to trigger reverse
+	sender3 := crypto.TxSender{Nonce: uint64(2)}
+	invalidInvokePayload, err := util.BuildInvokeTxData("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
+	if err != nil {
+		panic(err)
+	}
+
+	nonExistedPublicKey, _ := hex.DecodeString("1234567812345678")
+	invalidContractAddress := crypto.AddressFromPubKey(nonExistedPublicKey)
+	invalidInvokeTx := &crypto.Transaction{
+		Sender:   &sender3,
+		Receiver: &invalidContractAddress,
+		Payload:  invalidInvokePayload,
+		GasLimit: 0,
+		GasPrice: 0,
+	}
+
+	type args struct {
+		app        *App
+		tx         *crypto.Transaction
+		gasStation gas.Station
+	}
+	tests := []struct {
+		name       string
+		args       args
+		result     uint64
+		receiptErr error
+		events     []*crypto.TxEvent
+		gasUsed    uint64
+		wantErr    bool
+		wantErrObj error
+	}{
+		{
+			name:       "out of gas",
+			args:       args{tr.app, deployTx, gas.NewLiquidStation(tr.app, crypto.Address{})},
+			result:     0,
+			receiptErr: errors.New("Out of gas"),
+			events:     nil,
+			gasUsed:    11046,
+			wantErr:    false,
+			wantErrObj: nil,
+		},
+		{
+			name:       "valid deploy tx",
+			args:       args{tr.app, deployTx, gas.NewFreeStation(tr.app)},
+			result:     0,
+			receiptErr: nil,
+			events:     make([]*crypto.TxEvent, 0),
+			gasUsed:    0,
+			wantErr:    false,
+			wantErrObj: nil,
+		},
+		{
+			name:       "valid deploy init contract tx",
+			args:       args{tr.app, deployWithInitTx, gas.NewFreeStation(tr.app)},
+			result:     0,
+			receiptErr: nil,
+			events:     make([]*crypto.TxEvent, 0),
+			gasUsed:    0,
+			wantErr:    false,
+			wantErrObj: nil,
+		},
+		{
+			name:       "valid invoke tx",
+			args:       args{tr.app, invokeTx, gas.NewFreeStation(tr.app)},
+			result:     0,
+			receiptErr: nil,
+			events:     make([]*crypto.TxEvent, 0),
+			gasUsed:    0,
+			wantErr:    false,
+			wantErrObj: nil,
+		},
+		{
+			name:       "invalid invoke tx, reverse",
+			args:       args{tr.app, invalidInvokeTx, gas.NewFreeStation(tr.app)},
+			result:     0,
+			receiptErr: nil,
+			events:     make([]*crypto.TxEvent, 0),
+			gasUsed:    0,
+			wantErr:    true,
+			wantErrObj: errors.New("abi: cannot decode empty contract"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tr.app.SetGasStation(tt.args.gasStation)
+			receipt, err := tr.app.applyTransaction(tt.args.tx)
+			if tt.wantErr && (err == nil) {
+				t.Errorf("%s: applyTx() error = %v, wantErr %v", tt.name, err, tt.wantErrObj.Error())
+			}
+			if tt.wantErr && (err != nil) {
+				if tt.wantErrObj.Error() != err.Error() {
+					t.Errorf("%s: applyTx() error = %v, wantErr %v", tt.name, err, tt.wantErrObj.Error())
+				}
+			}
+
+			fmt.Println(tt.name, "result", receipt.Result, tt.result)
+			if receipt.Result != tt.result {
+				t.Errorf("%s: applyTx() result = %v, want %v", tt.name, receipt.Result, tt.result)
+			}
+
+			if tt.receiptErr != nil && receipt.Error != tt.receiptErr.Error() {
+				t.Errorf("%s: applyTx() receipt.Error = %v, want %v", tt.name, receipt.Error, tt.receiptErr.Error())
+			}
+
+			// if len(receipt.Events) == len(tt.events) {
+			// 	for i := range receipt.Events {
+			// 		if reflect.DeepEqual(*tt.events[i], *tt.events[i]) {
+			// 			t.Errorf("%s: applyTx() events = %v, want %v", tt.name, *receipt.Events[i], *tt.events[i])
+			// 		}
+			// 	}
+			// } else {
+			// 	t.Errorf("%s: applyTx() events = %v, want %v", tt.name, receipt.Events, tt.events)
+
+			// }
+
+			if uint64(receipt.GasUsed) != tt.gasUsed {
+				t.Errorf("%s: applyTx() gasUsed = %v, want %v", tt.name, receipt.GasUsed, tt.gasUsed)
+			}
+		})
+	}
+}

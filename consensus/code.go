@@ -1,6 +1,6 @@
 package consensus
 
-// Return codes for the examples
+// Return codes
 const (
 	CodeTypeOK                    uint32 = 0
 	CodeTypeEncodingError         uint32 = 1

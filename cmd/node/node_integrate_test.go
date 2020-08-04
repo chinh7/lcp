@@ -2,7 +2,6 @@ package node
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -16,7 +15,6 @@ import (
 	"golang.org/x/crypto/ed25519" // This is used in place of crypto/ed25519 to support older version of Go
 
 	"github.com/QuoineFinancial/liquid-chain/api"
-	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/util"
 	"github.com/google/go-cmp/cmp"
 	"github.com/tendermint/tendermint/config"
@@ -73,41 +71,6 @@ func (ts *testServer) stopNode() {
 	time.Sleep(500 * time.Millisecond)
 }
 
-func createDeployTx(codePath string, headerPath string, initFuncName string, params []string) string {
-	serializedTxData, err := util.BuildDeployTxData(codePath, headerPath, initFuncName, params)
-	if err != nil {
-		panic(err)
-	}
-	signer := crypto.TxSigner{Nonce: uint64(0)}
-	tx := &crypto.Tx{Data: serializedTxData, From: signer, GasLimit: 1, GasPrice: 1}
-
-	privKey := loadPrivateKey(SEED)
-	if err = tx.Sign(privKey); err != nil {
-		panic(err)
-	}
-	return base64.StdEncoding.EncodeToString(tx.Serialize())
-}
-
-func createInvokeTx(contractAddress string, nonce uint64, headerPath string, functionName string, params []string) string {
-	to, err := crypto.AddressFromString(contractAddress)
-	if err != nil {
-		panic(err)
-	}
-
-	serializedTxData, err := util.BuildInvokeTxData(headerPath, functionName, params)
-	if err != nil {
-		panic(err)
-	}
-	signer := crypto.TxSigner{Nonce: uint64(nonce)}
-	tx := &crypto.Tx{Data: serializedTxData, From: signer, To: to, GasLimit: 1, GasPrice: 1}
-
-	privKey := loadPrivateKey(SEED)
-	if err = tx.Sign(privKey); err != nil {
-		panic(err)
-	}
-	return base64.StdEncoding.EncodeToString(tx.Serialize())
-}
-
 func loadPrivateKey(SEED string) ed25519.PrivateKey {
 	hexSeed, err := hex.DecodeString(SEED)
 	if err != nil {
@@ -124,15 +87,15 @@ func TestBroadcastTx(t *testing.T) {
 	api := api.NewAPI(":5555", api.Config{
 		HomeDir: ts.node.rootDir,
 		NodeURL: "tcp://localhost:26657",
-		DB:      ts.node.app.StateDB,
 	})
 
 	router := api.Router
+	payload, _ := util.BuildDeployTxPayload("./testdata/contract.wasm", "./testdata/contract-abi.json", "init", []string{})
 	testcases := []testCase{
 		{
 			name:   "Broadcast",
 			method: "chain.Broadcast",
-			params: fmt.Sprintf(`{"rawTx": "%s"}`, createDeployTx("./testdata/contract.wasm", "./testdata/contract-abi.json", "init", []string{})),
+			params: fmt.Sprintf(`{"rawTx": "%s"}`, payload),
 			result: `{"jsonrpc":"2.0","result":{"hash":"53E3715C74FCFCC008AA9E2D7E99C51F109FFCC4EFBFA524D9BA6469EF4F5453","code":0,"log":""},"id":1}`,
 		},
 	}

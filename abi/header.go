@@ -2,6 +2,7 @@ package abi
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -33,9 +34,9 @@ type Function struct {
 
 // Header is model for function signature
 type Header struct {
-	Version   uint16               `json:"version"`
-	Functions map[string]*Function `json:"functions"`
-	Events    map[string]*Event    `json:"events"`
+	Version   uint16
+	Functions map[string]*Function
+	Events    map[string]*Event
 }
 
 // GetEvent return the event
@@ -131,6 +132,19 @@ func (h *Header) EncodeRLP(w io.Writer) error {
 		Version:   h.Version,
 		Functions: h.getFunctions(),
 		Events:    h.getEvents(),
+	})
+}
+
+// MarshalJSON returns json string of header
+func (h *Header) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Version   uint16      `json:"version"`
+		Events    []*Event    `json:"events"`
+		Functions []*Function `json:"functions"`
+	}{
+		Version:   h.Version,
+		Events:    h.getEvents(),
+		Functions: h.getFunctions(),
 	})
 }
 

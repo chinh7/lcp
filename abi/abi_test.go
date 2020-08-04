@@ -214,7 +214,7 @@ func TestBytesEncoding(t *testing.T) {
 	}
 
 	for index, table := range testTables {
-		decoded, err := DecodeToBytes(table.types, table.encoded)
+		decoded, err := DecodeBytes(table.types, table.encoded)
 		if err != nil {
 			t.Errorf("error: %s", err)
 		}
@@ -222,7 +222,7 @@ func TestBytesEncoding(t *testing.T) {
 			t.Errorf("Decoding case %v: decode of %v is incorrect, expected: %v, got: %v, diff: %v", index+1, table.encoded, table.decoded, decoded, diff)
 		}
 
-		encoded, err := EncodeFromBytes(table.types, decoded)
+		encoded, err := EncodeToBytes(table.types, decoded)
 		if err != nil {
 			panic(err)
 		}
@@ -244,7 +244,7 @@ func TestBytesEncoding(t *testing.T) {
 	}
 
 	for index, table := range testErrorsTables {
-		_, err := EncodeFromBytes(table.types, table.decoded)
+		_, err := EncodeToBytes(table.types, table.decoded)
 		if err == nil {
 			t.Errorf("expecting error at case: %v", index)
 		}

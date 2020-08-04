@@ -1,1 +1,25 @@
-{"version":1,"events":[],"functions":[{"name":"mean","parameters":[{"is_array":true,"type":"int32"}]},{"name":"sum_of_squares","parameters":[{"is_array":true,"type":"int32"}]},{"name":"square_root","parameters":[{"is_array":false,"type":"int32"}]},{"name":"address_xor","parameters":[{"is_array":false,"type":"address"}]}]}
+{
+  "version": 1,
+  "events": [],
+  "functions": [{
+    "name": "mean",
+    "parameters": [{
+      "type": "int32[]"
+    }]
+  }, {
+    "name": "sum_of_squares",
+    "parameters": [{
+      "type": "int32[]"
+    }]
+  }, {
+    "name": "square_root",
+    "parameters": [{
+      "type": "int32"
+    }]
+  }, {
+    "name": "address_xor",
+    "parameters": [{
+      "type": "address"
+    }]
+  }]
+}

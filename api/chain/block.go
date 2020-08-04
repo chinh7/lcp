@@ -3,25 +3,26 @@ package chain
 import (
 	"net/http"
 
-	"github.com/QuoineFinancial/liquid-chain/api/models"
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
+	"github.com/QuoineFinancial/liquid-chain/consensus"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
 // BlockParams is params of ChainService
 type BlockParams struct {
-	Height int64 `json:"height"`
 }
 
 // BlockResult is response of GetBlock
 type BlockResult struct {
-	Block *models.Block `json:"block"`
+	Block *crypto.Block `json:"block"`
 }
 
-// GetBlock return the block by height
-func (service *Service) GetBlock(r *http.Request, params *BlockParams, result *BlockResult) error {
-	tBlock, err := service.tAPI.Block(&params.Height)
-	if err != nil {
-		return err
-	}
-	result.Block = service.parseBlock(tBlock)
+// GetLatestBlock return the block by height
+func (service *Service) GetLatestBlock(r *http.Request, params *BlockParams, result *BlockResult) error {
+	lastBlockHash := service.app.InfoDB.Get([]byte(consensus.LastBlockHashKey))
+	rawBlock := service.app.BlockDB.Get(lastBlockHash)
+	var block crypto.Block
+	rlp.DecodeBytes(rawBlock, &block)
+	result.Block = &block
 	return nil
 }

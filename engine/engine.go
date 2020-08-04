@@ -7,7 +7,6 @@ import (
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/QuoineFinancial/liquid-chain/event"
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/vertexdlt/vertexvm/vm"
@@ -32,10 +31,10 @@ type Engine struct {
 	gasPolicy     gas.Policy
 	callDepth     int
 	memAggr       int
-	events        []event.Event
+	events        []*crypto.TxEvent
 	methodLookup  map[string]*foreignMethod
 	ptrArgSizeMap map[int]int
-	gas           *vm.Gas
+	gas           *vertex.Gas
 	parent        *Engine
 }
 
@@ -43,10 +42,10 @@ type Engine struct {
 func NewEngine(state *storage.State, account *storage.Account, caller crypto.Address, gasPolicy gas.Policy, gasLimit uint64) *Engine {
 	return &Engine{
 		state:         state,
-		account:       account,
 		caller:        caller,
+		account:       account,
 		gasPolicy:     gasPolicy,
-		events:        []event.Event{},
+		events:        []*crypto.TxEvent{},
 		methodLookup:  make(map[string]*foreignMethod),
 		ptrArgSizeMap: make(map[int]int),
 		gas:           &vm.Gas{Limit: gasLimit},
@@ -55,7 +54,7 @@ func NewEngine(state *storage.State, account *storage.Account, caller crypto.Add
 }
 
 // GetEvents return the event of engine
-func (engine *Engine) GetEvents() []event.Event {
+func (engine *Engine) GetEvents() []*crypto.TxEvent {
 	return engine.events
 }
 
@@ -64,14 +63,14 @@ func (engine *Engine) GetGasUsed() uint64 {
 	return engine.gas.Used
 }
 
-// NewChildEngine share with parent state except caller is contract itself
-func (engine *Engine) NewChildEngine(account *storage.Account) *Engine {
+// newChildEngine share with parent state except caller is contract itself
+func (engine *Engine) newChildEngine(account *storage.Account) *Engine {
 	return &Engine{
 		account:       account,
 		state:         engine.state,
 		caller:        engine.account.GetAddress(),
 		gasPolicy:     engine.gasPolicy,
-		events:        []event.Event{},
+		events:        []*crypto.TxEvent{},
 		methodLookup:  make(map[string]*foreignMethod),
 		ptrArgSizeMap: make(map[int]int),
 		gas:           engine.gas,
@@ -102,7 +101,7 @@ func (engine *Engine) Ignite(method string, methodArgs []byte) (uint64, error) {
 		return 0, err
 	}
 
-	decodedBytes, err := abi.DecodeToBytes(function.Parameters, methodArgs)
+	decodedBytes, err := abi.DecodeBytes(function.Parameters, methodArgs)
 	if err != nil {
 		return 0, err
 	}
@@ -120,7 +119,7 @@ func (engine *Engine) setStats(callDepth, memAggr int) {
 	engine.memAggr = memAggr
 }
 
-func (engine *Engine) loadArguments(vm *vm.VM, byteArgs [][]byte, params []*abi.Parameter, offset int) ([]uint64, error) {
+func (engine *Engine) loadArguments(vm *vertex.VM, byteArgs [][]byte, params []*abi.Parameter, offset int) ([]uint64, error) {
 	var args = make([]uint64, len(byteArgs))
 	byteSize := 0
 	for _, bytes := range byteArgs {
@@ -160,7 +159,7 @@ func (engine *Engine) ptrArgSizeGet(ptr int) (int, error) {
 	return size, nil
 }
 
-func (engine *Engine) pushEvent(event event.Event) {
+func (engine *Engine) pushEvent(event *crypto.TxEvent) {
 	if engine.parent != nil {
 		engine.parent.pushEvent(event)
 	} else {
