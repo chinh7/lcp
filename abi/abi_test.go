@@ -231,7 +231,7 @@ func TestBytesEncoding(t *testing.T) {
 		}
 	}
 
-	testErrorsTables := []struct {
+	testEncodeFromBytesErrorsTables := []struct {
 		types   []*Parameter
 		decoded [][]byte
 		err     error
@@ -243,8 +243,30 @@ func TestBytesEncoding(t *testing.T) {
 		},
 	}
 
-	for index, table := range testErrorsTables {
+	for index, table := range testEncodeFromBytesErrorsTables {
 		_, err := EncodeFromBytes(table.types, table.decoded)
+		if err == nil {
+			t.Errorf("expecting error at case: %v", index)
+		}
+		if err.Error() != table.err.Error() {
+			t.Errorf("Encoding case %v: error is incorrect, expecting error: %v, got: %v.", index+1, table.err, err)
+		}
+	}
+
+	testDecodeToBytesErrorsTables := []struct {
+		types   []*Parameter
+		encoded []byte
+		err     error
+	}{
+		{
+			types:   parameters1,
+			encoded: []byte{242, 88, 130, 213, 168, 132, 54, 126, 174, 198, 136, 26, 35, 156, 150, 103, 161, 151, 44, 88, 130, 225, 16, 132, 235, 121, 255, 255, 136, 84, 24, 251, 255, 255, 255, 255, 255, 132, 133, 5, 2, 70, 136, 81, 107, 154, 7, 43, 124, 80, 193},
+			err:     errors.New("Argument count mismatch, expecting: 11, got: 10"),
+		},
+	}
+
+	for index, table := range testDecodeToBytesErrorsTables {
+		_, err := DecodeToBytes(table.types, table.encoded)
 		if err == nil {
 			t.Errorf("expecting error at case: %v", index)
 		}
