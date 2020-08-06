@@ -114,8 +114,8 @@ func (t PrimitiveType) NewArgument(value interface{}) ([]byte, error) {
 }
 
 // NewArrayArgument returns a vm-compatible byte array from an interface of array
-func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
-	var parsedArgs [][]byte
+func (t PrimitiveType) NewArrayArgument(value interface{}) ([]byte, error) {
+	var parsedArgs []byte
 	switch t {
 	case Address:
 		parsed, ok := value.([]crypto.Address)
@@ -127,7 +127,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			parsedArgs = append(parsedArgs, arg)
+			parsedArgs = append(parsedArgs, arg...)
 		}
 	case Uint8:
 		parsed, ok := value.([]uint8)
@@ -139,7 +139,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			parsedArgs = append(parsedArgs, arg)
+			parsedArgs = append(parsedArgs, arg...)
 		}
 	case Uint16:
 		parsed, ok := value.([]uint16)
@@ -151,7 +151,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			parsedArgs = append(parsedArgs, arg)
+			parsedArgs = append(parsedArgs, arg...)
 		}
 	case Uint32:
 		parsed, ok := value.([]uint32)
@@ -163,7 +163,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			parsedArgs = append(parsedArgs, arg)
+			parsedArgs = append(parsedArgs, arg...)
 		}
 	case Uint64:
 		parsed, ok := value.([]uint64)
@@ -175,7 +175,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			parsedArgs = append(parsedArgs, arg)
+			parsedArgs = append(parsedArgs, arg...)
 		}
 	case Int8:
 		parsed, ok := value.([]int8)
@@ -187,7 +187,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			parsedArgs = append(parsedArgs, arg)
+			parsedArgs = append(parsedArgs, arg...)
 		}
 	case Int16:
 		parsed, ok := value.([]int16)
@@ -199,7 +199,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			parsedArgs = append(parsedArgs, arg)
+			parsedArgs = append(parsedArgs, arg...)
 		}
 	case Int32:
 		parsed, ok := value.([]int32)
@@ -211,7 +211,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			parsedArgs = append(parsedArgs, arg)
+			parsedArgs = append(parsedArgs, arg...)
 		}
 	case Int64:
 		parsed, ok := value.([]int64)
@@ -223,7 +223,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			parsedArgs = append(parsedArgs, arg)
+			parsedArgs = append(parsedArgs, arg...)
 		}
 	case Float32:
 		parsed, ok := value.([]float32)
@@ -235,7 +235,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			parsedArgs = append(parsedArgs, arg)
+			parsedArgs = append(parsedArgs, arg...)
 		}
 	case Float64:
 		parsed, ok := value.([]float64)
@@ -247,7 +247,7 @@ func (t PrimitiveType) NewArrayArgument(value interface{}) ([][]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			parsedArgs = append(parsedArgs, arg)
+			parsedArgs = append(parsedArgs, arg...)
 		}
 	default:
 		return nil, fmt.Errorf("not supported type: %s", t)
