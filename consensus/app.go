@@ -24,6 +24,7 @@ type App struct {
 	state *storage.State
 	block *crypto.Block
 
+	// TODO: replace InfoDB
 	InfoDB  db.Database
 	StateDB db.Database
 	BlockDB db.Database
@@ -154,8 +155,9 @@ func (app *App) DeliverTx(req abciTypes.RequestDeliverTx) abciTypes.ResponseDeli
 
 // Commit returns the state root of application storage. Called once all block processing is complete
 func (app *App) Commit() abciTypes.ResponseCommit {
-	app.block.Header.StateRoot = app.state.Commit()
-	app.block.Header.TransactionRoot = app.state.Commit()
+	stateRootHash, txRootHash := app.state.Commit()
+	app.block.Header.SetStateRoot(stateRootHash)
+	app.block.Header.SetTransactionRoot(txRootHash)
 	rawBlock, err := app.block.Encode()
 	if err != nil {
 		log.Fatal(err)
@@ -163,7 +165,7 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 	blockHash := app.block.Header.Hash()
 	app.BlockDB.Put(blockHash[:], rawBlock)
 	app.InfoDB.Put([]byte(LastBlockHashKey), blockHash[:])
-	return abciTypes.ResponseCommit{Data: blockHash[:]}
+	return abciTypes.ResponseCommit{Data: blockHash.Bytes()}
 }
 
 // SetGasStation active the gas station
@@ -180,12 +182,7 @@ func (app *App) GetGasContractToken() gas.Token {
 		}
 		contract, err := app.state.GetAccount(address)
 		if err != nil {
-			switch err {
-			case storage.ErrAccountNotExist:
-				return nil
-			default:
-				panic(err)
-			}
+			panic(err)
 		}
 		return token.NewToken(app.state, contract)
 	}

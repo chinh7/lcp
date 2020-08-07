@@ -1,7 +1,6 @@
 package test
 
 import (
-	"log"
 	"testing"
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
@@ -26,7 +25,6 @@ func TestVMEvent(t *testing.T) {
 	execEngine := engine.NewEngine(state, accountState, caller, &gas.FreePolicy{}, 0)
 
 	sayFunction, err := contract.Header.GetFunction("say")
-	log.Println(sayFunction)
 	if err != nil {
 		panic(err)
 	}

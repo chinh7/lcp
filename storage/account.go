@@ -24,7 +24,7 @@ type Account struct {
 
 // LoadAccount load the account from disk
 func (state *State) LoadAccount(address crypto.Address) (*Account, error) {
-	raw, err := state.accountTrie.Get(address[:])
+	raw, err := state.stateTrie.Get(address[:])
 	if err != nil {
 		return nil, err
 	}
@@ -49,9 +49,6 @@ func (state *State) GetAccount(address crypto.Address) (*Account, error) {
 		loadedAccount, err := state.LoadAccount(address)
 		if err != nil {
 			return nil, err
-		}
-		if loadedAccount == nil {
-			return nil, ErrAccountNotExist
 		}
 		state.accounts[address] = loadedAccount
 	}
