@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"errors"
 	"log"
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
@@ -16,13 +15,10 @@ type State struct {
 	db                db.Database
 	blockHeader       *crypto.BlockHeader
 	txTrie            *trie.Trie
+	stateTrie         *trie.Trie
 	accounts          map[crypto.Address]*Account
-	accountTrie       *trie.Trie
 	accountCheckpoint common.Hash
 }
-
-// ErrAccountNotExist returns when loadAccount returns nil
-var ErrAccountNotExist = errors.New("contract account not exist")
 
 // NewState returns a state database
 func NewState(blockHeader *crypto.BlockHeader, db db.Database) (*State, error) {
@@ -41,7 +37,7 @@ func NewState(blockHeader *crypto.BlockHeader, db db.Database) (*State, error) {
 		blockHeader:       blockHeader,
 		txTrie:            txTrie,
 		accounts:          make(map[crypto.Address]*Account),
-		accountTrie:       stateTrie,
+		stateTrie:         stateTrie,
 		accountCheckpoint: blockHeader.StateRoot,
 	}, nil
 }
@@ -64,23 +60,25 @@ func (state *State) Hash() common.Hash {
 
 		// Update account
 		raw, _ := rlp.EncodeToBytes(account)
-		if err = state.accountTrie.Update(account.address[:], raw); err != nil {
+		if err = state.stateTrie.Update(account.address[:], raw); err != nil {
 			panic(err)
 		}
 	}
-	return state.accountTrie.Hash()
+	return state.stateTrie.Hash()
 }
 
 // Commit stores all dirty Accounts to storage.trie
-func (state *State) Commit() common.Hash {
+func (state *State) Commit() (common.Hash, common.Hash) {
 	var err error
 	for _, account := range state.accounts {
 		if account == nil || !account.dirty {
 			continue
 		}
 
-		// Update contract
-		state.db.Put(account.ContractHash[:], account.contract)
+		if account.IsContract() {
+			// Update contract
+			state.db.Put(account.ContractHash[:], account.contract)
+		}
 
 		// Update account storage
 		if account.StorageHash, err = account.storage.Commit(); err != nil {
@@ -88,19 +86,28 @@ func (state *State) Commit() common.Hash {
 		}
 
 		// Update account
-		raw, _ := rlp.EncodeToBytes(account)
-		if err := state.accountTrie.Update(account.address[:], raw); err != nil {
+		raw, err := rlp.EncodeToBytes(account)
+		if err != nil {
+			panic(err)
+		}
+
+		if err := state.stateTrie.Update(account.address[:], raw); err != nil {
 			panic(err)
 		}
 
 		account.dirty = false
 	}
 
-	hash, err := state.accountTrie.Commit()
+	stateRootHash, err := state.stateTrie.Commit()
 	if err != nil {
 		log.Fatal(err)
 	}
-	return hash
+
+	txRootHash, err := state.txTrie.Commit()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return stateRootHash, txRootHash
 }
 
 // Revert state to last checkpoint
@@ -109,6 +116,6 @@ func (state *State) Revert() {
 	if err != nil {
 		panic(err)
 	}
-	state.accountTrie = t
+	state.stateTrie = t
 	state.accounts = make(map[crypto.Address]*Account)
 }

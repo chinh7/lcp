@@ -1,8 +1,6 @@
 package consensus
 
 import (
-	"fmt"
-
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/engine"
 )
@@ -13,10 +11,9 @@ const (
 )
 
 func (app *App) applyTransaction(tx *crypto.Transaction) (*crypto.TxReceipt, error) {
-	if tx.Receiver == nil {
+	if tx.Receiver == crypto.EmptyAddress {
 		return app.deployContract(tx)
 	}
-
 	return app.invokeContract(tx)
 }
 
@@ -35,10 +32,8 @@ func (app *App) deployContract(tx *crypto.Transaction) (*crypto.TxReceipt, error
 	// Create contract account
 	senderAddress := crypto.AddressFromPubKey(tx.Sender.PublicKey)
 	contractAddress := crypto.NewDeploymentAddress(senderAddress, tx.Sender.Nonce)
-
-	fmt.Println(senderAddress, contractAddress)
-	fmt.Println("state", app.state)
 	contractAccount, err := app.state.CreateAccount(senderAddress, contractAddress, tx.Payload.Contract)
+
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +52,12 @@ func (app *App) deployContract(tx *crypto.Transaction) (*crypto.TxReceipt, error
 	}
 
 	// Create account for creator and increase nonce by 1
-	app.increaseNonce(senderAddress)
-	receipt.Events = append(receipt.Events, app.gasStation.Burn(senderAddress, uint64(receipt.GasUsed)*uint64(tx.GasPrice))...)
+	if err := app.increaseNonce(senderAddress); err != nil {
+		return nil, err
+	}
+
+	gasEvents := app.gasStation.Burn(senderAddress, uint64(receipt.GasUsed)*uint64(tx.GasPrice))
+	receipt.Events = append(receipt.Events, gasEvents...)
 	return &receipt, nil
 }
 
@@ -66,7 +65,7 @@ func (app *App) invokeContract(tx *crypto.Transaction) (*crypto.TxReceipt, error
 	var receipt crypto.TxReceipt
 
 	// contract account not found is checked before apply tx
-	contractAccount, err := app.state.GetAccount(*tx.Receiver)
+	contractAccount, err := app.state.GetAccount(tx.Receiver)
 	if err != nil {
 		panic(err)
 	}
@@ -105,7 +104,9 @@ func (app *App) increaseNonce(address crypto.Address) error {
 	// Make sure account is created
 	if account == nil {
 		account, err = app.state.CreateAccount(address, address, nil)
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	account.SetNonce(account.Nonce + 1)

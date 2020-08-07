@@ -22,6 +22,9 @@ const (
 // Address crypto address
 type Address [AddressLength]byte
 
+// EmptyAddress is address to deploy tx
+var EmptyAddress = Address{}
+
 func (address *Address) setBytes(b []byte) {
 	if len(b) > len(address) {
 		b = b[len(b)-AddressLength:]

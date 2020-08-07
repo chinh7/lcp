@@ -85,7 +85,6 @@ func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
 	}
 
 	if apiFlag {
-		fmt.Println("API")
 		node.vertexAPI = api.NewAPI(":5555", api.Config{
 			HomeDir: node.rootDir,
 			NodeURL: "tcp://localhost:26657",

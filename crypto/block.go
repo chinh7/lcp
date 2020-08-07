@@ -33,6 +33,16 @@ type Block struct {
 	Transactions []*Transaction
 }
 
+// SetStateRoot set StateRoot of header
+func (blockHeader *BlockHeader) SetStateRoot(hash common.Hash) {
+	blockHeader.StateRoot = hash
+}
+
+// SetTransactionRoot set TransactionRoot of header
+func (blockHeader *BlockHeader) SetTransactionRoot(hash common.Hash) {
+	blockHeader.TransactionRoot = hash
+}
+
 // Hash returns blake2b hash of rlp encoding of block header
 func (blockHeader *BlockHeader) Hash() common.Hash {
 	encoded, _ := rlp.EncodeToBytes(blockHeader)

@@ -63,7 +63,7 @@ func TestApplyTx(t *testing.T) {
 	deployTx := &crypto.Transaction{
 		Sender:   &sender,
 		Payload:  data,
-		Receiver: nil,
+		Receiver: crypto.EmptyAddress,
 		GasLimit: 0,
 		GasPrice: 0,
 	}
@@ -75,7 +75,7 @@ func TestApplyTx(t *testing.T) {
 	deployWithInitTx := &crypto.Transaction{
 		Sender:   &sender,
 		Payload:  contractWithInitTxData,
-		Receiver: nil,
+		Receiver: crypto.EmptyAddress,
 		GasLimit: 100000,
 		GasPrice: 18,
 	}
@@ -91,7 +91,7 @@ func TestApplyTx(t *testing.T) {
 	}
 	invokeTx := &crypto.Transaction{
 		Sender:   &sender2,
-		Receiver: &contractAddress,
+		Receiver: contractAddress,
 		Payload:  invokeData,
 		GasLimit: 0,
 		GasPrice: 0,
@@ -108,7 +108,7 @@ func TestApplyTx(t *testing.T) {
 	invalidContractAddress := crypto.AddressFromPubKey(nonExistedPublicKey)
 	invalidInvokeTx := &crypto.Transaction{
 		Sender:   &sender3,
-		Receiver: &invalidContractAddress,
+		Receiver: invalidContractAddress,
 		Payload:  invalidInvokePayload,
 		GasLimit: 0,
 		GasPrice: 0,

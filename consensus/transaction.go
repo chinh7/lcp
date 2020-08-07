@@ -4,16 +4,13 @@ import (
 	"fmt"
 
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/QuoineFinancial/liquid-chain/storage"
 )
 
 func (app *App) validateTx(tx *crypto.Transaction) (uint32, error) {
 	nonce := uint64(0)
 	address := crypto.AddressFromPubKey(tx.Sender.PublicKey)
 	account, err := app.state.GetAccount(address)
-
-	// Ignore ErrAccountNotExist since to account can be nil
-	if err != nil && err != storage.ErrAccountNotExist {
+	if err != nil {
 		return CodeTypeUnknownError, err
 	}
 	if account != nil {
@@ -33,16 +30,11 @@ func (app *App) validateTx(tx *crypto.Transaction) (uint32, error) {
 	}
 
 	// Validate Non-existent contract invoke
-	if tx.Receiver != nil {
+	if tx.Receiver != crypto.EmptyAddress {
 		// invoke transaction
-		account, err := app.state.GetAccount(*tx.Receiver)
+		account, err := app.state.GetAccount(tx.Receiver)
 		if err != nil {
-			switch err {
-			case storage.ErrAccountNotExist:
-				return CodeTypeAccountNotExist, err
-			default:
-				return CodeTypeUnknownError, err
-			}
+			return CodeTypeUnknownError, err
 		}
 		if !account.IsContract() {
 			return CodeTypeNonContractAccount, fmt.Errorf("Invoke a non-contract account")

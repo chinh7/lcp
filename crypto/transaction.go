@@ -40,7 +40,7 @@ type TxPayload struct {
 type Transaction struct {
 	Version   uint16
 	Sender    *TxSender
-	Receiver  *Address
+	Receiver  Address
 	Payload   *TxPayload
 	GasPrice  uint32
 	GasLimit  uint32
@@ -49,7 +49,7 @@ type Transaction struct {
 }
 
 // Serialize returns bytes representation of transaction
-func (tx *Transaction) Serialize() ([]byte, error) {
+func (tx Transaction) Serialize() ([]byte, error) {
 	return rlp.EncodeToBytes(tx)
 }
 
@@ -59,7 +59,7 @@ func (tx *Transaction) Deserialize(raw []byte) error {
 }
 
 // Hash returns hash for storing transaction
-func (tx *Transaction) Hash() common.Hash {
+func (tx Transaction) Hash() common.Hash {
 	hash, _ := tx.Serialize()
 	return blake2b.Sum256(hash)
 }

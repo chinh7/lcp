@@ -74,9 +74,11 @@ func deploy(cmd *cobra.Command, args []string) {
 			Nonce:     uint64(nonce),
 			PublicKey: privateKey.Public().(ed25519.PublicKey),
 		},
-		Receiver: nil,
-		GasLimit: gas,
-		GasPrice: price,
+		Receiver:  crypto.EmptyAddress,
+		GasLimit:  gas,
+		GasPrice:  price,
+		Signature: nil,
+		Receipt:   &crypto.TxReceipt{},
 	}
 	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign[:])
@@ -108,9 +110,11 @@ func invoke(cmd *cobra.Command, args []string) {
 			Nonce:     uint64(nonce),
 			PublicKey: privateKey.Public().(ed25519.PublicKey),
 		},
-		Receiver: &receiver,
-		GasLimit: gas,
-		GasPrice: price,
+		Receiver:  receiver,
+		GasLimit:  gas,
+		GasPrice:  price,
+		Signature: nil,
+		Receipt:   &crypto.TxReceipt{},
 	}
 	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign[:])
