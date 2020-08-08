@@ -45,7 +45,7 @@ func (engine *Engine) handleEmitEvent(eventHeader *abi.Event, vm *vm.VM, args ..
 		}
 	}
 
-	values, err := abi.EncodeToBytes(eventHeader.Parameters, memBytes)
+	values, err := abi.EncodeFromBytes(eventHeader.Parameters, memBytes)
 	if err != nil {
 		return 0, err
 	}

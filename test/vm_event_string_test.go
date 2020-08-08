@@ -44,7 +44,7 @@ func TestVMEvent(t *testing.T) {
 
 	expectedMessage := "Checking"
 	event, _ := contract.Header.GetEvent("Say")
-	messages, _ := abi.DecodeBytes(event.Parameters, events[0].Data)
+	messages, _ := abi.DecodeToBytes(event.Parameters, events[0].Data)
 
 	if message := messages[0]; string(message) != expectedMessage {
 		t.Errorf("Expected message %v, got %v", expectedMessage, string(message))

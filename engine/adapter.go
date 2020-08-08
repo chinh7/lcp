@@ -167,7 +167,7 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 		values = append(values, bytes)
 
 	}
-	methodArgs, err := abi.EncodeToBytes(function.Parameters, values)
+	methodArgs, err := abi.EncodeFromBytes(function.Parameters, values)
 	if err != nil {
 		return 0, err
 	}

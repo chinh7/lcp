@@ -101,7 +101,7 @@ func (engine *Engine) Ignite(method string, methodArgs []byte) (uint64, error) {
 		return 0, err
 	}
 
-	decodedBytes, err := abi.DecodeBytes(function.Parameters, methodArgs)
+	decodedBytes, err := abi.DecodeToBytes(function.Parameters, methodArgs)
 	if err != nil {
 		return 0, err
 	}
