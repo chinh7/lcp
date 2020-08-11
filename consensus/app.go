@@ -21,6 +21,7 @@ import (
 type App struct {
 	abciTypes.BaseApplication
 
+	index *storage.IndexStorage
 	state *storage.State
 	block *crypto.Block
 
@@ -28,6 +29,7 @@ type App struct {
 	InfoDB  db.Database
 	StateDB db.Database
 	BlockDB db.Database
+	IndexDB db.Database
 
 	gasStation         gas.Station
 	gasContractAddress string
@@ -39,11 +41,14 @@ func NewApp(dbDir string, gasContractAddress string) *App {
 		os.Mkdir(dbDir, os.ModePerm)
 	}
 	app := &App{
-		BlockDB:            db.NewRocksDB(filepath.Join(dbDir, "block.db")),
-		StateDB:            db.NewRocksDB(filepath.Join(dbDir, "state.db")),
-		InfoDB:             db.NewRocksDB(filepath.Join(dbDir, "info.db")),
+		BlockDB: db.NewRocksDB(filepath.Join(dbDir, "block.db")),
+		StateDB: db.NewRocksDB(filepath.Join(dbDir, "state.db")),
+		InfoDB:  db.NewRocksDB(filepath.Join(dbDir, "info.db")),
+
+		IndexDB:            db.NewRocksDB(filepath.Join(dbDir, "index.db")),
 		gasContractAddress: gasContractAddress,
 	}
+	app.index = storage.NewIndexStorage(app.IndexDB)
 	app.SetGasStation(gas.NewFreeStation(app))
 	if err := app.loadLastBlock(); err == nil {
 		app.LoadState(app.block.Header)
@@ -165,6 +170,7 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 	blockHash := app.block.Header.Hash()
 	app.BlockDB.Put(blockHash[:], rawBlock)
 	app.InfoDB.Put([]byte(LastBlockHashKey), blockHash[:])
+	app.index.StoreBlockIndexes(app.block)
 	return abciTypes.ResponseCommit{Data: blockHash.Bytes()}
 }
 
