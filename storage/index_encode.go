@@ -22,7 +22,7 @@ func (index *IndexStorage) encodeTxHashToHeightKey(hash common.Hash) []byte {
 }
 
 func (index *IndexStorage) encodeHeightToBlockHashKey(height uint64) []byte {
-	var key []byte
+	key := make([]byte, 8)
 	binary.LittleEndian.PutUint64(key, height)
 	return index.encodeKey(HeightToBlockHashPrefix, key)
 }

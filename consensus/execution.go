@@ -64,10 +64,15 @@ func (app *App) deployContract(tx *crypto.Transaction) (*crypto.TxReceipt, error
 func (app *App) invokeContract(tx *crypto.Transaction) (*crypto.TxReceipt, error) {
 	var receipt crypto.TxReceipt
 
-	// contract account not found is checked before apply tx
 	contractAccount, err := app.state.GetAccount(tx.Receiver)
 	if err != nil {
 		panic(err)
+	}
+
+	if contractAccount == nil {
+		receipt.Success = false
+		receipt.Error = "Invoke nil contract"
+		return &receipt, nil
 	}
 
 	policy := app.gasStation.GetPolicy()

@@ -1,15 +1,17 @@
 package consensus
 
 import (
+	"bytes"
 	"crypto/ed25519"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"math/rand"
 	"os"
 	"strconv"
 	"testing"
 
+	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/util"
@@ -84,18 +86,22 @@ func TestApplyTx(t *testing.T) {
 	contractAddress := crypto.NewDeploymentAddress(senderAddress, sender.Nonce)
 
 	// Setup invoke contract transaction
-	sender2 := crypto.TxSender{Nonce: uint64(1)}
 	invokeData, err := util.BuildInvokeTxData("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
 	if err != nil {
 		panic(err)
 	}
 	invokeTx := &crypto.Transaction{
-		Sender:   &sender2,
+		Sender:   &sender,
 		Receiver: contractAddress,
 		Payload:  invokeData,
 		GasLimit: 0,
 		GasPrice: 0,
 	}
+	contractHeader, _ := abi.LoadHeaderFromFile("./execution_testdata/contract-abi.json")
+	mintEventHeader, _ := contractHeader.GetEvent("Mint")
+	mintAmount := make([]byte, abi.Uint64.GetMemorySize())
+	binary.LittleEndian.PutUint64(mintAmount, 1000)
+	mintEventData, _ := abi.EncodeFromBytes(mintEventHeader.Parameters, [][]byte{senderAddress[:], mintAmount})
 
 	// Setup falsy tx to trigger reverse
 	sender3 := crypto.TxSender{Nonce: uint64(2)}
@@ -103,7 +109,6 @@ func TestApplyTx(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-
 	nonExistedPublicKey, _ := hex.DecodeString("1234567812345678")
 	invalidContractAddress := crypto.AddressFromPubKey(nonExistedPublicKey)
 	invalidInvokeTx := &crypto.Transaction{
@@ -135,7 +140,7 @@ func TestApplyTx(t *testing.T) {
 			result:     0,
 			receiptErr: errors.New("Out of gas"),
 			events:     nil,
-			gasUsed:    11046,
+			gasUsed:    11186,
 			wantErr:    false,
 			wantErrObj: nil,
 		},
@@ -164,7 +169,10 @@ func TestApplyTx(t *testing.T) {
 			args:       args{tr.app, invokeTx, gas.NewFreeStation(tr.app)},
 			result:     0,
 			receiptErr: nil,
-			events:     make([]*crypto.TxEvent, 0),
+			events: []*crypto.TxEvent{{
+				Contract: contractAddress,
+				Data:     mintEventData,
+			}},
 			gasUsed:    0,
 			wantErr:    false,
 			wantErrObj: nil,
@@ -173,11 +181,11 @@ func TestApplyTx(t *testing.T) {
 			name:       "invalid invoke tx, reverse",
 			args:       args{tr.app, invalidInvokeTx, gas.NewFreeStation(tr.app)},
 			result:     0,
-			receiptErr: nil,
+			receiptErr: errors.New("Invoke nil contract"),
 			events:     make([]*crypto.TxEvent, 0),
 			gasUsed:    0,
-			wantErr:    true,
-			wantErrObj: errors.New("abi: cannot decode empty contract"),
+			wantErr:    false,
+			wantErrObj: nil,
 		},
 	}
 	for _, tt := range tests {
@@ -192,8 +200,6 @@ func TestApplyTx(t *testing.T) {
 					t.Errorf("%s: applyTx() error = %v, wantErr %v", tt.name, err, tt.wantErrObj.Error())
 				}
 			}
-
-			fmt.Println(tt.name, "result", receipt.Result, tt.result)
 			if receipt.Result != tt.result {
 				t.Errorf("%s: applyTx() result = %v, want %v", tt.name, receipt.Result, tt.result)
 			}
@@ -202,16 +208,19 @@ func TestApplyTx(t *testing.T) {
 				t.Errorf("%s: applyTx() receipt.Error = %v, want %v", tt.name, receipt.Error, tt.receiptErr.Error())
 			}
 
-			// if len(receipt.Events) == len(tt.events) {
-			// 	for i := range receipt.Events {
-			// 		if reflect.DeepEqual(*tt.events[i], *tt.events[i]) {
-			// 			t.Errorf("%s: applyTx() events = %v, want %v", tt.name, *receipt.Events[i], *tt.events[i])
-			// 		}
-			// 	}
-			// } else {
-			// 	t.Errorf("%s: applyTx() events = %v, want %v", tt.name, receipt.Events, tt.events)
+			if len(receipt.Events) == len(tt.events) {
+				for i := range receipt.Events {
+					if receipt.Events[i].Contract != tt.events[i].Contract {
+						t.Errorf("%s: applyTx() event.contract = %s, want %s", tt.name, receipt.Events[i].Contract.String(), tt.events[i].Contract.String())
+					}
 
-			// }
+					if !bytes.Equal(receipt.Events[i].Data, tt.events[i].Data) {
+						t.Errorf("%s: applyTx() event.Data = %v, want %v", tt.name, receipt.Events[i].Data, tt.events[i].Data)
+					}
+				}
+			} else {
+				t.Errorf("%s: applyTx() events count = %v, want %v", tt.name, len(receipt.Events), len(tt.events))
+			}
 
 			if uint64(receipt.GasUsed) != tt.gasUsed {
 				t.Errorf("%s: applyTx() gasUsed = %v, want %v", tt.name, receipt.GasUsed, tt.gasUsed)

@@ -25,7 +25,7 @@ func (index *IndexStorage) StoreBlockIndexes(block *crypto.Block) error {
 		block.Header.Hash().Bytes(),
 	)
 
-	var blockHeightByte []byte
+	blockHeightByte := make([]byte, 8)
 	binary.LittleEndian.PutUint64(blockHeightByte, block.Header.Height)
 	for _, tx := range block.Transactions {
 		index.database.Put(

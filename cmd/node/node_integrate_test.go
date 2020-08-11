@@ -2,6 +2,7 @@ package node
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -15,6 +16,7 @@ import (
 	"golang.org/x/crypto/ed25519" // This is used in place of crypto/ed25519 to support older version of Go
 
 	"github.com/QuoineFinancial/liquid-chain/api"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/util"
 	"github.com/google/go-cmp/cmp"
 	"github.com/tendermint/tendermint/config"
@@ -90,13 +92,35 @@ func TestBroadcastTx(t *testing.T) {
 	})
 
 	router := api.Router
-	payload, _ := util.BuildDeployTxPayload("./testdata/contract.wasm", "./testdata/contract-abi.json", "init", []string{})
+	seed := make([]byte, 32)
+	privateKey := ed25519.NewKeyFromSeed(seed)
+	sender := crypto.TxSender{
+		Nonce:     uint64(0),
+		PublicKey: privateKey.Public().(ed25519.PublicKey),
+	}
+	payload, err := util.BuildDeployTxPayload("./testdata/contract.wasm", "./testdata/contract-abi.json", "init", []string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployTx := &crypto.Transaction{
+		Sender:    &sender,
+		Payload:   payload,
+		Receiver:  crypto.EmptyAddress,
+		GasLimit:  0,
+		GasPrice:  1,
+		Signature: nil,
+		Receipt:   &crypto.TxReceipt{},
+	}
+	dataToSign := crypto.GetSigHash(deployTx)
+	deployTx.Signature = crypto.Sign(privateKey, dataToSign[:])
+	rawTx, _ := deployTx.Serialize()
+	serializedTx := base64.StdEncoding.EncodeToString(rawTx)
 	testcases := []testCase{
 		{
 			name:   "Broadcast",
 			method: "chain.Broadcast",
-			params: fmt.Sprintf(`{"rawTx": "%s"}`, payload),
-			result: `{"jsonrpc":"2.0","result":{"hash":"53E3715C74FCFCC008AA9E2D7E99C51F109FFCC4EFBFA524D9BA6469EF4F5453","code":0,"log":""},"id":1}`,
+			params: fmt.Sprintf(`{"rawTx": "%s"}`, serializedTx),
+			result: `{"jsonrpc":"2.0","result":{"hash":"0F347C58CE26B4CA60BB07F2B7811D75DF3F8583A87F406A7CB88958BD87E8B7","code":0,"log":""},"id":1}`,
 		},
 	}
 

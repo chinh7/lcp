@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"fmt"
 	"io/ioutil"
 	"math"
 	"time"
@@ -142,7 +141,6 @@ func TestEngineIgnite(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		fmt.Println(tt.name)
 		t.Run(tt.name, func(t *testing.T) {
 			contractBytes, _ := rlp.EncodeToBytes(&tt.caller)
 			callerAccount, _ := state.CreateAccount(contractCreator, tt.callerAddress, contractBytes)
