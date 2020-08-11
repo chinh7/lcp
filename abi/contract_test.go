@@ -2,12 +2,13 @@ package abi
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"testing"
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/nsf/jsondiff"
+	"github.com/tendermint/tendermint/libs/os"
 )
 
 func TestDecodeContract(t *testing.T) {
@@ -32,26 +33,17 @@ func TestDecodeContract(t *testing.T) {
 }
 
 func TestMarshalJSON(t *testing.T) {
-	h, _ := LoadHeaderFromFile("../test/testdata/token-abi.json")
+	abiFile := "../test/testdata/token-abi.json"
+	h, _ := LoadHeaderFromFile(abiFile)
 	code, _ := hex.DecodeString("1")
 	contract := Contract{
 		Header: h,
 		Code:   code,
 	}
-	jsonBytes, _ := contract.MarshalJSON()
-
-	var decodedContract struct {
-		Header *Header `json:"header"`
-		Code   string  `json:"code"`
-	}
-
-	json.Unmarshal(jsonBytes, &decodedContract)
-
-	opts := cmpopts.IgnoreUnexported(Event{})
-	if diff := cmp.Diff(decodedContract.Header, contract.Header, opts); diff != "" {
-		t.Errorf("Decode contract %v is incorrect, expected: %v, got: %v, diff: %v", contract, contract.Header, decodedContract.Header, diff)
-	}
-	if diff := cmp.Diff(decodedContract.Code, string(contract.Code), opts); diff != "" {
-		t.Errorf("Decode contract %v is incorrect, expected: %v, got: %v, diff: %v", contract, contract.Code, decodedContract.Code, diff)
+	jsonBytes, _ := contract.Header.MarshalJSON()
+	expectedJSONBytes, _ := os.ReadFile(abiFile)
+	if diff, result := jsondiff.Compare(jsonBytes, expectedJSONBytes, &jsondiff.Options{}); diff != jsondiff.FullMatch {
+		t.Log(result)
+		t.Error("JSON not matched")
 	}
 }

@@ -21,9 +21,8 @@ type Event struct {
 // Parameter is model for function signature
 type Parameter struct {
 	Name    string        `json:"name"`
-	IsArray bool          `json:"is_array"`
+	IsArray bool          `json:"-"`
 	Type    PrimitiveType `json:"type"`
-	Size    uint          `json:"size"`
 }
 
 // Function is model for function signature
@@ -145,6 +144,19 @@ func (h *Header) MarshalJSON() ([]byte, error) {
 		Version:   h.Version,
 		Events:    h.getEvents(),
 		Functions: h.getFunctions(),
+	})
+}
+
+// MarshalJSON returns json string of Parameter
+func (p *Parameter) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Name    string `json:"name"`
+		IsArray bool   `json:"-"`
+		Type    string `json:"type"`
+		Size    uint   `json:"size,omitempty"`
+	}{
+		Name: p.Name,
+		Type: p.Type.String(),
 	})
 }
 
