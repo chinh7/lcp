@@ -1,7 +1,6 @@
 package crypto
 
 import (
-	"log"
 	"time"
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
@@ -81,7 +80,7 @@ func DecodeBlock(rawBlock []byte) (*Block, error) {
 func MustDecodeBlock(rawBlock []byte) *Block {
 	block, err := DecodeBlock(rawBlock)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	return block
 }

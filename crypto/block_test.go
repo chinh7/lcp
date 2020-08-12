@@ -117,3 +117,10 @@ func TestBlock(t *testing.T) {
 		t.Errorf("Encode not equal, got = %v, want %v", encodedNew, encoded)
 	}
 }
+
+func TestMustDecodeBlock(t *testing.T) {
+	// This decoding should panic
+	defer func() { recover() }()
+	MustDecodeBlock([]byte{1, 2, 3})
+	t.Errorf("did not panic")
+}

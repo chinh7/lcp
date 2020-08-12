@@ -4,6 +4,8 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+
+	"github.com/pkg/errors"
 )
 
 func TestAddressFromString(t *testing.T) {
@@ -98,6 +100,40 @@ func TestAddressFromBytes(t *testing.T) {
 			}
 			if err == nil && tt.want != got.String() {
 				t.Errorf("AddressFromBytes() = %s, want %s", got.String(), tt.want)
+			}
+		})
+	}
+}
+
+func TestNewDeploymentAddress(t *testing.T) {
+	sender, _ := AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
+	contract, _ := AddressFromString("LB5EPP7RST6IROFHLNKTLGKAFQTXGNY45CEAXPTGVT3K53ZXFMMAW575")
+	contract2, _ := AddressFromString("LADAUIL4G5BB6DXOZPG4ES6UHVK4DJND4GADTMW7TDRI4P2B4O7NLJYF")
+	type args struct {
+		senderAddress Address
+		senderNonce   uint64
+	}
+	tests := []struct {
+		name string
+		args args
+		want Address
+	}{{
+		args: args{
+			senderAddress: sender,
+			senderNonce:   0,
+		},
+		want: contract,
+	}, {
+		args: args{
+			senderAddress: sender,
+			senderNonce:   1234,
+		},
+		want: contract2,
+	}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewDeploymentAddress(tt.args.senderAddress, tt.args.senderNonce); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewDeploymentAddress() = %v, want %v", got.String(), tt.want.String())
 			}
 		})
 	}
