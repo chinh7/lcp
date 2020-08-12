@@ -1,11 +1,13 @@
 package crypto
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/QuoineFinancial/liquid-chain/common"
+	"golang.org/x/crypto/ed25519"
 )
 
 func TestBlock_Hash(t *testing.T) {
@@ -37,5 +39,81 @@ func TestBlock_Hash(t *testing.T) {
 				t.Errorf("Block.Hash() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestBlock(t *testing.T) {
+	block := NewEmptyBlock(common.EmptyHash, 0, time.Unix(0, 0))
+	block.Header.SetStateRoot(common.BytesToHash([]byte{1, 2, 3}))
+	block.Header.SetTransactionRoot(common.BytesToHash([]byte{1, 2, 3}))
+	block.Transactions = []*Transaction{{
+		Version: 1,
+		Sender: &TxSender{
+			Nonce:     uint64(0),
+			PublicKey: ed25519.NewKeyFromSeed(make([]byte, 32)).Public().(ed25519.PublicKey),
+		},
+		Receiver: Address{},
+		Payload: &TxPayload{
+			Contract: []byte{1, 2, 3},
+			Method:   "Transfer",
+			Params:   []byte{4, 5, 6},
+		},
+		GasPrice:  1,
+		GasLimit:  2,
+		Signature: []byte{7, 8, 9},
+		Receipt: &TxReceipt{
+			Result:  1,
+			GasUsed: 2,
+			Code:    ReceiptCodeOK,
+			Events: []*TxEvent{{
+				Contract: Address{},
+				Data:     []byte{10, 11, 12},
+			}},
+		},
+	}, {
+		Version: 1,
+		Sender: &TxSender{
+			Nonce:     uint64(0),
+			PublicKey: ed25519.NewKeyFromSeed(make([]byte, 32)).Public().(ed25519.PublicKey),
+		},
+		Receiver: Address{},
+		Payload: &TxPayload{
+			Contract: []byte{1, 1, 1},
+			Method:   "Mint",
+			Params:   []byte{4, 4, 4},
+		},
+		GasPrice:  1,
+		GasLimit:  10,
+		Signature: []byte{7, 8, 9},
+		Receipt: &TxReceipt{
+			Result:  1,
+			GasUsed: 2,
+			Code:    ReceiptCodeOK,
+			Events: []*TxEvent{{
+				Contract: Address{},
+				Data:     []byte{10, 11, 12},
+			}},
+		},
+	}}
+
+	encoded, _ := block.Encode()
+	decodedBlock := MustDecodeBlock(encoded)
+	if decodedBlock.Header.Hash() != block.Header.Hash() {
+		t.Errorf("Got block hash after decoded = %v, want %v", decodedBlock.Header.Hash(), block.Header.Hash())
+	}
+
+	if len(decodedBlock.Transactions) != len(block.Transactions) {
+		t.Errorf("Encode transaction in block error")
+	} else {
+		for i := range decodedBlock.Transactions {
+			if decodedBlock.Transactions[i].Hash() != block.Transactions[i].Hash() {
+				t.Errorf("Encode transaction in block error")
+			}
+		}
+	}
+
+	encodedNew, _ := decodedBlock.Encode()
+	if !bytes.Equal(encoded, encodedNew) {
+		t.Errorf("Encode not equal, got = %v, want %v", encodedNew, encoded)
 	}
 }
