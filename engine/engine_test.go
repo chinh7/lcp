@@ -32,15 +32,16 @@ func loadContract(abiPath, wasmPath string) *abi.Contract {
 }
 
 func TestEngineIgnite(t *testing.T) {
-
 	contractCreator, _ := crypto.AddressFromString("LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R")
 	mathAddress, _ := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
 	utilAddress, _ := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
-	database := db.NewMemoryDB()
-	state, _ := storage.NewState(&crypto.BlockHeader{
+	state := storage.NewStateStorage(db.NewMemoryDB())
+	if err := state.LoadState(&crypto.BlockHeader{
 		Height: 1,
 		Time:   time.Unix(1578905663, 0),
-	}, database)
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		name          string

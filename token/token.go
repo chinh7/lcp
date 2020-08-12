@@ -14,7 +14,7 @@ import (
 
 // Token contract
 type Token struct {
-	state    *storage.State
+	state    *storage.StateStorage
 	contract *storage.Account
 }
 
@@ -61,7 +61,7 @@ func (token *Token) GetContract() *storage.Account {
 }
 
 // NewToken from contract
-func NewToken(state *storage.State, contract *storage.Account) *Token {
+func NewToken(state *storage.StateStorage, contract *storage.Account) *Token {
 	return &Token{
 		state:    state,
 		contract: contract,

@@ -25,7 +25,7 @@ type foreignMethod struct {
 
 // Engine is space to execute function
 type Engine struct {
-	state         *storage.State
+	state         *storage.StateStorage
 	account       *storage.Account
 	caller        crypto.Address
 	gasPolicy     gas.Policy
@@ -39,7 +39,7 @@ type Engine struct {
 }
 
 // NewEngine return new instance of Engine
-func NewEngine(state *storage.State, account *storage.Account, caller crypto.Address, gasPolicy gas.Policy, gasLimit uint64) *Engine {
+func NewEngine(state *storage.StateStorage, account *storage.Account, caller crypto.Address, gasPolicy gas.Policy, gasLimit uint64) *Engine {
 	return &Engine{
 		state:         state,
 		caller:        caller,

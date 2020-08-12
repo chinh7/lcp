@@ -29,7 +29,7 @@ func newTestResource() *TestResource {
 		panic(err)
 	}
 	app := NewApp(dbDir, "")
-	app.LoadState(&crypto.GenesisBlock)
+	app.state.LoadState(crypto.GenesisBlock.Header)
 	return &TestResource{
 		app:   app,
 		dbDir: dbDir,

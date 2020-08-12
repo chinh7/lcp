@@ -10,12 +10,15 @@ import (
 )
 
 // GenesisBlock is the first block of liquid chain
-var GenesisBlock = BlockHeader{
-	Height:          0,
-	Time:            time.Unix(0, 0),
-	Parent:          common.EmptyHash,
-	StateRoot:       common.EmptyHash,
-	TransactionRoot: common.EmptyHash,
+var GenesisBlock = Block{
+	Header: &BlockHeader{
+		Height:          0,
+		Time:            time.Unix(0, 0),
+		Parent:          common.EmptyHash,
+		StateRoot:       common.EmptyHash,
+		TransactionRoot: common.EmptyHash,
+	},
+	Transactions: nil,
 }
 
 // BlockHeader contains basic info and root hash of storage, transactions and receipts

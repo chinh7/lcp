@@ -22,9 +22,8 @@ const ownerBalance = uint64(1000000000 - 10000 - 4319)
 const otherBalance = uint64(10000)
 
 func setup() *Token {
-	db := db.NewMemoryDB()
-	state, err := storage.NewState(&crypto.GenesisBlock, db)
-	if err != nil {
+	state := storage.NewStateStorage(db.NewMemoryDB())
+	if err := state.LoadState(crypto.GenesisBlock.Header); err != nil {
 		panic(err)
 	}
 

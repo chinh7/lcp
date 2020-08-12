@@ -23,7 +23,7 @@ type Account struct {
 }
 
 // LoadAccount load the account from disk
-func (state *State) LoadAccount(address crypto.Address) (*Account, error) {
+func (state *StateStorage) LoadAccount(address crypto.Address) (*Account, error) {
 	raw, err := state.stateTrie.Get(address[:])
 	if err != nil {
 		return nil, err
@@ -36,15 +36,15 @@ func (state *State) LoadAccount(address crypto.Address) (*Account, error) {
 		return nil, err
 	}
 	account.address = address
-	account.contract = state.db.Get(account.ContractHash)
-	if account.storage, err = trie.New(account.StorageHash, state.db); err != nil {
+	account.contract = state.Get(account.ContractHash)
+	if account.storage, err = trie.New(account.StorageHash, state.Database); err != nil {
 		return nil, err
 	}
 	return &account, nil
 }
 
 // GetAccount retrieve the account state at addr
-func (state *State) GetAccount(address crypto.Address) (*Account, error) {
+func (state *StateStorage) GetAccount(address crypto.Address) (*Account, error) {
 	if state.accounts[address] == nil {
 		loadedAccount, err := state.LoadAccount(address)
 		if err != nil {
@@ -56,8 +56,8 @@ func (state *State) GetAccount(address crypto.Address) (*Account, error) {
 }
 
 // CreateAccount create a new account state for addr
-func (state *State) CreateAccount(creator crypto.Address, address crypto.Address, contract []byte) (*Account, error) {
-	storage, err := trie.New(common.Hash{}, state.db)
+func (state *StateStorage) CreateAccount(creator crypto.Address, address crypto.Address, contract []byte) (*Account, error) {
+	storage, err := trie.New(common.Hash{}, state.Database)
 	if err != nil {
 		return nil, err
 	}

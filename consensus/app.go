@@ -21,18 +21,26 @@ import (
 type App struct {
 	abciTypes.BaseApplication
 
-	index *storage.IndexStorage
-	state *storage.State
-	block *crypto.Block
-
-	// TODO: replace InfoDB
-	InfoDB  db.Database
-	StateDB db.Database
-	BlockDB db.Database
-	IndexDB db.Database
+	meta  *storage.MetaStorage
+	state *storage.StateStorage
+	block *storage.BlockStorage
 
 	gasStation         gas.Station
 	gasContractAddress string
+}
+
+func blockHashToAppHash(blockHash common.Hash) []byte {
+	if blockHash == common.EmptyHash {
+		return []byte{}
+	}
+	return blockHash.Bytes()
+}
+
+func appHashToBlockHash(appHash []byte) common.Hash {
+	if len(appHash) == 0 {
+		return common.EmptyHash
+	}
+	return common.BytesToHash(appHash)
 }
 
 // NewApp initializes a new app
@@ -41,62 +49,33 @@ func NewApp(dbDir string, gasContractAddress string) *App {
 		os.Mkdir(dbDir, os.ModePerm)
 	}
 	app := &App{
-		BlockDB: db.NewRocksDB(filepath.Join(dbDir, "block.db")),
-		StateDB: db.NewRocksDB(filepath.Join(dbDir, "state.db")),
-		InfoDB:  db.NewRocksDB(filepath.Join(dbDir, "info.db")),
-
-		IndexDB:            db.NewRocksDB(filepath.Join(dbDir, "index.db")),
+		meta:               storage.NewMetaStorage(db.NewRocksDB(filepath.Join(dbDir, "index.db"))),
+		state:              storage.NewStateStorage(db.NewRocksDB(filepath.Join(dbDir, "state.db"))),
+		block:              storage.NewBlockStorage(db.NewRocksDB(filepath.Join(dbDir, "block.db"))),
 		gasContractAddress: gasContractAddress,
 	}
-	app.index = storage.NewIndexStorage(app.IndexDB)
 	app.SetGasStation(gas.NewFreeStation(app))
-	if err := app.loadLastBlock(); err == nil {
-		app.LoadState(app.block.Header)
-	}
 	return app
-}
-
-// LoadState fetch app state from block header
-func (app *App) LoadState(blockHeader *crypto.BlockHeader) {
-	var err error
-	if app.state, err = storage.NewState(blockHeader, app.StateDB); err != nil {
-		panic(err)
-	}
-
-	// Keep switching until a desire gasStation is meet
-	for app.gasStation.Switch() {
-	}
 }
 
 // BeginBlock begins new block
 func (app *App) BeginBlock(req abciTypes.RequestBeginBlock) abciTypes.ResponseBeginBlock {
-	var previousBlockHash common.Hash
-	copy(previousBlockHash[:], req.Header.AppHash)
-
-	if previousBlockHash == common.EmptyHash {
-		app.LoadState(&crypto.GenesisBlock)
-	} else {
-		rawBlock := app.BlockDB.Get(previousBlockHash[:])
-		previousBlock := crypto.MustDecodeBlock(rawBlock)
-		app.LoadState(previousBlock.Header)
+	lastBlockHash := appHashToBlockHash(req.Header.AppHash)
+	previousBlock := app.block.MustGetBlock(lastBlockHash)
+	app.state.MustLoadState(previousBlock.Header)
+	app.block.ComposeBlock(previousBlock, req.Header.Time)
+	for app.gasStation.Switch() {
 	}
-	app.block = crypto.NewEmptyBlock(previousBlockHash, uint64(req.Header.GetHeight()), req.Header.GetTime())
 	return abciTypes.ResponseBeginBlock{}
 }
 
 // Info returns application chain info
 func (app *App) Info(req abciTypes.RequestInfo) (resInfo abciTypes.ResponseInfo) {
-	var lastBlockHeight int64
-	var lastBlockAppHash []byte
-
-	if app.state != nil {
-		lastBlockHeight = int64(app.state.GetBlockHeader().Height)
-		lastBlockAppHash = app.state.GetBlockHeader().Hash().Bytes()
-	}
-
+	lastBlockHeight := app.meta.LatestBlockHeight()
+	lastBlockHash := app.meta.HeightToBlockHash(lastBlockHeight)
 	return abciTypes.ResponseInfo{
-		LastBlockHeight:  lastBlockHeight,
-		LastBlockAppHash: lastBlockAppHash,
+		LastBlockHeight:  int64(lastBlockHeight),
+		LastBlockAppHash: blockHashToAppHash(lastBlockHash),
 	}
 }
 
@@ -131,17 +110,11 @@ func (app *App) CheckTx(req abciTypes.RequestCheckTx) abciTypes.ResponseCheckTx 
 func (app *App) DeliverTx(req abciTypes.RequestDeliverTx) abciTypes.ResponseDeliverTx {
 	var tx crypto.Transaction
 	if err := tx.Deserialize(req.GetTx()); err != nil {
-		return abciTypes.ResponseDeliverTx{
-			Code: CodeTypeEncodingError,
-			Log:  err.Error(),
-		}
+		return abciTypes.ResponseDeliverTx{}
 	}
 
-	if code, err := app.validateTx(&tx); err != nil {
-		return abciTypes.ResponseDeliverTx{
-			Code: code,
-			Log:  err.Error(),
-		}
+	if _, err := app.validateTx(&tx); err != nil {
+		return abciTypes.ResponseDeliverTx{}
 	}
 
 	if receipt, err := app.applyTransaction(&tx); err != nil {
@@ -153,7 +126,7 @@ func (app *App) DeliverTx(req abciTypes.RequestDeliverTx) abciTypes.ResponseDeli
 	if err := app.state.AddTransaction(&tx); err != nil {
 		log.Fatal(err)
 	}
-	app.block.Transactions = append(app.block.Transactions, &tx)
+	app.block.AddTransaction(&tx)
 
 	return abciTypes.ResponseDeliverTx{}
 }
@@ -161,17 +134,13 @@ func (app *App) DeliverTx(req abciTypes.RequestDeliverTx) abciTypes.ResponseDeli
 // Commit returns the state root of application storage. Called once all block processing is complete
 func (app *App) Commit() abciTypes.ResponseCommit {
 	stateRootHash, txRootHash := app.state.Commit()
-	app.block.Header.SetStateRoot(stateRootHash)
-	app.block.Header.SetTransactionRoot(txRootHash)
-	rawBlock, err := app.block.Encode()
+	app.block.FinalizeBlock(stateRootHash, txRootHash)
+	blockHash, err := app.block.Commit()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	blockHash := app.block.Header.Hash()
-	app.BlockDB.Put(blockHash[:], rawBlock)
-	app.InfoDB.Put([]byte(LastBlockHashKey), blockHash[:])
-	app.index.StoreBlockIndexes(app.block)
-	return abciTypes.ResponseCommit{Data: blockHash.Bytes()}
+	app.meta.StoreBlockIndexes(app.block.MustGetBlock(blockHash))
+	return abciTypes.ResponseCommit{Data: blockHashToAppHash(blockHash)}
 }
 
 // SetGasStation active the gas station

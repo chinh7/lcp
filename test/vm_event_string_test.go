@@ -18,8 +18,10 @@ func TestVMEvent(t *testing.T) {
 	caller, _ := crypto.AddressFromString("LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R")
 	contractAddress, _ := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
 
-	database := db.NewMemoryDB()
-	state, _ := storage.NewState(&crypto.GenesisBlock, database)
+	state := storage.NewStateStorage(db.NewMemoryDB())
+	if err := state.LoadState(crypto.GenesisBlock.Header); err != nil {
+		t.Fatal(err)
+	}
 
 	accountState, _ := state.CreateAccount(caller, contractAddress, contractBytes)
 	execEngine := engine.NewEngine(state, accountState, caller, &gas.FreePolicy{}, 0)

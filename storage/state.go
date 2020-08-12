@@ -10,9 +10,9 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/trie"
 )
 
-// State is the global account state consisting of many address->state mapping
-type State struct {
-	db                db.Database
+// StateStorage is the global account state consisting of many address->state mapping
+type StateStorage struct {
+	db.Database
 	blockHeader       *crypto.BlockHeader
 	txTrie            *trie.Trie
 	stateTrie         *trie.Trie
@@ -20,35 +20,55 @@ type State struct {
 	accountCheckpoint common.Hash
 }
 
-// NewState returns a state database
-func NewState(blockHeader *crypto.BlockHeader, db db.Database) (*State, error) {
-	stateTrie, err := trie.New(blockHeader.StateRoot, db)
+// AddTransaction add new tx to txTrie
+func (state *StateStorage) AddTransaction(tx *crypto.Transaction) error {
+	rawTx, err := tx.Serialize()
 	if err != nil {
-		return nil, err
+		return err
+	}
+	return state.txTrie.Update(tx.Hash().Bytes(), rawTx)
+}
+
+// NewStateStorage returns a state storage
+func NewStateStorage(db db.Database) *StateStorage {
+	return &StateStorage{Database: db}
+}
+
+// MustLoadState do LoadState, but panic if error
+func (state *StateStorage) MustLoadState(blockHeader *crypto.BlockHeader) {
+	if err := state.LoadState(blockHeader); err != nil {
+		panic(err)
+	}
+}
+
+// LoadState load state root of blockHeader into trie
+func (state *StateStorage) LoadState(blockHeader *crypto.BlockHeader) error {
+	stateTrie, err := trie.New(blockHeader.StateRoot, state.Database)
+	if err != nil {
+		return err
 	}
 
-	txTrie, err := trie.New(blockHeader.TransactionRoot, db)
+	txTrie, err := trie.New(blockHeader.TransactionRoot, state.Database)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &State{
-		db:                db,
-		blockHeader:       blockHeader,
-		txTrie:            txTrie,
-		accounts:          make(map[crypto.Address]*Account),
-		stateTrie:         stateTrie,
-		accountCheckpoint: blockHeader.StateRoot,
-	}, nil
+	state.blockHeader = blockHeader
+	state.txTrie = txTrie
+	state.stateTrie = stateTrie
+	state.accountCheckpoint = blockHeader.StateRoot
+	state.accounts = make(map[crypto.Address]*Account)
+
+	return nil
 }
 
 // GetBlockHeader return header of block that inits current state
-func (state *State) GetBlockHeader() *crypto.BlockHeader {
+func (state *StateStorage) GetBlockHeader() *crypto.BlockHeader {
 	return state.blockHeader
 }
 
 // Hash retrive hash of entire state
-func (state *State) Hash() common.Hash {
+func (state *StateStorage) Hash() common.Hash {
 	var err error
 	for _, account := range state.accounts {
 		if account == nil || !account.dirty {
@@ -68,7 +88,7 @@ func (state *State) Hash() common.Hash {
 }
 
 // Commit stores all dirty Accounts to storage.trie
-func (state *State) Commit() (common.Hash, common.Hash) {
+func (state *StateStorage) Commit() (common.Hash, common.Hash) {
 	var err error
 	for _, account := range state.accounts {
 		if account == nil || !account.dirty {
@@ -77,7 +97,7 @@ func (state *State) Commit() (common.Hash, common.Hash) {
 
 		if account.IsContract() {
 			// Update contract
-			state.db.Put(account.ContractHash[:], account.contract)
+			state.Put(account.ContractHash[:], account.contract)
 		}
 
 		// Update account storage
@@ -107,12 +127,14 @@ func (state *State) Commit() (common.Hash, common.Hash) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Println("StateStorage.Commit successfully for block", state.blockHeader.Height)
 	return stateRootHash, txRootHash
 }
 
 // Revert state to last checkpoint
-func (state *State) Revert() {
-	t, err := trie.New(state.accountCheckpoint, state.db)
+func (state *StateStorage) Revert() {
+	t, err := trie.New(state.accountCheckpoint, state.Database)
 	if err != nil {
 		panic(err)
 	}

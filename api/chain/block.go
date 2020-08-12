@@ -3,13 +3,12 @@ package chain
 import (
 	"net/http"
 
-	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
-	"github.com/QuoineFinancial/liquid-chain/consensus"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
-// BlockParams is params of ChainService
-type BlockParams struct {
+// BlockByHeightParams contains query height
+type BlockByHeightParams struct {
+	Height uint64 `json:"height"`
 }
 
 // BlockResult is response of GetBlock
@@ -18,11 +17,11 @@ type BlockResult struct {
 }
 
 // GetLatestBlock return the block by height
-func (service *Service) GetLatestBlock(r *http.Request, params *BlockParams, result *BlockResult) error {
-	lastBlockHash := service.app.InfoDB.Get([]byte(consensus.LastBlockHashKey))
-	rawBlock := service.app.BlockDB.Get(lastBlockHash)
-	var block crypto.Block
-	rlp.DecodeBytes(rawBlock, &block)
-	result.Block = &block
+func (service *Service) GetLatestBlock(r *http.Request, _ interface{}, result *BlockResult) error {
+	return nil
+}
+
+// GetBlockByHeight return block by its height
+func (service *Service) GetBlockByHeight(r *http.Request, params *BlockByHeightParams, result *BlockResult) error {
 	return nil
 }
