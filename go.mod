@@ -4,7 +4,6 @@ go 1.14
 
 require (
 	github.com/QuoineFinancial/liquid-chain-rlp v0.0.0-20200625105300-8a3d0c290807
-	github.com/davecgh/go-spew v1.1.1
 	github.com/google/go-cmp v0.4.0
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3

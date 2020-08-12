@@ -4,8 +4,6 @@ import (
 	"errors"
 	"reflect"
 	"testing"
-
-	"github.com/pkg/errors"
 )
 
 func TestAddressFromString(t *testing.T) {
