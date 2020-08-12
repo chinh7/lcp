@@ -24,8 +24,7 @@ func (app *App) deployContract(tx *crypto.Transaction) (*crypto.TxReceipt, error
 	policy := app.gasStation.GetPolicy()
 	receipt.GasUsed = uint32(policy.GetCostForContract(contractSize))
 	if tx.GasLimit < receipt.GasUsed {
-		receipt.Error = "Out of gas"
-		receipt.Success = false
+		receipt.Code = crypto.ReceiptCodeOutOfGas
 		return &receipt, nil
 	}
 
@@ -41,12 +40,11 @@ func (app *App) deployContract(tx *crypto.Transaction) (*crypto.TxReceipt, error
 	if tx.Payload.Method == InitFunctionName {
 		execEngine := engine.NewEngine(app.state, contractAccount, senderAddress, policy, uint64(tx.GasLimit-receipt.GasUsed))
 		if result, err := execEngine.Ignite(tx.Payload.Method, tx.Payload.Params); err != nil {
-			receipt.Error = err.Error()
-			receipt.Success = false
 			app.state.Revert()
+			receipt.Code = crypto.ReceiptCodeIgniteError
 		} else {
 			receipt.Result = result
-			receipt.Success = true
+			receipt.Code = crypto.ReceiptCodeOK
 		}
 		receipt.GasUsed += uint32(execEngine.GetGasUsed())
 	}
@@ -70,8 +68,7 @@ func (app *App) invokeContract(tx *crypto.Transaction) (*crypto.TxReceipt, error
 	}
 
 	if contractAccount == nil {
-		receipt.Success = false
-		receipt.Error = "Invoke nil contract"
+		receipt.Code = crypto.ReceiptCodeContractNotFound
 		return &receipt, nil
 	}
 
@@ -80,8 +77,7 @@ func (app *App) invokeContract(tx *crypto.Transaction) (*crypto.TxReceipt, error
 	execEngine := engine.NewEngine(app.state, contractAccount, senderAddress, policy, uint64(tx.GasLimit))
 
 	if result, err := execEngine.Ignite(tx.Payload.Method, tx.Payload.Params); err != nil {
-		receipt.Error = err.Error()
-		receipt.Success = false
+		receipt.Code = crypto.ReceiptCodeIgniteError
 		app.state.Revert()
 	} else {
 		receipt.Result = result

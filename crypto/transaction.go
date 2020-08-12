@@ -18,8 +18,7 @@ type TxEvent struct {
 type TxReceipt struct {
 	Result  uint64
 	GasUsed uint32
-	Success bool
-	Error   string
+	Code    ReceiptCode
 	Events  []*TxEvent
 }
 

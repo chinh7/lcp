@@ -5,7 +5,6 @@ import (
 	"crypto/ed25519"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
 	"math/rand"
 	"os"
 	"strconv"
@@ -58,7 +57,7 @@ func TestApplyTx(t *testing.T) {
 
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 
-	data, err := util.BuildDeployTxPayload("./execution_testdata/contract.wasm", "./execution_testdata/contract-abi.json", InitFunctionName, []string{})
+	data, err := util.BuildDeployTxPayload("./execution_testdata/contract.wasm", "./execution_testdata/contract-abi.json", "", []string{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +127,7 @@ func TestApplyTx(t *testing.T) {
 		name       string
 		args       args
 		result     uint64
-		receiptErr error
+		code       crypto.ReceiptCode
 		events     []*crypto.TxEvent
 		gasUsed    uint64
 		wantErr    bool
@@ -138,7 +137,7 @@ func TestApplyTx(t *testing.T) {
 			name:       "out of gas",
 			args:       args{tr.app, deployTx, gas.NewLiquidStation(tr.app, crypto.Address{})},
 			result:     0,
-			receiptErr: errors.New("Out of gas"),
+			code:       crypto.ReceiptCodeOutOfGas,
 			events:     nil,
 			gasUsed:    11186,
 			wantErr:    false,
@@ -148,7 +147,7 @@ func TestApplyTx(t *testing.T) {
 			name:       "valid deploy tx",
 			args:       args{tr.app, deployTx, gas.NewFreeStation(tr.app)},
 			result:     0,
-			receiptErr: nil,
+			code:       crypto.ReceiptCodeOK,
 			events:     make([]*crypto.TxEvent, 0),
 			gasUsed:    0,
 			wantErr:    false,
@@ -158,17 +157,17 @@ func TestApplyTx(t *testing.T) {
 			name:       "valid deploy init contract tx",
 			args:       args{tr.app, deployWithInitTx, gas.NewFreeStation(tr.app)},
 			result:     0,
-			receiptErr: nil,
+			code:       crypto.ReceiptCodeOK,
 			events:     make([]*crypto.TxEvent, 0),
 			gasUsed:    0,
 			wantErr:    false,
 			wantErrObj: nil,
 		},
 		{
-			name:       "valid invoke tx",
-			args:       args{tr.app, invokeTx, gas.NewFreeStation(tr.app)},
-			result:     0,
-			receiptErr: nil,
+			name:   "valid invoke tx",
+			args:   args{tr.app, invokeTx, gas.NewFreeStation(tr.app)},
+			result: 0,
+			code:   crypto.ReceiptCodeOK,
 			events: []*crypto.TxEvent{{
 				Contract: contractAddress,
 				Data:     mintEventData,
@@ -181,7 +180,7 @@ func TestApplyTx(t *testing.T) {
 			name:       "invalid invoke tx, reverse",
 			args:       args{tr.app, invalidInvokeTx, gas.NewFreeStation(tr.app)},
 			result:     0,
-			receiptErr: errors.New("Invoke nil contract"),
+			code:       crypto.ReceiptCodeContractNotFound,
 			events:     make([]*crypto.TxEvent, 0),
 			gasUsed:    0,
 			wantErr:    false,
@@ -204,8 +203,8 @@ func TestApplyTx(t *testing.T) {
 				t.Errorf("%s: applyTx() result = %v, want %v", tt.name, receipt.Result, tt.result)
 			}
 
-			if tt.receiptErr != nil && receipt.Error != tt.receiptErr.Error() {
-				t.Errorf("%s: applyTx() receipt.Error = %v, want %v", tt.name, receipt.Error, tt.receiptErr.Error())
+			if receipt.Code != tt.code {
+				t.Errorf("%s: applyTx() receipt.Code = %v, want %v", tt.name, receipt.Code, tt.code)
 			}
 
 			if len(receipt.Events) == len(tt.events) {

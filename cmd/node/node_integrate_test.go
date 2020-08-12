@@ -120,7 +120,7 @@ func TestBroadcastTx(t *testing.T) {
 			name:   "Broadcast",
 			method: "chain.Broadcast",
 			params: fmt.Sprintf(`{"rawTx": "%s"}`, serializedTx),
-			result: `{"jsonrpc":"2.0","result":{"hash":"0F347C58CE26B4CA60BB07F2B7811D75DF3F8583A87F406A7CB88958BD87E8B7","code":0,"log":""},"id":1}`,
+			result: `{"jsonrpc":"2.0","result":{"hash":"7E43B44AC44FFA3FAF53078D6BBCC55ACC7D9BB01AE20860D617226F69A168F5","code":0,"log":""},"id":1}`,
 		},
 	}
 

@@ -29,6 +29,13 @@ type App struct {
 	gasContractAddress string
 }
 
+// We use this code to communicate with Tendermint
+// https://docs.tendermint.com/master/spec/abci/abci.html
+const (
+	ResponseCodeOK    = uint32(0)
+	ResponseCodeNotOK = uint32(1)
+)
+
 func blockHashToAppHash(blockHash common.Hash) []byte {
 	if blockHash == common.EmptyHash {
 		return []byte{}
@@ -83,7 +90,7 @@ func (app *App) Info(req abciTypes.RequestInfo) (resInfo abciTypes.ResponseInfo)
 func (app *App) CheckTx(req abciTypes.RequestCheckTx) abciTypes.ResponseCheckTx {
 	if len(req.Tx) > constant.MaxTransactionSize {
 		return abciTypes.ResponseCheckTx{
-			Code: CodeTypeExceedTransactionSize,
+			Code: ResponseCodeNotOK,
 			Log:  fmt.Sprintf("Transaction size exceed %dB", constant.MaxTransactionSize),
 		}
 	}
@@ -91,30 +98,30 @@ func (app *App) CheckTx(req abciTypes.RequestCheckTx) abciTypes.ResponseCheckTx 
 	var tx crypto.Transaction
 	if err := tx.Deserialize(req.GetTx()); err != nil {
 		return abciTypes.ResponseCheckTx{
-			Code: CodeTypeEncodingError,
+			Code: ResponseCodeNotOK,
 			Log:  err.Error(),
 		}
 	}
 
-	if code, err := app.validateTx(&tx); err != nil {
+	if err := app.validateTx(&tx); err != nil {
 		return abciTypes.ResponseCheckTx{
-			Code: code,
+			Code: ResponseCodeNotOK,
 			Log:  err.Error(),
 		}
 	}
 
-	return abciTypes.ResponseCheckTx{Code: CodeTypeOK}
+	return abciTypes.ResponseCheckTx{Code: ResponseCodeOK}
 }
 
 //DeliverTx executes the submitted transaction
 func (app *App) DeliverTx(req abciTypes.RequestDeliverTx) abciTypes.ResponseDeliverTx {
 	var tx crypto.Transaction
 	if err := tx.Deserialize(req.GetTx()); err != nil {
-		return abciTypes.ResponseDeliverTx{}
+		return abciTypes.ResponseDeliverTx{Code: ResponseCodeNotOK}
 	}
 
-	if _, err := app.validateTx(&tx); err != nil {
-		return abciTypes.ResponseDeliverTx{}
+	if err := app.validateTx(&tx); err != nil {
+		return abciTypes.ResponseDeliverTx{Code: ResponseCodeNotOK}
 	}
 
 	if receipt, err := app.applyTransaction(&tx); err != nil {
@@ -128,7 +135,7 @@ func (app *App) DeliverTx(req abciTypes.RequestDeliverTx) abciTypes.ResponseDeli
 	}
 	app.block.AddTransaction(&tx)
 
-	return abciTypes.ResponseDeliverTx{}
+	return abciTypes.ResponseDeliverTx{Code: ResponseCodeOK}
 }
 
 // Commit returns the state root of application storage. Called once all block processing is complete

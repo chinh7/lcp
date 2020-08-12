@@ -30,7 +30,7 @@ func broadcast(endpoint string, hexTx []byte) {
 		var result chain.BroadcastResult
 		postJSON(endpoint, "chain.Broadcast", chain.BroadcastParams{RawTransaction: serializedTx}, &result)
 
-		if result.Code == consensus.CodeTypeOK {
+		if result.Code == consensus.ResponseCodeOK {
 			log.Println("Broadcast SUCCESS")
 			log.Printf("Code: %d\n", result.Code)
 			log.Printf("Transaction hash: %s\n", result.TransactionHash)
