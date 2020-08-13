@@ -140,6 +140,16 @@ func TestEngineIgnite(t *testing.T) {
 			args:          []string{"LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R"},
 			wantErr:       true,
 		},
+		{
+			name:          "chained ignite with event plarray",
+			callee:        nil,
+			calleeAddress: crypto.EmptyAddress,
+			caller:        loadContract("testdata/event-string-abi.json", "testdata/event-string.wasm"),
+			callerAddress: utilAddress,
+			funcName:      "say",
+			args:          []string{"0"},
+			wantErr:       false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
