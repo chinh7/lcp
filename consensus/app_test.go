@@ -2,7 +2,6 @@ package consensus
 
 import (
 	"bytes"
-	"crypto/ed25519"
 	"fmt"
 	"os"
 	"reflect"
@@ -10,8 +9,8 @@ import (
 	"time"
 
 	"github.com/QuoineFinancial/liquid-chain/common"
+	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/QuoineFinancial/liquid-chain/util"
 	"github.com/google/uuid"
 	"github.com/tendermint/tendermint/abci/types"
 )
@@ -43,57 +42,6 @@ func TestBlockHashAndAppHashConversion(t *testing.T) {
 	}
 }
 
-func getDeployTx() *crypto.Transaction {
-	seed := make([]byte, 32)
-	privateKey := ed25519.NewKeyFromSeed(seed)
-	sender := crypto.TxSender{
-		Nonce:     uint64(0),
-		PublicKey: privateKey.Public().(ed25519.PublicKey),
-	}
-	data, err := util.BuildDeployTxPayload("./execution_testdata/contract.wasm", "./execution_testdata/contract-abi.json", "", []string{})
-	if err != nil {
-		panic(err)
-	}
-	tx := &crypto.Transaction{
-		Version:  1,
-		Sender:   &sender,
-		Payload:  data,
-		Receiver: crypto.EmptyAddress,
-		GasLimit: 0,
-		GasPrice: 1,
-		Receipt:  &crypto.TxReceipt{},
-	}
-	dataToSign := crypto.GetSigHash(tx)
-	tx.Signature = crypto.Sign(privateKey, dataToSign.Bytes())
-	return tx
-}
-
-func getInvokeTx() *crypto.Transaction {
-	seed := make([]byte, 32)
-	privateKey := ed25519.NewKeyFromSeed(seed)
-	sender := crypto.TxSender{
-		Nonce:     uint64(1),
-		PublicKey: privateKey.Public().(ed25519.PublicKey),
-	}
-	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
-	data, err := util.BuildInvokeTxData("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
-	if err != nil {
-		panic(err)
-	}
-	tx := &crypto.Transaction{
-		Version:  1,
-		Sender:   &sender,
-		Payload:  data,
-		Receiver: crypto.NewDeploymentAddress(senderAddress, 0),
-		GasLimit: 0,
-		GasPrice: 1,
-		Receipt:  &crypto.TxReceipt{},
-	}
-	dataToSign := crypto.GetSigHash(tx)
-	tx.Signature = crypto.Sign(privateKey, dataToSign.Bytes())
-	return tx
-}
-
 func TestFulLAppFlow(t *testing.T) {
 	id, _ := uuid.NewUUID()
 	path := fmt.Sprintf("./data-" + id.String())
@@ -119,7 +67,7 @@ func TestFulLAppFlow(t *testing.T) {
 		height: 1,
 		time:   time.Unix(0, 1),
 		txRequests: []txRequest{{
-			tx:                        getDeployTx(),
+			tx:                        testResource{}.getDeployTx(),
 			expectedResponseCheckTx:   types.ResponseCheckTx{Code: ResponseCodeOK},
 			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeOK},
 		}},
@@ -127,9 +75,31 @@ func TestFulLAppFlow(t *testing.T) {
 		height: 2,
 		time:   time.Unix(0, 2),
 		txRequests: []txRequest{{
-			tx:                        getInvokeTx(),
+			tx:                        testResource{}.getInvokeTx(),
 			expectedResponseCheckTx:   types.ResponseCheckTx{Code: ResponseCodeOK},
 			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeOK},
+		}},
+	}, {
+		height: 3,
+		time:   time.Unix(0, 3),
+		txRequests: []txRequest{{
+			tx:                      testResource{}.getInvokeNilContractTx(),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invoke nil contract"},
+		}, {
+			tx:                      testResource{}.getInvalidMaxSizeTx(),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: fmt.Sprintf("Transaction size exceed %vB", constant.MaxTransactionSize)},
+		}, {
+			tx:                      testResource{}.getInvaliSignatureTx(),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid signature"},
+		}, {
+			tx:                      testResource{}.getInvalidNonceTx(),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid nonce. Expected 2, got 123"},
+		}, {
+			tx:                      testResource{}.getInvalidGasPriceTx(),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid gas price"},
+		}, {
+			tx:                      testResource{}.getInvokeNonContractTx(),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invoke a non-contract account"},
 		}},
 	}}
 

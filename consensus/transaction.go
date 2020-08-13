@@ -28,12 +28,13 @@ func (app *App) validateTx(tx *crypto.Transaction) error {
 		return fmt.Errorf("Invalid signature")
 	}
 
-	// Validate Non-existent contract invoke
 	if tx.Receiver != crypto.EmptyAddress {
-		// invoke transaction
 		account, err := app.state.GetAccount(tx.Receiver)
 		if err != nil {
 			return err
+		}
+		if account == nil {
+			return fmt.Errorf("Invoke nil contract")
 		}
 		if !account.IsContract() {
 			return fmt.Errorf("Invoke a non-contract account")
