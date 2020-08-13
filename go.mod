@@ -13,6 +13,7 @@ require (
 	github.com/rs/cors v1.7.0
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.6.3
+	github.com/stretchr/testify v1.5.1
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c
 	github.com/tendermint/tendermint v0.33.6
 	github.com/vertexdlt/vertexvm v0.0.0-20191210081850-664d19e8b3bb

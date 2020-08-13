@@ -3,8 +3,10 @@ package consensus
 import (
 	"bytes"
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -12,8 +14,121 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/abci/types"
 )
+
+func newAppTestResource() *TestResource {
+	rand.Seed(time.Now().UTC().UnixNano())
+	dbDir := "./testdata/db/test_" + strconv.Itoa(rand.Intn(10000)) + "/"
+	err := os.MkdirAll(dbDir, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+	app := NewApp(dbDir, "")
+	app.state.LoadState(crypto.GenesisBlock.Header)
+
+	return &TestResource{app, dbDir}
+}
+
+func TestNewApp(t *testing.T) {
+	rand.Seed(time.Now().UTC().UnixNano())
+	dbDir := "./testdata/db/test_" + strconv.Itoa(rand.Intn(10000)) + "/"
+	err := os.MkdirAll(dbDir, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		_ = os.RemoveAll(dbDir)
+	}()
+
+	gasContractAddress := "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7"
+
+	app := NewApp(dbDir, gasContractAddress)
+	assert.NotNil(t, app)
+}
+
+func TestApp_BeginBlock(t *testing.T) {
+	tr := newAppTestResource()
+	defer tr.cleanData()
+	app := tr.app
+
+	t.Run("Should load state from genesis block", func(t *testing.T) {
+		reqHeight := int64(0)
+		previousBlockHash := common.EmptyHash.Bytes()
+		stateRootHash, txRootHash := tr.app.state.Commit()
+
+		req := types.RequestBeginBlock{Header: types.Header{Height: reqHeight, AppHash: previousBlockHash}}
+		got := app.BeginBlock(req)
+		want := types.ResponseBeginBlock{}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("App.BeginBlock() = %v, want %v", got, want)
+		}
+
+		// loadState() should be called
+		assert.NotNil(t, app.state)
+		assert.Equal(t, uint64(reqHeight), app.state.GetBlockHeader().Height)
+		assert.Equal(t, stateRootHash, app.state.Hash())
+		assert.Equal(t, txRootHash, app.state.Hash())
+	})
+
+	t.Run("Should load state", func(t *testing.T) {
+		stateRootHash, txRootHash := tr.app.state.Commit()
+		reqHeight := int64(1)
+
+		previousBlock := crypto.Block{
+			Header:       &crypto.BlockHeader{Height: uint64(reqHeight), Time: time.Now(), Parent: common.EmptyHash, StateRoot: stateRootHash, TransactionRoot: txRootHash},
+			Transactions: nil,
+		}
+
+		rawBlock, _ := previousBlock.Encode()
+		blockHash := previousBlock.Header.Hash()
+		app.block.Put(blockHash[:], rawBlock)
+
+		assert.NotNil(t, app.state)
+		assert.Equal(t, uint64(0), app.state.GetBlockHeader().Height)
+
+		req := types.RequestBeginBlock{Header: types.Header{Height: reqHeight, AppHash: blockHash.Bytes()}}
+		got := app.BeginBlock(req)
+		want := types.ResponseBeginBlock{}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("App.BeginBlock() = %v, want %v", got, want)
+		}
+
+		// loadState() should be called
+		assert.NotNil(t, app.state)
+		assert.Equal(t, uint64(reqHeight), app.state.GetBlockHeader().Height)
+		assert.Equal(t, stateRootHash, app.state.Hash())
+		assert.Equal(t, txRootHash, app.state.Hash())
+	})
+}
+
+func TestApp_Info(t *testing.T) {
+	tr := newAppTestResource()
+	defer tr.cleanData()
+	app := tr.app
+
+	t.Run("Should return valid response", func(t *testing.T) {
+		height := 2
+		stateRootHash, txRootHash := tr.app.state.Commit()
+		block := crypto.Block{
+			Header:       &crypto.BlockHeader{Height: uint64(height), Time: time.Now(), Parent: common.EmptyHash, StateRoot: stateRootHash, TransactionRoot: txRootHash},
+			Transactions: nil,
+		}
+		app.meta.StoreBlockIndexes(&block)
+
+		got := app.Info(types.RequestInfo{})
+		// returns correct current state
+		want := types.ResponseInfo{
+			LastBlockHeight:  int64(height),
+			LastBlockAppHash: block.Header.Hash().Bytes(),
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("Got app.Info() = %v, want %v", got, want)
+		}
+	})
+}
 
 func TestBlockHashAndAppHashConversion(t *testing.T) {
 	tests := []struct {
@@ -42,7 +157,7 @@ func TestBlockHashAndAppHashConversion(t *testing.T) {
 	}
 }
 
-func TestFulLAppFlow(t *testing.T) {
+func TestFullAppFlow(t *testing.T) {
 	id, _ := uuid.NewUUID()
 	path := fmt.Sprintf("./data-" + id.String())
 	app := NewApp(path, "")
@@ -135,5 +250,4 @@ func TestFulLAppFlow(t *testing.T) {
 			t.Errorf("Commit app hash = %v, is different from info app hash = %v", appHash, info.LastBlockAppHash)
 		}
 	}
-
 }
