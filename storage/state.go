@@ -128,7 +128,6 @@ func (state *StateStorage) Commit() (common.Hash, common.Hash) {
 		log.Fatal(err)
 	}
 
-	log.Println("StateStorage.Commit successfully for block", state.blockHeader.Height)
 	return stateRootHash, txRootHash
 }
 

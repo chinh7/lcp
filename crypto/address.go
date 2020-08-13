@@ -36,11 +36,9 @@ func (address *Address) String() string {
 
 // AddressFromPubKey create an address from public key
 func AddressFromPubKey(publicKey ed25519.PublicKey) Address {
-	raw := append([]byte{versionByteAccountID}, publicKey...)
-	checksum := crc16.Checksum(raw)
-	raw = append(raw, checksum...)
+	data := append([]byte{versionByteAccountID}, publicKey...)
 	var a Address
-	a.setBytes(raw)
+	a.setBytes(append(data, crc16.Checksum(data)...))
 	return a
 }
 
