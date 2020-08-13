@@ -1,10 +1,7 @@
 package crypto
 
 import (
-	"bytes"
 	"encoding/base32"
-	"encoding/binary"
-	"log"
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/crc16"
@@ -38,33 +35,18 @@ func (address *Address) String() string {
 }
 
 // AddressFromPubKey create an address from public key
-func AddressFromPubKey(src []byte) Address {
-	version := versionByteAccountID
-	var raw bytes.Buffer
-
-	// write version byte
-	if err := binary.Write(&raw, binary.LittleEndian, version); err != nil {
-		log.Fatalf("byte write should not fail %v", err)
-	}
-
-	// write payload
-	if _, err := raw.Write(src); err != nil {
-		log.Fatalf("byte write should not fail %v", err)
-	}
-
-	// calculate and write checksum
-	checksum := crc16.Checksum(raw.Bytes())
-	if _, err := raw.Write(checksum); err != nil {
-		log.Fatalf("byte write should not fail %v", err)
-	}
-	var address Address
-	address.setBytes(raw.Bytes())
-	return address
+func AddressFromPubKey(publicKey ed25519.PublicKey) Address {
+	raw := append([]byte{versionByteAccountID}, publicKey...)
+	checksum := crc16.Checksum(raw)
+	raw = append(raw, checksum...)
+	var a Address
+	a.setBytes(raw)
+	return a
 }
 
 // AddressFromString parse an address string to Address
 func AddressFromString(address string) (Address, error) {
-	pubKeyBytes, err := decodeAddress(versionByteAccountID, address)
+	pubKeyBytes, err := decodeAddress(address)
 	if err != nil {
 		return Address{}, err
 	}
@@ -75,7 +57,7 @@ func AddressFromString(address string) (Address, error) {
 // AddressFromBytes return an address given its bytes
 func AddressFromBytes(b []byte) (Address, error) {
 	var a Address
-	_, err := decodeAddressBytes(versionByteAccountID, b)
+	_, err := decodeAddressBytes(b)
 	if err != nil {
 		return Address{}, err
 	}
@@ -96,21 +78,21 @@ func decodeString(src string) ([]byte, error) {
 	return raw, nil
 }
 
-func decodeAddress(expected byte, src string) ([]byte, error) {
+func decodeAddress(src string) ([]byte, error) {
 	raw, err := decodeString(src)
 	if err != nil {
 		return nil, err
 	}
-	return decodeAddressBytes(expected, raw)
+	return decodeAddressBytes(raw)
 }
 
-func decodeAddressBytes(expected byte, raw []byte) ([]byte, error) {
+func decodeAddressBytes(raw []byte) ([]byte, error) {
 	version := byte(raw[0])
 	payload := raw[1 : len(raw)-2]
 	checksum := raw[len(raw)-2:]
 	original := raw[0 : len(raw)-2]
 
-	if version != expected {
+	if version != versionByteAccountID {
 		return nil, errors.Errorf("Unexpected version %x", version)
 	}
 

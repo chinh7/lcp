@@ -47,6 +47,12 @@ func TestAddressFromString(t *testing.T) {
 			want: Address{},
 			err:  errors.New("Unexpected version 8"),
 		},
+		{
+			name: "invalid length",
+			args: args{address: "AE======"},
+			want: Address{},
+			err:  errors.New("encoded value is 1 bytes; minimum valid length is 3"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -132,6 +138,35 @@ func TestNewDeploymentAddress(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := NewDeploymentAddress(tt.args.senderAddress, tt.args.senderNonce); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewDeploymentAddress() = %v, want %v", got.String(), tt.want.String())
+			}
+		})
+	}
+}
+
+func TestAddress_setBytes(t *testing.T) {
+	tests := []struct {
+		name string
+		b    []byte
+		want Address
+	}{{
+		name: "empty bytes",
+		b:    []byte{},
+		want: Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	}, {
+		name: "overwhelm bytes",
+		b:    []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
+		want: Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
+	}, {
+		name: "normal bytes",
+		b:    []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+		want: Address{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got Address
+			got.setBytes(tt.b)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("setBytes() = %v, want %v", got.String(), tt.want.String())
 			}
 		})
 	}
