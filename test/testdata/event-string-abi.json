@@ -4,21 +4,14 @@
     {
       "name": "Say",
       "parameters": [
-        {
-          "name": "message",
-          "type": "lparray"
-        }
+        { "is_array": false, "name": "message", "type": "lparray" }
       ]
     }
   ],
   "functions": [
     {
       "name": "say",
-      "parameters": [
-        {
-          "type": "int32"
-        }
-      ]
+      "parameters": [{ "is_array": false, "name": "i", "type": "int32" }]
     }
   ]
 }

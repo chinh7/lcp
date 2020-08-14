@@ -119,8 +119,8 @@ func TestBroadcastTx(t *testing.T) {
 		{
 			name:   "Broadcast",
 			method: "chain.Broadcast",
-			params: fmt.Sprintf(`{"rawTx": "%s"}`, serializedTx),
-			result: `{"jsonrpc":"2.0","result":{"hash":"7E43B44AC44FFA3FAF53078D6BBCC55ACC7D9BB01AE20860D617226F69A168F5","code":0,"log":""},"id":1}`,
+			params: fmt.Sprintf(`{"rawTx": "%s"}`, createDeployTx("../../test/testdata/liquid-token.wasm", "../../test/testdata/liquid-token-abi.json", "init", []string{"0"})),
+			result: `{"jsonrpc":"2.0","result":{"hash":"0746A23A1F5D40FD76B7454281E85000D652035AEFE3D1E58885BAAA9CABE7CF","code":0,"log":""},"id":1}`,
 		},
 	}
 

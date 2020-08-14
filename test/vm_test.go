@@ -16,7 +16,7 @@ import (
 )
 
 func TestVM(t *testing.T) {
-	contract := loadContract("testdata/token-abi.json", "testdata/token.wasm")
+	contract := loadContract("testdata/liquid-token-abi.json", "testdata/liquid-token.wasm")
 	header := contract.Header
 	contractBytes, _ := rlp.EncodeToBytes(&contract)
 	caller, _ := crypto.AddressFromString("LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R")

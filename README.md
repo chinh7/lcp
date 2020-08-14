@@ -34,3 +34,20 @@ docker-compose run --service-ports node start --api
 ```
 docker-compose run node unsafe_reset_all
 ```
+
+
+
+## Testing
+
+1. New contract sources should be added to `wasm-funcs.export` in the following format:
+
+   `<path>=<export-functions>`
+
+2. Compile sources to wasm:
+
+   ```bash
+   ./wasm-compile.sh
+   ```
+
+   
+

@@ -1,56 +1,51 @@
 {
   "version": 1,
-  "events": [{
-    "name": "address_checked",
-    "parameters": [{
-      "name": "contract",
-      "type": "address"
-    }, {
-      "name": "checksum",
-      "type": "uint8"
-    }]
-  }],
-  "functions": [{
-    "name": "init",
-    "parameters": [{
-      "type": "address"
-    }]
-  }, {
-    "name": "variance",
-    "parameters": [{
-      "type": "int32[]"
-    }]
-  }, {
-    "name": "hypotenuse",
-    "parameters": [{
-      "type": "int32"
-    }, {
-      "type": "int32"
-    }]
-  }, {
-    "name": "xor_checksum",
-    "parameters": [{
-      "type": "address"
-    }]
-  }, {
-    "name": "mod_invoke",
-    "parameters": [{
-      "type": "address"
-    }]
-  }, {
-    "name": "mod_emit",
-    "parameters": [{
-      "type": "address"
-    }]
-  }, {
-    "name": "mean",
-    "parameters": [{
-      "type": "int32[]"
-    }]
-  }, {
-    "name": "average",
-    "parameters": [{
-      "type": "int32[]"
-    }]
-  }]
+  "events": [
+    {
+      "name": "address_checked",
+      "parameters": [
+        { "is_array": false, "name": "contract", "type": "address" },
+        { "is_array": false, "name": "checksum", "type": "uint8" }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "name": "init",
+      "parameters": [
+        { "is_array": false, "name": "math_contract", "type": "address" }
+      ]
+    },
+    {
+      "name": "variance",
+      "parameters": [{ "is_array": true, "name": "a", "type": "int32" }]
+    },
+    {
+      "name": "hypotenuse",
+      "parameters": [
+        { "is_array": false, "name": "a", "type": "int32" },
+        { "is_array": false, "name": "b", "type": "int32" }
+      ]
+    },
+    {
+      "name": "xor_checksum",
+      "parameters": [{ "is_array": false, "name": "a", "type": "address" }]
+    },
+    {
+      "name": "mod_invoke",
+      "parameters": [{ "is_array": false, "name": "a", "type": "address" }]
+    },
+    {
+      "name": "mod_emit",
+      "parameters": [{ "is_array": false, "name": "a", "type": "address" }]
+    },
+    {
+      "name": "mean",
+      "parameters": [{ "is_array": true, "name": "a", "type": "int32" }]
+    },
+    {
+      "name": "average",
+      "parameters": [{ "is_array": true, "name": "a", "type": "int32" }]
+    }
+  ]
 }

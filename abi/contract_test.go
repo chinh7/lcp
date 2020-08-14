@@ -12,7 +12,7 @@ import (
 )
 
 func TestDecodeContract(t *testing.T) {
-	h, _ := LoadHeaderFromFile("../test/testdata/token-abi.json")
+	h, _ := LoadHeaderFromFile("../test/testdata/liquid-token-abi.json")
 	contract := Contract{
 		Header: h,
 		Code:   []byte{1},
@@ -33,8 +33,7 @@ func TestDecodeContract(t *testing.T) {
 }
 
 func TestMarshalJSON(t *testing.T) {
-	abiFile := "../test/testdata/token-abi.json"
-	h, _ := LoadHeaderFromFile(abiFile)
+	h, _ := LoadHeaderFromFile("../test/testdata/liquid-token-abi.json")
 	code, _ := hex.DecodeString("1")
 	contract := Contract{
 		Header: h,
