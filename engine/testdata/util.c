@@ -58,7 +58,7 @@ int sdk_caller_is_creator() {
 }
 
 int init(address math_contract) {
-  if (sdk_caller_is_creator()) {  
+  if (sdk_caller_is_creator()) {
     sdk_storage_set(MATH_KEY, sizeof(MATH_KEY), math_contract, ADDR_SIZE);
   }
 }
@@ -72,7 +72,7 @@ int variance(int32_t* a) {
   chain_method_bind(math_contract, MATH_SS, sizeof(MATH_SS), LOCAL_SS, sizeof(LOCAL_SS));
   chain_method_bind(math_contract, MATH_SR, sizeof(MATH_SR), LOCAL_SR, sizeof(LOCAL_SR));
 
-  int b[len];  
+  int b[len];
   int mean = get_mean(a);
   for(int i=0; i< len; i++){
     b[i] = a[i] - mean;

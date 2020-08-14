@@ -22,13 +22,15 @@ type TestResource struct {
 }
 
 func newTestResource() *TestResource {
-	dbDir := "./execution_testdata/db/test_" + strconv.Itoa(rand.Intn(10000))
+	dbDir := "./tmp" + strconv.Itoa(rand.Intn(10000))
 	err := os.MkdirAll(dbDir, os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
 	app := NewApp(dbDir, "")
-	app.state.LoadState(crypto.GenesisBlock.Header)
+	if err := app.state.LoadState(crypto.GenesisBlock.Header); err != nil {
+		panic(err)
+	}
 	return &TestResource{
 		app:   app,
 		dbDir: dbDir,
@@ -57,7 +59,7 @@ func TestApplyTx(t *testing.T) {
 
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 
-	data, err := util.BuildDeployTxPayload("./execution_testdata/contract.wasm", "./execution_testdata/contract-abi.json", "", []string{})
+	data, err := util.BuildDeployTxPayload("../test/testdata/liquid-token.wasm", "../test/testdata/liquid-token-abi.json", "", []string{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +71,7 @@ func TestApplyTx(t *testing.T) {
 		GasPrice: 0,
 	}
 
-	contractWithInitTxData, err := util.BuildDeployTxPayload("./execution_testdata/contract-with-init.wasm", "./execution_testdata/contract-with-init-abi.json", InitFunctionName, []string{"100"})
+	contractWithInitTxData, err := util.BuildDeployTxPayload("../test/testdata/liquid-token.wasm", "../test/testdata/liquid-token-abi.json", "", []string{"100"})
 	if err != nil {
 		panic(err)
 	}
@@ -85,7 +87,7 @@ func TestApplyTx(t *testing.T) {
 	contractAddress := crypto.NewDeploymentAddress(senderAddress, sender.Nonce)
 
 	// Setup invoke contract transaction
-	invokeData, err := util.BuildInvokeTxPayload("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
+	invokeData, err := util.BuildInvokeTxPayload("../test/testdata/liquid-token-abi.json", "mint", []string{"1000"})
 	if err != nil {
 		panic(err)
 	}
@@ -96,7 +98,7 @@ func TestApplyTx(t *testing.T) {
 		GasLimit: 0,
 		GasPrice: 0,
 	}
-	contractHeader, _ := abi.LoadHeaderFromFile("./execution_testdata/contract-abi.json")
+	contractHeader, _ := abi.LoadHeaderFromFile("../test/testdata/liquid-token-abi.json")
 	mintEventHeader, _ := contractHeader.GetEvent("Mint")
 	mintAmount := make([]byte, abi.Uint64.GetMemorySize())
 	binary.LittleEndian.PutUint64(mintAmount, 1000)
@@ -104,7 +106,7 @@ func TestApplyTx(t *testing.T) {
 
 	// Setup falsy tx to trigger reverse
 	sender3 := crypto.TxSender{Nonce: uint64(2)}
-	invalidInvokePayload, err := util.BuildInvokeTxPayload("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
+	invalidInvokePayload, err := util.BuildInvokeTxPayload("../test/testdata/liquid-token-abi.json", "mint", []string{"1000"})
 	if err != nil {
 		panic(err)
 	}
@@ -139,7 +141,7 @@ func TestApplyTx(t *testing.T) {
 			result:     0,
 			code:       crypto.ReceiptCodeOutOfGas,
 			events:     nil,
-			gasUsed:    11186,
+			gasUsed:    11100,
 			wantErr:    false,
 			wantErrObj: nil,
 		},

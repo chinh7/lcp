@@ -28,7 +28,7 @@ double square_root(int32_t a) {
 }
 
 int address_xor(address a){
-   int ret = 0;	
+   int ret = 0;
    for (int i = 0; i < ADDR_SIZE; i++){
       ret = ret ^ a[i];
    }

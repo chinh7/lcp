@@ -98,7 +98,7 @@ func TestBroadcastTx(t *testing.T) {
 		Nonce:     uint64(0),
 		PublicKey: privateKey.Public().(ed25519.PublicKey),
 	}
-	payload, err := util.BuildDeployTxPayload("./testdata/contract.wasm", "./testdata/contract-abi.json", "init", []string{})
+	payload, err := util.BuildDeployTxPayload("../../test/testdata/liquid-token.wasm", "../../test/testdata/liquid-token-abi.json", "init", []string{"0"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,8 +119,8 @@ func TestBroadcastTx(t *testing.T) {
 		{
 			name:   "Broadcast",
 			method: "chain.Broadcast",
-			params: fmt.Sprintf(`{"rawTx": "%s"}`, createDeployTx("../../test/testdata/liquid-token.wasm", "../../test/testdata/liquid-token-abi.json", "init", []string{"0"})),
-			result: `{"jsonrpc":"2.0","result":{"hash":"0746A23A1F5D40FD76B7454281E85000D652035AEFE3D1E58885BAAA9CABE7CF","code":0,"log":""},"id":1}`,
+			params: fmt.Sprintf(`{"rawTx": "%s"}`, serializedTx),
+			result: `{"jsonrpc":"2.0","result":{"hash":"8ABD8063E6DBF3FD957812E5E23E94E45C76804EF34FD7E31F8E776CC3ED0E19","code":0,"log":""},"id":1}`,
 		},
 	}
 

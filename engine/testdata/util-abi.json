@@ -18,7 +18,7 @@
     },
     {
       "name": "variance",
-      "parameters": [{ "is_array": true, "name": "a", "type": "int32" }]
+      "parameters": [{ "is_array": true, "name": "a", "type": "int32[]" }]
     },
     {
       "name": "hypotenuse",
@@ -41,11 +41,11 @@
     },
     {
       "name": "mean",
-      "parameters": [{ "is_array": true, "name": "a", "type": "int32" }]
+      "parameters": [{ "is_array": true, "name": "a", "type": "int32[]" }]
     },
     {
       "name": "average",
-      "parameters": [{ "is_array": true, "name": "a", "type": "int32" }]
+      "parameters": [{ "is_array": true, "name": "a", "type": "int32[]" }]
     }
   ]
 }

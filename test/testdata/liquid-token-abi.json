@@ -4,41 +4,33 @@
     {
       "name": "Mint",
       "parameters": [
-        { "is_array": false, "name": "to", "type": "address" },
-        { "is_array": false, "name": "amount", "type": "uint64" }
+        { "name": "to", "type": "address" },
+        { "name": "amount", "type": "uint64" }
       ]
     },
     {
       "name": "Transfer",
       "parameters": [
-        { "is_array": false, "name": "from", "type": "address" },
-        { "is_array": false, "name": "to", "type": "address" },
-        { "is_array": false, "name": "amount", "type": "uint64" },
-        { "is_array": false, "name": "memo", "type": "uint64" }
+        { "name": "from", "type": "address" },
+        { "name": "to", "type": "address" },
+        { "name": "amount", "type": "uint64" },
+        { "name": "memo", "type": "uint64" }
       ]
     }
   ],
   "functions": [
     {
       "name": "get_balance",
-      "parameters": [
-        { "is_array": false, "name": "address", "type": "address" }
-      ]
+      "parameters": [{ "name": "address", "type": "address" }]
     },
-    {
-      "name": "mint",
-      "parameters": [{ "is_array": false, "name": "amount", "type": "uint64" }]
-    },
+    { "name": "init", "parameters": [{ "name": "amount", "type": "uint64" }] },
+    { "name": "mint", "parameters": [{ "name": "amount", "type": "uint64" }] },
     {
       "name": "transfer",
       "parameters": [
-        { "is_array": false, "name": "to", "type": "address" },
-        { "is_array": false, "name": "amount", "type": "uint64" }
+        { "name": "to", "type": "address" },
+        { "name": "amount", "type": "uint64" }
       ]
-    },
-    {
-      "name": "init",
-      "parameters": [{ "is_array": false, "name": "amount", "type": "uint64" }]
     }
   ]
 }

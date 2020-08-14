@@ -19,7 +19,7 @@ import (
 
 func newAppTestResource() *TestResource {
 	rand.Seed(time.Now().UTC().UnixNano())
-	dbDir := "./testdata/db/test_" + strconv.Itoa(rand.Intn(10000)) + "/"
+	dbDir := "./tmp" + strconv.Itoa(rand.Intn(10000)) + "/"
 	err := os.MkdirAll(dbDir, os.ModePerm)
 	if err != nil {
 		panic(err)
@@ -32,7 +32,7 @@ func newAppTestResource() *TestResource {
 
 func TestNewApp(t *testing.T) {
 	rand.Seed(time.Now().UTC().UnixNano())
-	dbDir := "./testdata/db/test_" + strconv.Itoa(rand.Intn(10000)) + "/"
+	dbDir := "./tmp" + strconv.Itoa(rand.Intn(10000)) + "/"
 	err := os.MkdirAll(dbDir, os.ModePerm)
 	if err != nil {
 		panic(err)

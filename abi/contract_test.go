@@ -2,13 +2,15 @@ package abi
 
 import (
 	"encoding/hex"
+	"io/ioutil"
+	"os"
+	"reflect"
 	"testing"
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/nsf/jsondiff"
-	"github.com/tendermint/tendermint/libs/os"
+	"github.com/google/uuid"
 )
 
 func TestDecodeContract(t *testing.T) {
@@ -33,16 +35,22 @@ func TestDecodeContract(t *testing.T) {
 }
 
 func TestMarshalJSON(t *testing.T) {
-	h, _ := LoadHeaderFromFile("../test/testdata/liquid-token-abi.json")
+	abiFile := "../test/testdata/liquid-token-abi.json"
+	want, _ := LoadHeaderFromFile(abiFile)
 	code, _ := hex.DecodeString("1")
 	contract := Contract{
-		Header: h,
+		Header: want,
 		Code:   code,
 	}
 	jsonBytes, _ := contract.Header.MarshalJSON()
-	expectedJSONBytes, _ := os.ReadFile(abiFile)
-	if diff, result := jsondiff.Compare(jsonBytes, expectedJSONBytes, &jsondiff.Options{}); diff != jsondiff.FullMatch {
-		t.Log(result)
-		t.Error("JSON not matched")
+
+	tmpPath, _ := uuid.NewUUID()
+	defer os.RemoveAll(tmpPath.String())
+	if err := ioutil.WriteFile(tmpPath.String(), jsonBytes, os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := LoadHeaderFromFile(tmpPath.String())
+	if !reflect.DeepEqual(want, got) {
+		t.Errorf("Got header loaded after JSON marshal = %v, want %v", got, want)
 	}
 }
