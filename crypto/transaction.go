@@ -11,6 +11,7 @@ import (
 // TxEvent is emitted while executing transactions
 type TxEvent struct {
 	Contract Address
+	Index    uint32
 	Data     []byte
 }
 

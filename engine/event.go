@@ -20,6 +20,9 @@ func (engine *Engine) handleEmitEvent(eventHeader *abi.Event, vm *vm.VM, args ..
 			}
 			length := int(binary.LittleEndian.Uint32(lengthBytes))
 			arrayPointerBytes, err := readAt(vm, paramPointer+pointerSize, pointerSize)
+			if err != nil {
+				return 0, err
+			}
 			arrayPointer := int(binary.LittleEndian.Uint32(arrayPointerBytes))
 			array, err := readAt(vm, arrayPointer, length)
 			if err != nil {
