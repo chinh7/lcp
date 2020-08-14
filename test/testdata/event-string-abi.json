@@ -1,17 +1,1 @@
-{
-  "version": 1,
-  "events": [
-    {
-      "name": "Say",
-      "parameters": [
-        { "is_array": false, "name": "message", "type": "lparray" }
-      ]
-    }
-  ],
-  "functions": [
-    {
-      "name": "say",
-      "parameters": [{ "is_array": false, "name": "i", "type": "int32" }]
-    }
-  ]
-}
+{"version":1,"events":[{"name":"Say","parameters":[{"name":"message","type":"lparray"}]}],"functions":[{"name":"say","parameters":[{"name":"i","type":"int32"}]}]}
