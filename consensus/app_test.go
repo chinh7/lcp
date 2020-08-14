@@ -242,6 +242,30 @@ func TestApp_DeliverTx(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("DeliverTx with success transactions", func(t *testing.T) {
+		type txRequest struct {
+			tx                        *crypto.Transaction
+			expectedResponseDeliverTx types.ResponseDeliverTx
+		}
+
+		deliverTxTestTable := []txRequest{{
+			tx:                        tr.getDeployTx(1),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeOK},
+		}, {
+			tx:                        tr.getInvokeTx(2),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeOK},
+		}}
+
+		for i, deliverTxTest := range deliverTxTestTable {
+			rawTx, _ := deliverTxTest.tx.Serialize()
+			got := app.DeliverTx(types.RequestDeliverTx{Tx: rawTx})
+			want := deliverTxTest.expectedResponseDeliverTx
+			if diff := cmp.Diff(got, want); diff != "" {
+				t.Errorf("Case %d: App.DeliverTx() is expected to be = %v, got %v", i+1, want, got)
+			}
+		}
+	})
 }
 
 func TestBlockHashAndAppHashConversion(t *testing.T) {
