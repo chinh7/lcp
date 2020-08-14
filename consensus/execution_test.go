@@ -71,7 +71,7 @@ func TestApplyTx(t *testing.T) {
 		GasPrice: 0,
 	}
 
-	contractWithInitTxData, err := util.BuildDeployTxPayload("../test/testdata/liquid-token.wasm", "../test/testdata/liquid-token-abi.json", "", []string{"100"})
+	contractWithInitTxData, err := util.BuildDeployTxPayload("../test/testdata/liquid-token.wasm", "../test/testdata/liquid-token-abi.json", "init", []string{"100"})
 	if err != nil {
 		panic(err)
 	}
