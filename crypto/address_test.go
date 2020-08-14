@@ -2,8 +2,9 @@ package crypto
 
 import (
 	"errors"
-	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestAddressFromString(t *testing.T) {
@@ -60,7 +61,7 @@ func TestAddressFromString(t *testing.T) {
 			if err != nil && err.Error() != tt.err.Error() {
 				t.Errorf("AddressFromString() err = %v, want %v", err, tt.err)
 			}
-			if err == nil && !reflect.DeepEqual(got, tt.want) {
+			if err == nil && !cmp.Equal(got, tt.want) {
 				t.Errorf("AddressFromString() = %v, want %v", got, tt.want)
 			}
 		})
@@ -136,7 +137,7 @@ func TestNewDeploymentAddress(t *testing.T) {
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewDeploymentAddress(tt.args.senderAddress, tt.args.senderNonce); !reflect.DeepEqual(got, tt.want) {
+			if got := NewDeploymentAddress(tt.args.senderAddress, tt.args.senderNonce); !cmp.Equal(got, tt.want) {
 				t.Errorf("NewDeploymentAddress() = %v, want %v", got.String(), tt.want.String())
 			}
 		})
@@ -165,7 +166,7 @@ func TestAddress_setBytes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var got Address
 			got.setBytes(tt.b)
-			if !reflect.DeepEqual(got, tt.want) {
+			if !cmp.Equal(got, tt.want) {
 				t.Errorf("setBytes() = %v, want %v", got.String(), tt.want.String())
 			}
 		})

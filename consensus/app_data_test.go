@@ -178,3 +178,24 @@ func (tr TestResource) getInvokeNonContractTx(nonce int) *crypto.Transaction {
 	tx.Signature = crypto.Sign(privateKey, dataToSign.Bytes())
 	return tx
 }
+
+func (tr TestResource) getInvalidSerializedTx(nonce int) *crypto.Transaction {
+	sender, privateKey := tr.getSenderWithNonce(nonce)
+	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
+	data, err := util.BuildInvokeTxData("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
+	if err != nil {
+		panic(err)
+	}
+	tx := &crypto.Transaction{
+		Version:  1,
+		Sender:   &sender,
+		Payload:  data,
+		Receiver: senderAddress,
+		GasLimit: 0,
+		GasPrice: 0,
+		Receipt:  &crypto.TxReceipt{},
+	}
+	dataToSign := crypto.GetSigHash(tx)
+	tx.Signature = crypto.Sign(privateKey, dataToSign.Bytes())
+	return tx
+}

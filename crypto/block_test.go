@@ -2,11 +2,11 @@ package crypto
 
 import (
 	"bytes"
-	"reflect"
 	"testing"
 	"time"
 
 	"github.com/QuoineFinancial/liquid-chain/common"
+	"github.com/google/go-cmp/cmp"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -35,7 +35,7 @@ func TestBlock_Hash(t *testing.T) {
 			block := &Block{
 				Header: tt.fields.header,
 			}
-			if got := block.Header.Hash(); !reflect.DeepEqual(got, tt.want) {
+			if got := block.Header.Hash(); !cmp.Equal(got, tt.want) {
 				t.Errorf("Block.Hash() = %v, want %v", got, tt.want)
 			}
 		})

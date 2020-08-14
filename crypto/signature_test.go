@@ -3,10 +3,10 @@ package crypto
 import (
 	"crypto/ed25519"
 	"crypto/rand"
-	"reflect"
 	"testing"
 
 	"github.com/QuoineFinancial/liquid-chain/common"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestSign(t *testing.T) {
@@ -27,7 +27,7 @@ func TestSign(t *testing.T) {
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Sign(tt.args.privateKey, tt.args.message); !reflect.DeepEqual(got, tt.want) {
+			if got := Sign(tt.args.privateKey, tt.args.message); !cmp.Equal(got, tt.want) {
 				t.Errorf("Sign() = %v, want %v", got, tt.want)
 			}
 		})
@@ -74,7 +74,7 @@ func TestGetSigHash(t *testing.T) {
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetSigHash(tt.args.tx); !reflect.DeepEqual(got, tt.want) {
+			if got := GetSigHash(tt.args.tx); !cmp.Equal(got, tt.want) {
 				t.Errorf("GetSigHash() = %v, want %v", got, tt.want)
 			}
 		})

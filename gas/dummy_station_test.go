@@ -2,12 +2,12 @@ package gas
 
 import (
 	cryptoRand "crypto/rand"
-	"reflect"
 	"testing"
 
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestDummyStation_Sufficient(t *testing.T) {
@@ -42,7 +42,7 @@ func TestDummyStation_Burn(t *testing.T) {
 	pub, _, _ := ed25519.GenerateKey(cryptoRand.Reader)
 	addr := crypto.AddressFromPubKey(pub)
 	var want []*crypto.TxEvent
-	if got := station.Burn(addr, uint64(0)); !reflect.DeepEqual(got, want) {
+	if got := station.Burn(addr, uint64(0)); !cmp.Equal(got, want) {
 		t.Errorf("DummyStation.Burn() = %v, want %v", got, want)
 	}
 }
@@ -64,7 +64,7 @@ func TestDummyStation_GetPolicy(t *testing.T) {
 		policy: &FreePolicy{},
 	}
 	want := &FreePolicy{}
-	if got := station.GetPolicy(); !reflect.DeepEqual(got, want) {
+	if got := station.GetPolicy(); !cmp.Equal(got, want) {
 		t.Errorf("DummyStation.GetPolicy() = %v, want %v", got, want)
 	}
 }
@@ -95,7 +95,7 @@ func TestNewDummyStation(t *testing.T) {
 		policy: &FreePolicy{},
 	}
 
-	if got := NewDummyStation(app); !reflect.DeepEqual(got, want) {
+	if got := NewDummyStation(app); !cmp.Equal(got, want, cmp.AllowUnexported(DummyStation{})) {
 		t.Errorf("NewTestStation() = %v, want %v", got, want)
 	}
 }

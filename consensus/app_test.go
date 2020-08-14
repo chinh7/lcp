@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -61,7 +60,7 @@ func TestApp_BeginBlock(t *testing.T) {
 		req := types.RequestBeginBlock{Header: types.Header{Height: reqHeight, AppHash: previousBlockHash}}
 		got := app.BeginBlock(req)
 		want := types.ResponseBeginBlock{}
-		if !reflect.DeepEqual(got, want) {
+		if !cmp.Equal(got, want) {
 			t.Errorf("App.BeginBlock() = %v, want %v", got, want)
 		}
 
@@ -91,7 +90,7 @@ func TestApp_BeginBlock(t *testing.T) {
 		req := types.RequestBeginBlock{Header: types.Header{Height: reqHeight, AppHash: blockHash.Bytes()}}
 		got := app.BeginBlock(req)
 		want := types.ResponseBeginBlock{}
-		if !reflect.DeepEqual(got, want) {
+		if !cmp.Equal(got, want) {
 			t.Errorf("App.BeginBlock() = %v, want %v", got, want)
 		}
 
@@ -124,7 +123,7 @@ func TestApp_Info(t *testing.T) {
 			LastBlockAppHash: block.Header.Hash().Bytes(),
 		}
 
-		if !reflect.DeepEqual(got, want) {
+		if !cmp.Equal(got, want) {
 			t.Errorf("Got app.Info() = %v, want %v", got, want)
 		}
 	})
@@ -183,6 +182,68 @@ func TestApp_CheckTx(t *testing.T) {
 	})
 }
 
+func TestApp_DeliverTx(t *testing.T) {
+	tr := newAppTestResource()
+	defer tr.cleanData()
+	app := tr.app
+
+	app.BeginBlock(types.RequestBeginBlock{
+		Header: types.Header{
+			Height:  1,
+			Time:    time.Now(),
+			AppHash: []byte{},
+		},
+	})
+	deployTx, _ := tr.getDeployTx(0).Serialize()
+	app.DeliverTx(types.RequestDeliverTx{Tx: deployTx})
+	app.Commit()
+
+	t.Run("Deserialize tx error", func(t *testing.T) {
+		got := app.DeliverTx(types.RequestDeliverTx{Tx: []byte{1, 2, 3}})
+		want := types.ResponseDeliverTx{Code: ResponseCodeNotOK}
+
+		if !cmp.Equal(got, want) {
+			t.Errorf("App.DeliverTx() = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("DeliverTx with error transactions", func(t *testing.T) {
+		type txRequest struct {
+			tx                        *crypto.Transaction
+			expectedResponseDeliverTx types.ResponseDeliverTx
+		}
+
+		deliverTxTestTable := []txRequest{{
+			tx:                        tr.getInvokeNilContractTx(1),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeNotOK},
+		}, {
+			tx:                        tr.getInvalidMaxSizeTx(1),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeNotOK},
+		}, {
+			tx:                        tr.getInvalidSignatureTx(1),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeNotOK},
+		}, {
+			tx:                        tr.getInvalidNonceTx(2),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeNotOK},
+		}, {
+			tx:                        tr.getInvalidGasPriceTx(1),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeNotOK},
+		}, {
+			tx:                        tr.getInvokeNonContractTx(1),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeNotOK},
+		}}
+
+		for i, deliverTxTest := range deliverTxTestTable {
+			rawTx, _ := deliverTxTest.tx.Serialize()
+			got := app.DeliverTx(types.RequestDeliverTx{Tx: rawTx})
+			want := deliverTxTest.expectedResponseDeliverTx
+			if diff := cmp.Diff(got, want); diff != "" {
+				t.Errorf("Case %d: App.DeliverTx() is expected to be = %v, got %v", i+1, want, got)
+			}
+		}
+	})
+}
+
 func TestBlockHashAndAppHashConversion(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -199,11 +260,11 @@ func TestBlockHashAndAppHashConversion(t *testing.T) {
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := blockHashToAppHash(tt.blockHash); !reflect.DeepEqual(got, tt.appHash) {
+			if got := blockHashToAppHash(tt.blockHash); !cmp.Equal(got, tt.appHash) {
 				t.Errorf("blockHashToAppHash() = %v, want %v", got, tt.appHash)
 			}
 
-			if got := appHashToBlockHash(tt.appHash); !reflect.DeepEqual(got, tt.blockHash) {
+			if got := appHashToBlockHash(tt.appHash); !cmp.Equal(got, tt.blockHash) {
 				t.Errorf("appHashToBlockHash() = %v, want %v", got, tt.blockHash)
 			}
 		})
@@ -281,13 +342,13 @@ func TestFullAppFlow(t *testing.T) {
 		for _, txRequest := range round.txRequests {
 			rawTx, _ := txRequest.tx.Serialize()
 			responseCheckTx := app.CheckTx(types.RequestCheckTx{Tx: rawTx})
-			if !reflect.DeepEqual(responseCheckTx, txRequest.expectedResponseCheckTx) {
+			if !cmp.Equal(responseCheckTx, txRequest.expectedResponseCheckTx) {
 				t.Errorf("app.CheckTx error, got %v, want %v", responseCheckTx, txRequest.expectedResponseCheckTx)
 			}
 
 			if responseCheckTx.Code == ResponseCodeOK {
 				responseDeliverTx := app.DeliverTx(types.RequestDeliverTx{Tx: rawTx})
-				if !reflect.DeepEqual(responseDeliverTx, txRequest.expectedResponseDeliverTx) {
+				if !cmp.Equal(responseDeliverTx, txRequest.expectedResponseDeliverTx) {
 					t.Errorf("app.CheckTx error, got %v, want %v", responseDeliverTx, txRequest.expectedResponseDeliverTx)
 				}
 			}

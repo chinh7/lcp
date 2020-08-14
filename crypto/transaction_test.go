@@ -1,10 +1,10 @@
 package crypto
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/QuoineFinancial/liquid-chain/common"
+	"github.com/google/go-cmp/cmp"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -70,7 +70,7 @@ func TestTransaction_Serialize(t *testing.T) {
 				t.Errorf("Transaction.Serialize() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !cmp.Equal(got, tt.want) {
 				t.Errorf("Transaction.Serialize() = %v, want %v", got, tt.want)
 			}
 		})
@@ -132,7 +132,7 @@ func TestTransaction_Deserialize(t *testing.T) {
 				t.Errorf("Transaction.Deserialize() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if err == nil {
-				if equal := reflect.DeepEqual(tx, tt.want); !equal {
+				if equal := cmp.Equal(tx, tt.want); !equal {
 					t.Errorf("Transaction.Deserialize() %v, want %v", tx, tt.wantErr)
 				}
 			}
@@ -195,7 +195,7 @@ func TestTransaction_Hash(t *testing.T) {
 				Signature: tt.fields.Signature,
 				Receipt:   tt.fields.Receipt,
 			}
-			if got := tx.Hash(); !reflect.DeepEqual(got, tt.want) {
+			if got := tx.Hash(); !cmp.Equal(got, tt.want) {
 				t.Errorf("Transaction.Hash() = %v, want %v", got, tt.want)
 			}
 		})
