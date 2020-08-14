@@ -13,7 +13,7 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/google/uuid"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/abci/types"
 )
@@ -130,6 +130,59 @@ func TestApp_Info(t *testing.T) {
 	})
 }
 
+func TestApp_CheckTx(t *testing.T) {
+	tr := newAppTestResource()
+	defer tr.cleanData()
+	app := tr.app
+
+	app.BeginBlock(types.RequestBeginBlock{
+		Header: types.Header{
+			Height:  1,
+			Time:    time.Now(),
+			AppHash: []byte{},
+		},
+	})
+	deployTx, _ := tr.getDeployTx(0).Serialize()
+	app.DeliverTx(types.RequestDeliverTx{Tx: deployTx})
+	app.Commit()
+
+	t.Run("CheckTx with error transactions", func(t *testing.T) {
+		type txRequest struct {
+			tx                      *crypto.Transaction
+			expectedResponseCheckTx types.ResponseCheckTx
+		}
+
+		checkTxTestTable := []txRequest{{
+			tx:                      tr.getInvokeNilContractTx(1),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invoke nil contract"},
+		}, {
+			tx:                      tr.getInvalidMaxSizeTx(1),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: fmt.Sprintf("Transaction size exceed %vB", constant.MaxTransactionSize)},
+		}, {
+			tx:                      tr.getInvalidSignatureTx(1),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid signature"},
+		}, {
+			tx:                      tr.getInvalidNonceTx(2),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid nonce. Expected 1, got 2"},
+		}, {
+			tx:                      tr.getInvalidGasPriceTx(1),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid gas price"},
+		}, {
+			tx:                      tr.getInvokeNonContractTx(1),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invoke a non-contract account"},
+		}}
+
+		for i, checkTxTest := range checkTxTestTable {
+			rawTx, _ := checkTxTest.tx.Serialize()
+			got := app.CheckTx(types.RequestCheckTx{Tx: rawTx})
+			want := checkTxTest.expectedResponseCheckTx
+			if diff := cmp.Diff(got, want); diff != "" {
+				t.Errorf("Case %d: App.CheckTx() is expected to be = %v, got %v", i+1, want, got)
+			}
+		}
+	})
+}
+
 func TestBlockHashAndAppHashConversion(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -158,12 +211,9 @@ func TestBlockHashAndAppHashConversion(t *testing.T) {
 }
 
 func TestFullAppFlow(t *testing.T) {
-	id, _ := uuid.NewUUID()
-	path := fmt.Sprintf("./data-" + id.String())
-	app := NewApp(path, "")
-	defer func() {
-		os.RemoveAll(path)
-	}()
+	tr := newAppTestResource()
+	defer tr.cleanData()
+	app := tr.app
 
 	type txRequest struct {
 		tx                        *crypto.Transaction
@@ -182,7 +232,7 @@ func TestFullAppFlow(t *testing.T) {
 		height: 1,
 		time:   time.Unix(0, 1),
 		txRequests: []txRequest{{
-			tx:                        testResource{}.getDeployTx(),
+			tx:                        tr.getDeployTx(0),
 			expectedResponseCheckTx:   types.ResponseCheckTx{Code: ResponseCodeOK},
 			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeOK},
 		}},
@@ -190,7 +240,7 @@ func TestFullAppFlow(t *testing.T) {
 		height: 2,
 		time:   time.Unix(0, 2),
 		txRequests: []txRequest{{
-			tx:                        testResource{}.getInvokeTx(),
+			tx:                        tr.getInvokeTx(1),
 			expectedResponseCheckTx:   types.ResponseCheckTx{Code: ResponseCodeOK},
 			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeOK},
 		}},
@@ -198,22 +248,22 @@ func TestFullAppFlow(t *testing.T) {
 		height: 3,
 		time:   time.Unix(0, 3),
 		txRequests: []txRequest{{
-			tx:                      testResource{}.getInvokeNilContractTx(),
+			tx:                      tr.getInvokeNilContractTx(2),
 			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invoke nil contract"},
 		}, {
-			tx:                      testResource{}.getInvalidMaxSizeTx(),
+			tx:                      tr.getInvalidMaxSizeTx(2),
 			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: fmt.Sprintf("Transaction size exceed %vB", constant.MaxTransactionSize)},
 		}, {
-			tx:                      testResource{}.getInvaliSignatureTx(),
+			tx:                      tr.getInvalidSignatureTx(2),
 			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid signature"},
 		}, {
-			tx:                      testResource{}.getInvalidNonceTx(),
+			tx:                      tr.getInvalidNonceTx(123),
 			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid nonce. Expected 2, got 123"},
 		}, {
-			tx:                      testResource{}.getInvalidGasPriceTx(),
+			tx:                      tr.getInvalidGasPriceTx(2),
 			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid gas price"},
 		}, {
-			tx:                      testResource{}.getInvokeNonContractTx(),
+			tx:                      tr.getInvokeNonContractTx(2),
 			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invoke a non-contract account"},
 		}},
 	}}

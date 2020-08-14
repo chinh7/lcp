@@ -15,6 +15,7 @@ require (
 	github.com/spf13/viper v1.6.3
 	github.com/stretchr/testify v1.5.1
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c
+	github.com/tendermint/abci v0.12.0
 	github.com/tendermint/tendermint v0.33.6
 	github.com/vertexdlt/vertexvm v0.0.0-20191210081850-664d19e8b3bb
 	golang.org/x/crypto v0.0.0-20200406173513-056763e48d71

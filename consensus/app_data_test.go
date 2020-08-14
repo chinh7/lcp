@@ -2,22 +2,24 @@ package consensus
 
 import (
 	"crypto/ed25519"
-	"math/rand"
 
 	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/util"
 )
 
-type testResource struct{}
-
-func (testResource) getDeployTx() *crypto.Transaction {
+func (tr TestResource) getSenderWithNonce(nonce int) (crypto.TxSender, ed25519.PrivateKey) {
 	seed := make([]byte, 32)
 	privateKey := ed25519.NewKeyFromSeed(seed)
 	sender := crypto.TxSender{
-		Nonce:     uint64(0),
+		Nonce:     uint64(nonce),
 		PublicKey: privateKey.Public().(ed25519.PublicKey),
 	}
+	return sender, privateKey
+}
+
+func (tr TestResource) getDeployTx(nonce int) *crypto.Transaction {
+	sender, privateKey := tr.getSenderWithNonce(nonce)
 	data, err := util.BuildDeployTxPayload("./execution_testdata/contract.wasm", "./execution_testdata/contract-abi.json", "", []string{})
 	if err != nil {
 		panic(err)
@@ -36,13 +38,8 @@ func (testResource) getDeployTx() *crypto.Transaction {
 	return tx
 }
 
-func (testResource) getInvokeTx() *crypto.Transaction {
-	seed := make([]byte, 32)
-	privateKey := ed25519.NewKeyFromSeed(seed)
-	sender := crypto.TxSender{
-		Nonce:     uint64(1),
-		PublicKey: privateKey.Public().(ed25519.PublicKey),
-	}
+func (tr TestResource) getInvokeTx(nonce int) *crypto.Transaction {
+	sender, privateKey := tr.getSenderWithNonce(nonce)
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 	data, err := util.BuildInvokeTxData("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
 	if err != nil {
@@ -62,15 +59,8 @@ func (testResource) getInvokeTx() *crypto.Transaction {
 	return tx
 }
 
-func (testResource) getInvalidMaxSizeTx() *crypto.Transaction {
-	seed := make([]byte, 32)
-	rand.Read(seed)
-
-	privateKey := ed25519.NewKeyFromSeed(seed)
-	sender := crypto.TxSender{
-		Nonce:     uint64(0),
-		PublicKey: privateKey.Public().(ed25519.PublicKey),
-	}
+func (tr TestResource) getInvalidMaxSizeTx(nonce int) *crypto.Transaction {
+	sender, _ := tr.getSenderWithNonce(nonce)
 	type maxSizeContart [constant.MaxTransactionSize]byte
 	var contract maxSizeContart
 	tx := &crypto.Transaction{
@@ -85,15 +75,8 @@ func (testResource) getInvalidMaxSizeTx() *crypto.Transaction {
 	return tx
 }
 
-func (testResource) getInvaliSignatureTx() *crypto.Transaction {
-	seed := make([]byte, 32)
-	rand.Read(seed)
-
-	privateKey := ed25519.NewKeyFromSeed(seed)
-	sender := crypto.TxSender{
-		Nonce:     uint64(0),
-		PublicKey: privateKey.Public().(ed25519.PublicKey),
-	}
+func (tr TestResource) getInvalidSignatureTx(nonce int) *crypto.Transaction {
+	sender, _ := tr.getSenderWithNonce(nonce)
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 	data, err := util.BuildInvokeTxData("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
 	if err != nil {
@@ -112,13 +95,8 @@ func (testResource) getInvaliSignatureTx() *crypto.Transaction {
 	return tx
 }
 
-func (testResource) getInvalidNonceTx() *crypto.Transaction {
-	seed := make([]byte, 32)
-	privateKey := ed25519.NewKeyFromSeed(seed)
-	sender := crypto.TxSender{
-		Nonce:     uint64(123),
-		PublicKey: privateKey.Public().(ed25519.PublicKey),
-	}
+func (tr TestResource) getInvalidNonceTx(nonce int) *crypto.Transaction {
+	sender, privateKey := tr.getSenderWithNonce(nonce)
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 	data, err := util.BuildInvokeTxData("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
 	if err != nil {
@@ -138,13 +116,8 @@ func (testResource) getInvalidNonceTx() *crypto.Transaction {
 	return tx
 }
 
-func (testResource) getInvalidGasPriceTx() *crypto.Transaction {
-	seed := make([]byte, 32)
-	privateKey := ed25519.NewKeyFromSeed(seed)
-	sender := crypto.TxSender{
-		Nonce:     uint64(2),
-		PublicKey: privateKey.Public().(ed25519.PublicKey),
-	}
+func (tr TestResource) getInvalidGasPriceTx(nonce int) *crypto.Transaction {
+	sender, privateKey := tr.getSenderWithNonce(nonce)
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 	data, err := util.BuildInvokeTxData("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
 	if err != nil {
@@ -164,13 +137,8 @@ func (testResource) getInvalidGasPriceTx() *crypto.Transaction {
 	return tx
 }
 
-func (testResource) getInvokeNilContractTx() *crypto.Transaction {
-	seed := make([]byte, 32)
-	privateKey := ed25519.NewKeyFromSeed(seed)
-	sender := crypto.TxSender{
-		Nonce:     uint64(2),
-		PublicKey: privateKey.Public().(ed25519.PublicKey),
-	}
+func (tr TestResource) getInvokeNilContractTx(nonce int) *crypto.Transaction {
+	sender, privateKey := tr.getSenderWithNonce(nonce)
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 	data, err := util.BuildInvokeTxData("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
 	if err != nil {
@@ -190,13 +158,8 @@ func (testResource) getInvokeNilContractTx() *crypto.Transaction {
 	return tx
 }
 
-func (testResource) getInvokeNonContractTx() *crypto.Transaction {
-	seed := make([]byte, 32)
-	privateKey := ed25519.NewKeyFromSeed(seed)
-	sender := crypto.TxSender{
-		Nonce:     uint64(2),
-		PublicKey: privateKey.Public().(ed25519.PublicKey),
-	}
+func (tr TestResource) getInvokeNonContractTx(nonce int) *crypto.Transaction {
+	sender, privateKey := tr.getSenderWithNonce(nonce)
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 	data, err := util.BuildInvokeTxData("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
 	if err != nil {
