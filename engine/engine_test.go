@@ -159,7 +159,9 @@ func TestEngineIgnite(t *testing.T) {
 			if tt.callee != nil {
 				if tt.calleeAddress.String() != tt.callerAddress.String() {
 					contractBytes, _ := rlp.EncodeToBytes(&tt.callee)
-					state.CreateAccount(contractCreator, tt.calleeAddress, contractBytes)
+					if _, err := state.CreateAccount(contractCreator, tt.calleeAddress, contractBytes); err != nil {
+						panic(err)
+					}
 
 				}
 				// contract init
@@ -176,7 +178,6 @@ func TestEngineIgnite(t *testing.T) {
 				if err != nil {
 					panic(err)
 				}
-
 			}
 
 			// exec

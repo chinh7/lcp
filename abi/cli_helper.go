@@ -31,7 +31,7 @@ type HeaderFile struct {
 
 // IsArray returns true if ParameterFile type ends in [] (an array)
 func (p ParameterFile) IsArray() bool {
-	return p.Type[len(p.Type)-2:] == "[]"
+	return strings.HasSuffix(p.Type, "[]")
 }
 
 func parsePrimitiveTypeFromString(t string) (PrimitiveType, error) {
