@@ -65,7 +65,7 @@ func TestTransaction_Serialize(t *testing.T) {
 				Signature: tt.fields.Signature,
 				Receipt:   tt.fields.Receipt,
 			}
-			got, err := tx.Serialize()
+			got, err := tx.Encode()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Transaction.Serialize() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -126,13 +126,12 @@ func TestTransaction_Deserialize(t *testing.T) {
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var tx Transaction
-			err := tx.Deserialize(tt.args.raw)
+			tx, err := DecodeTransaction(tt.args.raw)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Transaction.Deserialize() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("DecodeTransaction() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if err == nil {
-				if equal := cmp.Equal(tx, tt.want); !equal {
+				if equal := cmp.Equal((*tx), tt.want); !equal {
 					t.Errorf("Transaction.Deserialize() %v, want %v", tx, tt.wantErr)
 				}
 			}

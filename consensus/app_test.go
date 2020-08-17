@@ -141,7 +141,7 @@ func TestApp_CheckTx(t *testing.T) {
 			AppHash: []byte{},
 		},
 	})
-	deployTx, _ := tr.getDeployTx(0).Serialize()
+	deployTx, _ := tr.getDeployTx(0).Encode()
 	app.DeliverTx(types.RequestDeliverTx{Tx: deployTx})
 	app.Commit()
 
@@ -172,7 +172,7 @@ func TestApp_CheckTx(t *testing.T) {
 		}}
 
 		for i, checkTxTest := range checkTxTestTable {
-			rawTx, _ := checkTxTest.tx.Serialize()
+			rawTx, _ := checkTxTest.tx.Encode()
 			got := app.CheckTx(types.RequestCheckTx{Tx: rawTx})
 			want := checkTxTest.expectedResponseCheckTx
 			if diff := cmp.Diff(got, want); diff != "" {
@@ -194,7 +194,7 @@ func TestApp_DeliverTx(t *testing.T) {
 			AppHash: []byte{},
 		},
 	})
-	deployTx, _ := tr.getDeployTx(0).Serialize()
+	deployTx, _ := tr.getDeployTx(0).Encode()
 	app.DeliverTx(types.RequestDeliverTx{Tx: deployTx})
 	app.Commit()
 
@@ -234,7 +234,7 @@ func TestApp_DeliverTx(t *testing.T) {
 		}}
 
 		for i, deliverTxTest := range deliverTxTestTable {
-			rawTx, _ := deliverTxTest.tx.Serialize()
+			rawTx, _ := deliverTxTest.tx.Encode()
 			got := app.DeliverTx(types.RequestDeliverTx{Tx: rawTx})
 			want := deliverTxTest.expectedResponseDeliverTx
 			if diff := cmp.Diff(got, want); diff != "" {
@@ -258,7 +258,7 @@ func TestApp_DeliverTx(t *testing.T) {
 		}}
 
 		for i, deliverTxTest := range deliverTxTestTable {
-			rawTx, _ := deliverTxTest.tx.Serialize()
+			rawTx, _ := deliverTxTest.tx.Encode()
 			got := app.DeliverTx(types.RequestDeliverTx{Tx: rawTx})
 			want := deliverTxTest.expectedResponseDeliverTx
 			if diff := cmp.Diff(got, want); diff != "" {
@@ -364,7 +364,7 @@ func TestFullAppFlow(t *testing.T) {
 		})
 
 		for _, txRequest := range round.txRequests {
-			rawTx, _ := txRequest.tx.Serialize()
+			rawTx, _ := txRequest.tx.Encode()
 			responseCheckTx := app.CheckTx(types.RequestCheckTx{Tx: rawTx})
 			if !cmp.Equal(responseCheckTx, txRequest.expectedResponseCheckTx) {
 				t.Errorf("app.CheckTx error, got %v, want %v", responseCheckTx, txRequest.expectedResponseCheckTx)

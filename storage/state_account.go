@@ -22,8 +22,8 @@ type Account struct {
 	contract []byte
 }
 
-// LoadAccount load the account from disk
-func (state *StateStorage) LoadAccount(address crypto.Address) (*Account, error) {
+// loadAccount load the account from disk
+func (state *StateStorage) loadAccount(address crypto.Address) (*Account, error) {
 	raw, err := state.stateTrie.Get(address[:])
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (state *StateStorage) LoadAccount(address crypto.Address) (*Account, error)
 // GetAccount retrieve the account state at addr
 func (state *StateStorage) GetAccount(address crypto.Address) (*Account, error) {
 	if state.accounts[address] == nil {
-		loadedAccount, err := state.LoadAccount(address)
+		loadedAccount, err := state.loadAccount(address)
 		if err != nil {
 			return nil, err
 		}

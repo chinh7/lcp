@@ -37,12 +37,12 @@ type Block struct {
 
 // SetStateRoot set StateRoot of header
 func (blockHeader *BlockHeader) SetStateRoot(hash common.Hash) {
-	blockHeader.StateRoot = hash
+	blockHeader.StateRoot.SetBytes(hash.Bytes())
 }
 
 // SetTransactionRoot set TransactionRoot of header
 func (blockHeader *BlockHeader) SetTransactionRoot(hash common.Hash) {
-	blockHeader.TransactionRoot = hash
+	blockHeader.TransactionRoot.SetBytes(hash.Bytes())
 }
 
 // Hash returns blake2b hash of rlp encoding of block header

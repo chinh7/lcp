@@ -22,7 +22,7 @@ type StateStorage struct {
 
 // AddTransaction add new tx to txTrie
 func (state *StateStorage) AddTransaction(tx *crypto.Transaction) error {
-	rawTx, err := tx.Serialize()
+	rawTx, err := tx.Encode()
 	if err != nil {
 		return err
 	}

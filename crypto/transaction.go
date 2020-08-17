@@ -48,18 +48,22 @@ type Transaction struct {
 	Receipt   *TxReceipt
 }
 
-// Serialize returns bytes representation of transaction
-func (tx Transaction) Serialize() ([]byte, error) {
+// Encode returns bytes representation of transaction
+func (tx Transaction) Encode() ([]byte, error) {
 	return rlp.EncodeToBytes(tx)
 }
 
-// Deserialize returns Transaction from bytes representation
-func (tx *Transaction) Deserialize(raw []byte) error {
-	return rlp.DecodeBytes(raw, &tx)
+// DecodeTransaction returns Transaction from bytes representation
+func DecodeTransaction(raw []byte) (*Transaction, error) {
+	var tx Transaction
+	if err := rlp.DecodeBytes(raw, &tx); err != nil {
+		return nil, err
+	}
+	return &tx, nil
 }
 
 // Hash returns hash for storing transaction
 func (tx Transaction) Hash() common.Hash {
-	hash, _ := tx.Serialize()
+	hash, _ := tx.Encode()
 	return blake2b.Sum256(hash)
 }

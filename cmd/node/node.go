@@ -16,7 +16,7 @@ type LiquidNode struct {
 	app                *consensus.App
 	command            *cobra.Command
 	tmNode             *tmNode.Node
-	vertexAPI          *api.API
+	chainAPI           *api.API
 }
 
 // New returns new instance of Node

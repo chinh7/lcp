@@ -10,7 +10,7 @@ import (
 )
 
 // BuildInvokeTxData build data for invoke transaction
-func BuildInvokeTxData(headerPath string, methodName string, params []string) (*crypto.TxPayload, error) {
+func BuildInvokeTxPayload(headerPath string, methodName string, params []string) (*crypto.TxPayload, error) {
 	header, err := abi.LoadHeaderFromFile(headerPath)
 	if err != nil {
 		return nil, err

@@ -21,7 +21,7 @@ func NewMetaStorage(db db.Database) *MetaStorage {
 // StoreBlockIndexes extracts all indexes and store it
 func (ms *MetaStorage) StoreBlockIndexes(block *crypto.Block) error {
 	ms.Put(
-		ms.encodeHeightToBlockHashKey(block.Header.Height),
+		ms.encodeBlockHeightToBlockHashKey(block.Header.Height),
 		block.Header.Hash().Bytes(),
 	)
 
@@ -29,7 +29,7 @@ func (ms *MetaStorage) StoreBlockIndexes(block *crypto.Block) error {
 	binary.LittleEndian.PutUint64(blockHeightByte, block.Header.Height)
 	for _, tx := range block.Transactions {
 		ms.Put(
-			ms.encodeTxHashToHeightKey(tx.Hash()),
+			ms.encodeTxHashToBlockHeightKey(tx.Hash()),
 			blockHeightByte,
 		)
 	}
@@ -53,14 +53,14 @@ func (ms *MetaStorage) LatestBlockHeight() uint64 {
 	return binary.LittleEndian.Uint64(blockHeightByte)
 }
 
-// HeightToBlockHash retrieves block hash by its height
-func (ms *MetaStorage) HeightToBlockHash(height uint64) common.Hash {
-	hash := ms.Get(ms.encodeHeightToBlockHashKey(height))
+// BlockHeightToBlockHash retrieves block hash by its height
+func (ms *MetaStorage) BlockHeightToBlockHash(height uint64) common.Hash {
+	hash := ms.Get(ms.encodeBlockHeightToBlockHashKey(height))
 	return common.BytesToHash(hash)
 }
 
 // TxHashToBlockHeight retrieves height of block which contains tx
 func (ms *MetaStorage) TxHashToBlockHeight(txHash common.Hash) uint64 {
-	blockHeightByte := ms.Get(ms.encodeTxHashToHeightKey(txHash))
+	blockHeightByte := ms.Get(ms.encodeTxHashToBlockHeightKey(txHash))
 	return binary.LittleEndian.Uint64(blockHeightByte)
 }

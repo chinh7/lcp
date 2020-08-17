@@ -85,12 +85,12 @@ func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
 	}
 
 	if apiFlag {
-		node.vertexAPI = api.NewAPI(":5555", api.Config{
+		node.chainAPI = api.NewAPI(":5555", api.Config{
 			HomeDir: node.rootDir,
 			NodeURL: "tcp://localhost:26657",
 			App:     node.app,
 		})
-		err := node.vertexAPI.Serve()
+		err := node.chainAPI.Serve()
 		if err != nil {
 			return err
 		}
@@ -100,8 +100,8 @@ func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
 }
 
 func (node *LiquidNode) stopNode() {
-	if node.vertexAPI != nil {
-		node.vertexAPI.Close()
+	if node.chainAPI != nil {
+		node.chainAPI.Close()
 	}
 
 	if node.tmNode.IsRunning() {

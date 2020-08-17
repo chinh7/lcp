@@ -83,7 +83,7 @@ func deploy(cmd *cobra.Command, args []string) {
 	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign[:])
 
-	if rawTx, err := tx.Serialize(); err != nil {
+	if rawTx, err := tx.Encode(); err != nil {
 		panic(err)
 	} else {
 		broadcast(endpoint, rawTx)
@@ -99,7 +99,7 @@ func invoke(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	payload, err := util.BuildInvokeTxData(args[1], args[2], args[3:])
+	payload, err := util.BuildInvokeTxPayload(args[1], args[2], args[3:])
 	if err != nil {
 		panic(err)
 	}
@@ -119,7 +119,7 @@ func invoke(cmd *cobra.Command, args []string) {
 	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign[:])
 
-	if rawTx, err := tx.Serialize(); err != nil {
+	if rawTx, err := tx.Encode(); err != nil {
 		panic(err)
 	} else {
 		broadcast(endpoint, rawTx)

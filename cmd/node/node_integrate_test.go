@@ -113,7 +113,7 @@ func TestBroadcastTx(t *testing.T) {
 	}
 	dataToSign := crypto.GetSigHash(deployTx)
 	deployTx.Signature = crypto.Sign(privateKey, dataToSign[:])
-	rawTx, _ := deployTx.Serialize()
+	rawTx, _ := deployTx.Encode()
 	serializedTx := base64.StdEncoding.EncodeToString(rawTx)
 	testcases := []testCase{
 		{

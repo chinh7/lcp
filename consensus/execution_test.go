@@ -85,7 +85,7 @@ func TestApplyTx(t *testing.T) {
 	contractAddress := crypto.NewDeploymentAddress(senderAddress, sender.Nonce)
 
 	// Setup invoke contract transaction
-	invokeData, err := util.BuildInvokeTxData("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
+	invokeData, err := util.BuildInvokeTxPayload("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
 	if err != nil {
 		panic(err)
 	}
@@ -104,7 +104,7 @@ func TestApplyTx(t *testing.T) {
 
 	// Setup falsy tx to trigger reverse
 	sender3 := crypto.TxSender{Nonce: uint64(2)}
-	invalidInvokePayload, err := util.BuildInvokeTxData("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
+	invalidInvokePayload, err := util.BuildInvokeTxPayload("./execution_testdata/contract-abi.json", "mint", []string{"1000"})
 	if err != nil {
 		panic(err)
 	}

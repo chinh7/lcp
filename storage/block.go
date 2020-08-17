@@ -31,8 +31,8 @@ func (bs *BlockStorage) FinalizeBlock(stateRoot, txRoot common.Hash) error {
 		return errors.New("BlockStorage.currentBlock is nil")
 	}
 
-	bs.currentBlock.Header.StateRoot.SetBytes(stateRoot.Bytes())
-	bs.currentBlock.Header.TransactionRoot.SetBytes(txRoot.Bytes())
+	bs.currentBlock.Header.SetStateRoot(stateRoot)
+	bs.currentBlock.Header.SetTransactionRoot(txRoot)
 	return nil
 }
 

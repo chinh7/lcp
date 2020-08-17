@@ -10,19 +10,19 @@ import (
 type metaKeyPrefix byte
 
 const (
-	heightToBlockHashPrefix metaKeyPrefix = 0x0
-	txHashToHeightPrefix    metaKeyPrefix = 0x1
-	latestBlockHeightPrefix metaKeyPrefix = 0x2
+	blockHeightToBlockHashPrefix metaKeyPrefix = 0x0
+	txHashToBlockHeightPrefix    metaKeyPrefix = 0x1
+	latestBlockHeightPrefix      metaKeyPrefix = 0x2
 )
 
-func (index *MetaStorage) encodeTxHashToHeightKey(hash common.Hash) []byte {
-	return index.encodeKey(txHashToHeightPrefix, hash[:])
+func (index *MetaStorage) encodeTxHashToBlockHeightKey(hash common.Hash) []byte {
+	return index.encodeKey(txHashToBlockHeightPrefix, hash[:])
 }
 
-func (index *MetaStorage) encodeHeightToBlockHashKey(height uint64) []byte {
+func (index *MetaStorage) encodeBlockHeightToBlockHashKey(height uint64) []byte {
 	key := make([]byte, 8)
 	binary.LittleEndian.PutUint64(key, height)
-	return index.encodeKey(heightToBlockHashPrefix, key)
+	return index.encodeKey(blockHeightToBlockHashPrefix, key)
 }
 
 func (index *MetaStorage) encodeLatestBlockHeightKey() []byte {

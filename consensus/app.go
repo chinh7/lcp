@@ -79,7 +79,7 @@ func (app *App) BeginBlock(req abciTypes.RequestBeginBlock) abciTypes.ResponseBe
 // Info returns application chain info
 func (app *App) Info(req abciTypes.RequestInfo) (resInfo abciTypes.ResponseInfo) {
 	lastBlockHeight := app.meta.LatestBlockHeight()
-	lastBlockHash := app.meta.HeightToBlockHash(lastBlockHeight)
+	lastBlockHash := app.meta.BlockHeightToBlockHash(lastBlockHeight)
 	return abciTypes.ResponseInfo{
 		LastBlockHeight:  int64(lastBlockHeight),
 		LastBlockAppHash: blockHashToAppHash(lastBlockHash),
@@ -95,15 +95,15 @@ func (app *App) CheckTx(req abciTypes.RequestCheckTx) abciTypes.ResponseCheckTx 
 		}
 	}
 
-	var tx crypto.Transaction
-	if err := tx.Deserialize(req.GetTx()); err != nil {
+	tx, err := crypto.DecodeTransaction(req.GetTx())
+	if err != nil {
 		return abciTypes.ResponseCheckTx{
 			Code: ResponseCodeNotOK,
 			Log:  err.Error(),
 		}
 	}
 
-	if err := app.validateTx(&tx); err != nil {
+	if err := app.validateTx(tx); err != nil {
 		return abciTypes.ResponseCheckTx{
 			Code: ResponseCodeNotOK,
 			Log:  err.Error(),
@@ -115,25 +115,28 @@ func (app *App) CheckTx(req abciTypes.RequestCheckTx) abciTypes.ResponseCheckTx 
 
 //DeliverTx executes the submitted transaction
 func (app *App) DeliverTx(req abciTypes.RequestDeliverTx) abciTypes.ResponseDeliverTx {
-	var tx crypto.Transaction
-	if err := tx.Deserialize(req.GetTx()); err != nil {
+	tx, err := crypto.DecodeTransaction(req.GetTx())
+	if err != nil {
 		return abciTypes.ResponseDeliverTx{Code: ResponseCodeNotOK}
 	}
 
-	if err := app.validateTx(&tx); err != nil {
+	if err := app.validateTx(tx); err != nil {
 		return abciTypes.ResponseDeliverTx{Code: ResponseCodeNotOK}
 	}
 
-	if receipt, err := app.applyTransaction(&tx); err != nil {
+	if receipt, err := app.applyTransaction(tx); err != nil {
 		panic(err)
 	} else {
 		tx.Receipt = receipt
 	}
 
-	if err := app.state.AddTransaction(&tx); err != nil {
-		log.Fatal(err)
+	if err := app.state.AddTransaction(tx); err != nil {
+		panic(err)
 	}
-	app.block.AddTransaction(&tx)
+
+	if err := app.block.AddTransaction(tx); err != nil {
+		panic(err)
+	}
 
 	return abciTypes.ResponseDeliverTx{Code: ResponseCodeOK}
 }
@@ -141,12 +144,19 @@ func (app *App) DeliverTx(req abciTypes.RequestDeliverTx) abciTypes.ResponseDeli
 // Commit returns the state root of application storage. Called once all block processing is complete
 func (app *App) Commit() abciTypes.ResponseCommit {
 	stateRootHash, txRootHash := app.state.Commit()
-	app.block.FinalizeBlock(stateRootHash, txRootHash)
+	if err := app.block.FinalizeBlock(stateRootHash, txRootHash); err != nil {
+		panic(err)
+	}
+
 	blockHash, err := app.block.Commit()
 	if err != nil {
 		panic(err)
 	}
-	app.meta.StoreBlockIndexes(app.block.MustGetBlock(blockHash))
+
+	if err := app.meta.StoreBlockIndexes(app.block.MustGetBlock(blockHash)); err != nil {
+		log.Println("unable to store index for block", blockHash)
+	}
+
 	return abciTypes.ResponseCommit{Data: blockHashToAppHash(blockHash)}
 }
 
