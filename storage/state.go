@@ -1,8 +1,7 @@
 package storage
 
 import (
-	"errors"
-	"time"
+	"log"
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/common"
@@ -11,106 +10,95 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/trie"
 )
 
-// BlockInfo contains essential block information
-type BlockInfo struct {
-	Height  uint64
-	AppHash common.Hash
-	Time    time.Time
+// StateStorage is the global account state consisting of many address->state mapping
+type StateStorage struct {
+	db.Database
+	blockHeader       *crypto.BlockHeader
+	txTrie            *trie.Trie
+	stateTrie         *trie.Trie
+	accounts          map[crypto.Address]*Account
+	accountCheckpoint common.Hash
 }
 
-// State is the global account state consisting of many address->state mapping
-type State struct {
-	BlockInfo  *BlockInfo
-	db         db.Database
-	trie       *trie.Trie
-	checkpoint common.Hash
-	accounts   map[crypto.Address]*Account
-}
-
-// ErrAccountNotExist returns when loadAccount returns nil
-var ErrAccountNotExist = errors.New("contract account not exist")
-
-// New returns a state database
-func New(root common.Hash, db db.Database) (*State, error) {
-	t, err := trie.New(root, db)
+// AddTransaction add new tx to txTrie
+func (state *StateStorage) AddTransaction(tx *crypto.Transaction) error {
+	rawTx, err := tx.Encode()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &State{
-		db:         db,
-		trie:       t,
-		checkpoint: root,
-		accounts:   make(map[crypto.Address]*Account),
-	}, nil
+	return state.txTrie.Update(tx.Hash().Bytes(), rawTx)
 }
 
-// LoadAccount load the account from disk
-func (state *State) LoadAccount(address crypto.Address) (*Account, error) {
-	raw, err := state.trie.Get(address[:])
+// NewStateStorage returns a state storage
+func NewStateStorage(db db.Database) *StateStorage {
+	return &StateStorage{Database: db}
+}
+
+// MustLoadState do LoadState, but panic if error
+func (state *StateStorage) MustLoadState(blockHeader *crypto.BlockHeader) {
+	if err := state.LoadState(blockHeader); err != nil {
+		panic(err)
+	}
+}
+
+// LoadState load state root of blockHeader into trie
+func (state *StateStorage) LoadState(blockHeader *crypto.BlockHeader) error {
+	stateTrie, err := trie.New(blockHeader.StateRoot, state.Database)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	var account Account
-	if len(raw) <= 0 {
-		return nil, nil
-	}
-	if err := rlp.DecodeBytes(raw, &account); err != nil {
-		return nil, err
-	}
-	account.address = address
-	account.contract = state.db.Get(account.ContractHash)
-	if account.storage, err = trie.New(account.StorageHash, state.db); err != nil {
-		return nil, err
-	}
-	return &account, nil
-}
 
-// GetAccount retrieve the account state at addr
-func (state *State) GetAccount(address crypto.Address) (*Account, error) {
-	if state.accounts[address] == nil {
-		loadedAccount, err := state.LoadAccount(address)
-		if err != nil {
-			return nil, err
-		}
-		if loadedAccount == nil {
-			return nil, ErrAccountNotExist
-		}
-		state.accounts[address] = loadedAccount
-	}
-	return state.accounts[address], nil
-}
-
-// CreateAccount create a new account state for addr
-func (state *State) CreateAccount(creator crypto.Address, address crypto.Address, contract []byte) (*Account, error) {
-	storage, err := trie.New(common.Hash{}, state.db)
+	txTrie, err := trie.New(blockHeader.TransactionRoot, state.Database)
 	if err != nil {
-		return nil, err
-	}
-	account := &Account{
-		Nonce:    0,
-		Creator:  creator,
-		address:  address,
-		storage:  storage,
-		contract: contract,
-		dirty:    true,
+		return err
 	}
 
-	account.setContract(contract)
-	state.db.Put(account.ContractHash[:], account.contract)
+	state.blockHeader = blockHeader
+	state.txTrie = txTrie
+	state.stateTrie = stateTrie
+	state.accountCheckpoint = blockHeader.StateRoot
+	state.accounts = make(map[crypto.Address]*Account)
 
-	state.accounts[address] = account
-	return account, nil
+	return nil
 }
 
-// Commit stores all dirty Accounts to state.trie
-func (state *State) Commit() common.Hash {
+// GetBlockHeader return header of block that inits current state
+func (state *StateStorage) GetBlockHeader() *crypto.BlockHeader {
+	return state.blockHeader
+}
+
+// Hash retrive hash of entire state
+func (state *StateStorage) Hash() common.Hash {
 	var err error
 	for _, account := range state.accounts {
 		if account == nil || !account.dirty {
 			continue
 		}
 
-		// Add source code
+		// Update account storage
+		account.StorageHash = account.storage.Hash()
+
+		// Update account
+		raw, _ := rlp.EncodeToBytes(account)
+		if err = state.stateTrie.Update(account.address[:], raw); err != nil {
+			panic(err)
+		}
+	}
+	return state.stateTrie.Hash()
+}
+
+// Commit stores all dirty Accounts to storage.trie
+func (state *StateStorage) Commit() (common.Hash, common.Hash) {
+	var err error
+	for _, account := range state.accounts {
+		if account == nil || !account.dirty {
+			continue
+		}
+
+		if account.IsContract() {
+			// Update contract
+			state.Put(account.ContractHash[:], account.contract)
+		}
 
 		// Update account storage
 		if account.StorageHash, err = account.storage.Commit(); err != nil {
@@ -118,25 +106,37 @@ func (state *State) Commit() common.Hash {
 		}
 
 		// Update account
-		raw, _ := rlp.EncodeToBytes(account)
-		if err = state.trie.Update(account.address[:], raw); err != nil {
+		raw, err := rlp.EncodeToBytes(account)
+		if err != nil {
 			panic(err)
 		}
+
+		if err := state.stateTrie.Update(account.address[:], raw); err != nil {
+			panic(err)
+		}
+
 		account.dirty = false
 	}
-	state.checkpoint, err = state.trie.Commit()
+
+	stateRootHash, err := state.stateTrie.Commit()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	return state.checkpoint
+
+	txRootHash, err := state.txTrie.Commit()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return stateRootHash, txRootHash
 }
 
 // Revert state to last checkpoint
-func (state *State) Revert() {
-	t, err := trie.New(state.checkpoint, state.db)
+func (state *StateStorage) Revert() {
+	t, err := trie.New(state.accountCheckpoint, state.Database)
 	if err != nil {
 		panic(err)
 	}
-	state.trie = t
+	state.stateTrie = t
 	state.accounts = make(map[crypto.Address]*Account)
 }

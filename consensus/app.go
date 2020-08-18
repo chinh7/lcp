@@ -3,258 +3,155 @@ package consensus
 import (
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
-
-	"golang.org/x/crypto/ed25519"
 
 	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/constant"
-	"github.com/QuoineFinancial/liquid-chain/core"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
-	"github.com/QuoineFinancial/liquid-chain/event"
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
 	"github.com/QuoineFinancial/liquid-chain/token"
 
-	"github.com/tendermint/tendermint/abci/types"
-
-	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
+	abciTypes "github.com/tendermint/tendermint/abci/types"
 )
 
 // App basic Tendermint base app
 type App struct {
-	types.BaseApplication
-	state    *storage.State
-	nodeInfo string
+	abciTypes.BaseApplication
 
-	InfoDB  db.Database
-	StateDB db.Database
+	meta  *storage.MetaStorage
+	state *storage.StateStorage
+	block *storage.BlockStorage
 
 	gasStation         gas.Station
 	gasContractAddress string
 }
 
-// NewApp initializes a new app
-func NewApp(nodeInfo string, dbDir string, gasContractAddress string) *App {
-	infoDB := db.NewRocksDB(filepath.Join(dbDir, "info.db"))
-	stateDB := db.NewRocksDB(filepath.Join(dbDir, "storage.db"))
+// We use this code to communicate with Tendermint
+// https://docs.tendermint.com/master/spec/abci/abci.html
+const (
+	ResponseCodeOK    = uint32(0)
+	ResponseCodeNotOK = uint32(1)
+)
 
+func blockHashToAppHash(blockHash common.Hash) []byte {
+	if blockHash == common.EmptyHash {
+		return []byte{}
+	}
+	return blockHash.Bytes()
+}
+
+func appHashToBlockHash(appHash []byte) common.Hash {
+	if len(appHash) == 0 {
+		return common.EmptyHash
+	}
+	return common.BytesToHash(appHash)
+}
+
+// NewApp initializes a new app
+func NewApp(dbDir string, gasContractAddress string) *App {
+	if _, err := os.Stat(dbDir); os.IsNotExist(err) {
+		os.Mkdir(dbDir, os.ModePerm)
+	}
 	app := &App{
-		nodeInfo:           nodeInfo,
-		StateDB:            stateDB,
-		InfoDB:             infoDB,
+		meta:               storage.NewMetaStorage(db.NewRocksDB(filepath.Join(dbDir, "index.db"))),
+		state:              storage.NewStateStorage(db.NewRocksDB(filepath.Join(dbDir, "state.db"))),
+		block:              storage.NewBlockStorage(db.NewRocksDB(filepath.Join(dbDir, "block.db"))),
 		gasContractAddress: gasContractAddress,
 	}
-
 	app.SetGasStation(gas.NewFreeStation(app))
-
-	// Load last proccessed block height
-	bytes := app.InfoDB.Get([]byte("lastBlockInfo"))
-
-	if len(bytes) > 0 {
-		blockInfo := &storage.BlockInfo{}
-		if err := rlp.DecodeBytes(bytes, blockInfo); err != nil {
-			panic(err)
-		}
-		app.loadState(blockInfo)
-	}
-
 	return app
 }
 
-func (app *App) loadState(blockInfo *storage.BlockInfo) {
-	var err error
-	if app.state, err = storage.New(common.BytesToHash(blockInfo.AppHash[:]), app.StateDB); err != nil {
-		panic(err)
-	}
-
-	app.state.BlockInfo = blockInfo
-	// Keep switching until a desire gasStation is meet
+// BeginBlock begins new block
+func (app *App) BeginBlock(req abciTypes.RequestBeginBlock) abciTypes.ResponseBeginBlock {
+	lastBlockHash := appHashToBlockHash(req.Header.AppHash)
+	previousBlock := app.block.MustGetBlock(lastBlockHash)
+	app.state.MustLoadState(previousBlock.Header)
+	app.block.ComposeBlock(previousBlock, req.Header.Time)
 	for app.gasStation.Switch() {
 	}
-}
-
-// BeginBlock begins new block
-func (app *App) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock {
-	var trieHash common.Hash
-	copy(trieHash[:], req.Header.AppHash)
-	blockInfo := &storage.BlockInfo{
-		Height:  uint64(req.Header.Height),
-		AppHash: trieHash,
-		Time:    req.Header.Time,
-	}
-	app.loadState(blockInfo)
-	return types.ResponseBeginBlock{}
+	return abciTypes.ResponseBeginBlock{}
 }
 
 // Info returns application chain info
-func (app *App) Info(req types.RequestInfo) (resInfo types.ResponseInfo) {
-	var lastBlockHeight int64
-	var lastBlockAppHash []byte
-
-	if app.state != nil && app.state.BlockInfo != nil {
-		lastBlockHeight = int64(app.state.BlockInfo.Height)
-		lastBlockAppHash = app.state.BlockInfo.AppHash[:]
-	}
-	return types.ResponseInfo{
-		Data:             fmt.Sprintf("{\"version\":%s}", app.nodeInfo),
-		LastBlockHeight:  lastBlockHeight,
-		LastBlockAppHash: lastBlockAppHash,
+func (app *App) Info(req abciTypes.RequestInfo) (resInfo abciTypes.ResponseInfo) {
+	lastBlockHeight := app.meta.LatestBlockHeight()
+	lastBlockHash := app.meta.BlockHeightToBlockHash(lastBlockHeight)
+	return abciTypes.ResponseInfo{
+		LastBlockHeight:  int64(lastBlockHeight),
+		LastBlockAppHash: blockHashToAppHash(lastBlockHash),
 	}
 }
 
 // CheckTx checks if submitted transaction is valid and can be passed to next step
-func (app *App) CheckTx(req types.RequestCheckTx) types.ResponseCheckTx {
-	tx := &crypto.Tx{}
-	if err := tx.Deserialize(req.GetTx()); err != nil {
-		return types.ResponseCheckTx{
-			Code: CodeTypeEncodingError,
+func (app *App) CheckTx(req abciTypes.RequestCheckTx) abciTypes.ResponseCheckTx {
+	if len(req.Tx) > constant.MaxTransactionSize {
+		return abciTypes.ResponseCheckTx{
+			Code: ResponseCodeNotOK,
+			Log:  fmt.Sprintf("Transaction size exceed %dB", constant.MaxTransactionSize),
+		}
+	}
+
+	tx, err := crypto.DecodeTransaction(req.GetTx())
+	if err != nil {
+		return abciTypes.ResponseCheckTx{
+			Code: ResponseCodeNotOK,
 			Log:  err.Error(),
 		}
 	}
 
-	if code, err := app.validateTx(tx, len(req.GetTx())); err != nil {
-		return types.ResponseCheckTx{
-			Code: code,
+	if err := app.validateTx(tx); err != nil {
+		return abciTypes.ResponseCheckTx{
+			Code: ResponseCodeNotOK,
 			Log:  err.Error(),
 		}
 	}
 
-	return types.ResponseCheckTx{Code: CodeTypeOK}
-}
-
-func (app *App) validateTx(tx *crypto.Tx, txSize int) (uint32, error) {
-	// Validate tx size
-	if txSize > constant.MaxTransactionSize {
-		err := fmt.Errorf("Transaction size exceed %dB", constant.MaxTransactionSize)
-		return CodeTypeExceedTransactionSize, err
-	}
-
-	nonce := uint64(0)
-	address := tx.From.Address()
-	account, err := app.state.GetAccount(address)
-	// Ignore ErrAccountNotExist since to account can be nil
-	if err != nil && err != storage.ErrAccountNotExist {
-		return CodeTypeUnknownError, err
-	}
-	if account != nil {
-		nonce = account.Nonce
-	}
-
-	// Validate tx nonce
-	if tx.From.Nonce != nonce {
-		err := fmt.Errorf("Invalid nonce. Expected %v, got %v", nonce, tx.From.Nonce)
-		return CodeTypeBadNonce, err
-	}
-
-	// Validate tx signature
-	err = tx.VerifySignature()
-	if err != nil {
-		switch err {
-		case crypto.ErrInvalidPubKeyLength:
-			err := fmt.Errorf("Invalid public key. Expected size of %vB, got %vB", ed25519.PublicKeySize, len(tx.From.PubKey))
-			return CodeTypeInvalidPubKey, err
-		case crypto.ErrInvalidSignature:
-			return CodeTypeInvalidSignature, fmt.Errorf("Invalid signature")
-		default:
-			return CodeTypeUnknownError, err
-		}
-	}
-
-	// Validate Non-existent contract invoke
-	if (tx.To != crypto.Address{}) {
-		// invoke transaction
-		account, err := app.state.GetAccount(tx.To)
-		if err != nil {
-			switch err {
-			case storage.ErrAccountNotExist:
-				return CodeTypeAccountNotExist, err
-			default:
-				return CodeTypeUnknownError, err
-			}
-		}
-		if !account.IsContract() {
-			return CodeTypeNonContractAccount, fmt.Errorf("Invoke a non-contract account")
-		}
-	}
-
-	// Validate gas limit
-	fee, err := tx.GetFee()
-	if err != nil {
-		return CodeTypeUnknownError, err
-	}
-
-	if !app.gasStation.Sufficient(address, fee) {
-		return CodeTypeInsufficientFee, fmt.Errorf("Insufficient fee")
-	}
-
-	// Validate gas price
-	if !app.gasStation.CheckGasPrice(tx.GasPrice) {
-		return CodeTypeInvalidGasPrice, fmt.Errorf("Invalid gas price")
-	}
-
-	// Validate tx data
-	txData := &crypto.TxData{}
-	err = txData.Deserialize(tx.Data)
-	if err != nil {
-		return CodeTypeInvalidData, err
-	}
-
-	return CodeTypeOK, nil
+	return abciTypes.ResponseCheckTx{Code: ResponseCodeOK}
 }
 
 //DeliverTx executes the submitted transaction
-func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
-	tx := &crypto.Tx{}
-	if err := tx.Deserialize(req.GetTx()); err != nil {
-		return types.ResponseDeliverTx{
-			Code: CodeTypeEncodingError,
-			Log:  err.Error(),
-		}
-	}
-	if code, err := app.validateTx(tx, len(req.GetTx())); err != nil {
-		return types.ResponseDeliverTx{
-			Code: code,
-			Log:  err.Error(),
-		}
-	}
-
-	info := "ok"
-	codeType := CodeTypeOK
-	result, applyEvents, gasUsed, err := core.ApplyTx(app.state, tx, app.gasStation)
+func (app *App) DeliverTx(req abciTypes.RequestDeliverTx) abciTypes.ResponseDeliverTx {
+	tx, err := crypto.DecodeTransaction(req.GetTx())
 	if err != nil {
-		codeType = CodeTypeUnknownError
-		info = err.Error()
-	}
-	fromAddress := tx.From.Address()
-	detailEvent := event.NewDetailsEvent(app.state.BlockInfo.Height, fromAddress, tx.To, tx.From.Nonce, result, tx.GasPrice)
-	events := append(applyEvents, detailEvent)
-	tmEvents := make([]types.Event, len(events))
-	for index := range events {
-		tmEvents[index] = events[index].ToTMEvent()
+		return abciTypes.ResponseDeliverTx{Code: ResponseCodeNotOK}
 	}
 
-	return types.ResponseDeliverTx{
-		Code:      codeType,
-		Events:    tmEvents,
-		Info:      info,
-		GasWanted: int64(tx.GasLimit),
-		GasUsed:   int64(gasUsed),
+	if err := app.validateTx(tx); err != nil {
+		return abciTypes.ResponseDeliverTx{Code: ResponseCodeNotOK}
 	}
+
+	if receipt, err := app.applyTransaction(tx); err != nil {
+		panic(err)
+	} else {
+		tx.Receipt = receipt
+	}
+
+	if err := app.state.AddTransaction(tx); err != nil {
+		panic(err)
+	}
+
+	if err := app.block.AddTransaction(tx); err != nil {
+		panic(err)
+	}
+
+	return abciTypes.ResponseDeliverTx{Code: ResponseCodeOK}
 }
 
 // Commit returns the state root of application storage. Called once all block processing is complete
-func (app *App) Commit() types.ResponseCommit {
-	appHash := app.state.Commit()
-	bytes, err := rlp.EncodeToBytes(app.state.BlockInfo)
-	if err != nil {
-		log.Println("cannot encode block info")
-	} else {
-		app.InfoDB.Put([]byte("lastBlockInfo"), bytes)
+func (app *App) Commit() abciTypes.ResponseCommit {
+	stateRootHash, txRootHash := app.state.Commit()
+	if err := app.block.FinalizeBlock(stateRootHash, txRootHash); err != nil {
+		panic(err)
 	}
-
-	return types.ResponseCommit{Data: appHash[:]}
+	blockHash := app.block.Commit()
+	if err := app.meta.StoreBlockIndexes(app.block.MustGetBlock(blockHash)); err != nil {
+		log.Println("unable to store index for block", blockHash)
+	}
+	return abciTypes.ResponseCommit{Data: blockHashToAppHash(blockHash)}
 }
 
 // SetGasStation active the gas station
@@ -271,12 +168,7 @@ func (app *App) GetGasContractToken() gas.Token {
 		}
 		contract, err := app.state.GetAccount(address)
 		if err != nil {
-			switch err {
-			case storage.ErrAccountNotExist:
-				return nil
-			default:
-				panic(err)
-			}
+			panic(err)
 		}
 		return token.NewToken(app.state, contract)
 	}

@@ -10,23 +10,28 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
+// ParameterFile ParameterFile
+type ParameterFile struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
 // HeaderFile representation of Header file
 type HeaderFile struct {
 	Version uint16 `json:"version"`
 	Events  []struct {
-		Name       string `json:"name"`
-		Parameters []struct {
-			Name string `json:"name"`
-			Type string `json:"type"`
-		} `json:"parameters"`
+		Name       string          `json:"name"`
+		Parameters []ParameterFile `json:"parameters"`
 	} `json:"events"`
 	Functions []struct {
-		Name       string `json:"name"`
-		Parameters []struct {
-			IsArray bool   `json:"is_array"`
-			Type    string `json:"type"`
-		} `json:"parameters"`
+		Name       string          `json:"name"`
+		Parameters []ParameterFile `json:"parameters"`
 	}
+}
+
+// IsArray returns true if ParameterFile type ends in [] (an array)
+func (p ParameterFile) IsArray() bool {
+	return strings.HasSuffix(p.Type, "[]")
 }
 
 func parsePrimitiveTypeFromString(t string) (PrimitiveType, error) {
@@ -323,14 +328,22 @@ func LoadHeaderFromFile(path string) (*Header, error) {
 			Parameters: []*Parameter{},
 		}
 		for _, hParam := range hFunction.Parameters {
-			paramType, err := parsePrimitiveTypeFromString(hParam.Type)
+			var parameter Parameter
+			var paramType PrimitiveType
+			var pType string
+			parameter.IsArray = hParam.IsArray()
+			if parameter.IsArray {
+				pType = hParam.Type[:len(hParam.Type)-2]
+			} else {
+				pType = hParam.Type
+			}
+			paramType, err = parsePrimitiveTypeFromString(pType)
 			if err != nil {
 				return nil, err
 			}
-			function.Parameters = append(function.Parameters, &Parameter{
-				IsArray: hParam.IsArray,
-				Type:    paramType,
-			})
+			parameter.Type = paramType
+			parameter.Name = hParam.Name
+			function.Parameters = append(function.Parameters, &parameter)
 		}
 		header.Functions[function.Name] = &function
 	}

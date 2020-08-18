@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"fmt"
 	"io/ioutil"
 	"math"
 	"time"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/abi"
-	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/gas"
@@ -34,13 +32,16 @@ func loadContract(abiPath, wasmPath string) *abi.Contract {
 }
 
 func TestEngineIgnite(t *testing.T) {
-
 	contractCreator, _ := crypto.AddressFromString("LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R")
 	mathAddress, _ := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
 	utilAddress, _ := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
-	database := db.NewMemoryDB()
-	state, _ := storage.New(common.Hash{}, database)
-	state.BlockInfo = &storage.BlockInfo{Height: 1, Time: time.Unix(1578905663, 0)}
+	state := storage.NewStateStorage(db.NewMemoryDB())
+	if err := state.LoadState(&crypto.BlockHeader{
+		Height: 1,
+		Time:   time.Unix(1578905663, 0),
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		name          string
@@ -139,9 +140,18 @@ func TestEngineIgnite(t *testing.T) {
 			args:          []string{"LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R"},
 			wantErr:       true,
 		},
+		{
+			name:          "chained ignite with event plarray",
+			callee:        nil,
+			calleeAddress: crypto.EmptyAddress,
+			caller:        loadContract("testdata/event-string-abi.json", "testdata/event-string.wasm"),
+			callerAddress: utilAddress,
+			funcName:      "say",
+			args:          []string{"0"},
+			wantErr:       false,
+		},
 	}
 	for _, tt := range tests {
-		fmt.Println(tt.name)
 		t.Run(tt.name, func(t *testing.T) {
 			contractBytes, _ := rlp.EncodeToBytes(&tt.caller)
 			callerAccount, _ := state.CreateAccount(contractCreator, tt.callerAddress, contractBytes)
@@ -149,7 +159,9 @@ func TestEngineIgnite(t *testing.T) {
 			if tt.callee != nil {
 				if tt.calleeAddress.String() != tt.callerAddress.String() {
 					contractBytes, _ := rlp.EncodeToBytes(&tt.callee)
-					state.CreateAccount(contractCreator, tt.calleeAddress, contractBytes)
+					if _, err := state.CreateAccount(contractCreator, tt.calleeAddress, contractBytes); err != nil {
+						panic(err)
+					}
 
 				}
 				// contract init
@@ -166,7 +178,6 @@ func TestEngineIgnite(t *testing.T) {
 				if err != nil {
 					panic(err)
 				}
-
 			}
 
 			// exec

@@ -3,6 +3,7 @@ package node
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/QuoineFinancial/liquid-chain/api"
 	"github.com/QuoineFinancial/liquid-chain/consensus"
@@ -10,9 +11,9 @@ import (
 	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/cmd/tendermint/commands"
 	"github.com/tendermint/tendermint/config"
-	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
-	"github.com/tendermint/tendermint/libs/common"
+	tmFlags "github.com/tendermint/tendermint/libs/cli/flags"
 	"github.com/tendermint/tendermint/libs/log"
+	tmos "github.com/tendermint/tendermint/libs/os"
 	tmNode "github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/privval"
@@ -20,30 +21,14 @@ import (
 )
 
 func (node *LiquidNode) newTendermintNode(config *config.Config, logger log.Logger) (*tmNode.Node, error) {
-	node.app = consensus.NewApp(config.Moniker, config.DBDir(), node.gasContractAddress)
+	node.app = consensus.NewApp(filepath.Join(config.DBDir(), "liquid"), node.gasContractAddress)
 	nodeKey, err := p2p.LoadOrGenNodeKey(config.NodeKeyFile())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load or gen node key %s: %w", config.NodeKeyFile(), err)
 	}
 
-	oldPrivVal := config.OldPrivValidatorFile()
-	newPrivValKey := config.PrivValidatorKeyFile()
-	newPrivValState := config.PrivValidatorStateFile()
-
-	if _, err := os.Stat(oldPrivVal); !os.IsNotExist(err) {
-		oldPV, err := privval.LoadOldFilePV(oldPrivVal)
-		if err != nil {
-			return nil, fmt.Errorf("Error reading OldPrivValidator from %v: %v", oldPrivVal, err)
-		}
-		logger.Info("Upgrading PrivValidator file",
-			"old", oldPrivVal,
-			"newKey", newPrivValKey,
-			"newState", newPrivValState,
-		)
-		oldPV.Upgrade(newPrivValKey, newPrivValState)
-	}
 	return tmNode.NewNode(config,
-		privval.LoadOrGenFilePV(newPrivValKey, newPrivValState),
+		privval.LoadOrGenFilePV(config.PrivValidatorKeyFile(), config.PrivValidatorStateFile()),
 		nodeKey,
 		proxy.NewLocalClientCreator(node.app),
 		tmNode.DefaultGenesisDocProviderFunc(config),
@@ -71,7 +56,7 @@ func (node *LiquidNode) parseConfig() (*config.Config, error) {
 
 func (node *LiquidNode) startTendermintNode(conf *config.Config) error {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-	logger, err := tmflags.ParseLogLevel(conf.LogLevel, logger, config.DefaultLogLevel())
+	logger, err := tmFlags.ParseLogLevel(conf.LogLevel, logger, config.DefaultLogLevel())
 	if err != nil {
 		return err
 	}
@@ -83,7 +68,7 @@ func (node *LiquidNode) startTendermintNode(conf *config.Config) error {
 	node.tmNode = n
 
 	// Stop upon receiving SIGTERM or CTRL-C.
-	common.TrapSignal(logger, func() {
+	tmos.TrapSignal(logger, func() {
 		node.stopNode()
 	})
 
@@ -95,18 +80,17 @@ func (node *LiquidNode) startTendermintNode(conf *config.Config) error {
 }
 
 func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
-	err := node.startTendermintNode(conf)
-	if err != nil {
+	if err := node.startTendermintNode(conf); err != nil {
 		return err
 	}
 
 	if apiFlag {
-		node.vertexApi = api.NewAPI(":5555", api.Config{
+		node.chainAPI = api.NewAPI(":5555", api.Config{
 			HomeDir: node.rootDir,
 			NodeURL: "tcp://localhost:26657",
-			DB:      node.app.StateDB,
+			App:     node.app,
 		})
-		err := node.vertexApi.Serve()
+		err := node.chainAPI.Serve()
 		if err != nil {
 			return err
 		}
@@ -116,8 +100,8 @@ func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
 }
 
 func (node *LiquidNode) stopNode() {
-	if node.vertexApi != nil {
-		node.vertexApi.Close()
+	if node.chainAPI != nil {
+		node.chainAPI.Close()
 	}
 
 	if node.tmNode.IsRunning() {

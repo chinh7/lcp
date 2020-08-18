@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 )
 
 // BuildInvokeTxData build data for invoke transaction
-func BuildInvokeTxData(headerPath string, methodName string, params []string) ([]byte, error) {
+func BuildInvokeTxPayload(headerPath string, methodName string, params []string) (*crypto.TxPayload, error) {
 	header, err := abi.LoadHeaderFromFile(headerPath)
 	if err != nil {
 		return nil, err
@@ -26,12 +26,14 @@ func BuildInvokeTxData(headerPath string, methodName string, params []string) ([
 		return nil, err
 	}
 
-	txData := crypto.TxData{Method: methodName, Params: encodedArgs}
-	return txData.Serialize(), nil
+	return &crypto.TxPayload{
+		Method: methodName,
+		Params: encodedArgs,
+	}, nil
 }
 
-// BuildDeployTxData build data for deploy transaction
-func BuildDeployTxData(codePath string, headerPath string, initFuncName string, params []string) ([]byte, error) {
+// BuildDeployTxPayload build data for deploy transaction
+func BuildDeployTxPayload(codePath string, headerPath string, initFuncName string, params []string) (*crypto.TxPayload, error) {
 	code, err := ioutil.ReadFile(codePath)
 	if err != nil {
 		return nil, err
@@ -52,19 +54,21 @@ func BuildDeployTxData(codePath string, headerPath string, initFuncName string, 
 		return nil, err
 	}
 
-	txData := crypto.TxData{ContractCode: contractCode}
+	payload := crypto.TxPayload{
+		Contract: contractCode,
+	}
 
 	function, err := header.GetFunction(initFuncName)
 	if err == nil {
 		encodedArgs, err := abi.EncodeFromString(function.Parameters, params)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		txData.Method = initFuncName
-		txData.Params = encodedArgs
+		payload.Method = initFuncName
+		payload.Params = encodedArgs
 	} else if err.Error() != fmt.Sprintf("function %s not found", initFuncName) {
-		panic(err)
+		return nil, err
 	}
 
-	return txData.Serialize(), nil
+	return &payload, nil
 }

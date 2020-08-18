@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
@@ -19,6 +20,59 @@ type Account struct {
 	address  crypto.Address
 	storage  *trie.Trie
 	contract []byte
+}
+
+// loadAccount load the account from disk
+func (state *StateStorage) loadAccount(address crypto.Address) (*Account, error) {
+	raw, err := state.stateTrie.Get(address[:])
+	if err != nil {
+		return nil, err
+	}
+	var account Account
+	if len(raw) <= 0 {
+		return nil, nil
+	}
+	if err := rlp.DecodeBytes(raw, &account); err != nil {
+		return nil, err
+	}
+	account.address = address
+	account.contract = state.Get(account.ContractHash)
+	if account.storage, err = trie.New(account.StorageHash, state.Database); err != nil {
+		return nil, err
+	}
+	return &account, nil
+}
+
+// GetAccount retrieve the account state at addr
+func (state *StateStorage) GetAccount(address crypto.Address) (*Account, error) {
+	if state.accounts[address] == nil {
+		loadedAccount, err := state.loadAccount(address)
+		if err != nil {
+			return nil, err
+		}
+		state.accounts[address] = loadedAccount
+	}
+	return state.accounts[address], nil
+}
+
+// CreateAccount create a new account state for addr
+func (state *StateStorage) CreateAccount(creator crypto.Address, address crypto.Address, contract []byte) (*Account, error) {
+	storage, err := trie.New(common.Hash{}, state.Database)
+	if err != nil {
+		return nil, err
+	}
+	account := &Account{
+		Nonce:    0,
+		Creator:  creator,
+		address:  address,
+		storage:  storage,
+		contract: contract,
+		dirty:    true,
+	}
+
+	account.setContract(contract)
+	state.accounts[address] = account
+	return account, nil
 }
 
 // GetStorage get the value at key of storage

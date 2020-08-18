@@ -7,7 +7,6 @@ import (
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/abi"
-	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/gas"
@@ -23,8 +22,10 @@ func TestVM(t *testing.T) {
 	caller, _ := crypto.AddressFromString("LDH4MEPOJX3EGN3BLBTLEYXVHYCN3AVA7IOE772F3XGI6VNZHAP6GX5R")
 	contractAddress, _ := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
 
-	database := db.NewMemoryDB()
-	state, _ := storage.New(common.Hash{}, database)
+	state := storage.NewStateStorage(db.NewMemoryDB())
+	if err := state.LoadState(crypto.GenesisBlock.Header); err != nil {
+		t.Fatal(err)
+	}
 
 	accountState, _ := state.CreateAccount(caller, contractAddress, contractBytes)
 	execEngine := engine.NewEngine(state, accountState, caller, &gas.FreePolicy{}, 0)

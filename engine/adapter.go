@@ -8,7 +8,6 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/QuoineFinancial/liquid-chain/event"
 	"github.com/vertexdlt/vertexvm/vm"
 )
 
@@ -116,11 +115,11 @@ func (engine *Engine) chainMethodBind(vm *vm.VM, args ...uint64) (uint64, error)
 }
 
 func (engine *Engine) chainBlockHeight(vm *vm.VM, args ...uint64) (uint64, error) {
-	return engine.state.BlockInfo.Height, nil
+	return engine.state.GetBlockHeader().Height, nil
 }
 
 func (engine *Engine) chainBlockTime(vm *vm.VM, args ...uint64) (uint64, error) {
-	return uint64(engine.state.BlockInfo.Time.Unix()), nil
+	return uint64(engine.state.GetBlockHeader().Time.Unix()), nil
 }
 
 func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM, args ...uint64) (uint64, error) {
@@ -178,64 +177,9 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 		return 0, err
 	}
 	// TODO memcheck
-	childEngine := engine.NewChildEngine(account)
+	childEngine := engine.newChildEngine(account)
 	childEngine.setStats(engine.callDepth+1, engine.memAggr+vm.MemSize())
 	return childEngine.Ignite(foreignMethod.name, methodArgs)
-}
-
-func (engine *Engine) handleEmitEvent(abiEvent *abi.Event, vm *vm.VM, args ...uint64) (uint64, error) {
-	address := engine.account.GetAddress()
-	var memBytes [][]byte
-	for i, param := range abiEvent.Parameters {
-		if param.Type == abi.LPArray {
-			paramPointer := int(uint32(args[i]))
-
-			sizeMem, err := readAt(vm, paramPointer, pointerSize)
-			size := int(binary.LittleEndian.Uint32(sizeMem))
-
-			valuePointerBytes, err := readAt(vm, paramPointer+pointerSize, pointerSize)
-			valuePointer := int(binary.LittleEndian.Uint32(valuePointerBytes))
-			value, err := readAt(vm, valuePointer, size)
-
-			if err != nil {
-				return 0, err
-			}
-
-			memBytes = append(memBytes, value)
-		} else if param.Type.IsPointer() {
-			paramPtr := int(uint32(args[i]))
-			size := param.Type.GetMemorySize()
-			memValue, err := readAt(vm, paramPtr, size)
-			if err != nil {
-				return 0, err
-			}
-			if param.Type.IsAddress() {
-				if _, err := crypto.AddressFromBytes(memValue); err != nil {
-					return 0, err
-				}
-			}
-			memBytes = append(memBytes, memValue)
-		} else {
-			size := abi.Uint64.GetMemorySize()
-			value := make([]byte, size)
-			binary.LittleEndian.PutUint64(value, args[i])
-			memBytes = append(memBytes, value)
-		}
-	}
-
-	values, err := abi.EncodeFromBytes(abiEvent.Parameters, memBytes)
-	if err != nil {
-		return 0, err
-	}
-
-	cost := engine.gasPolicy.GetCostForEvent(len(values))
-	err = vm.BurnGas(cost)
-	if err != nil {
-		return 0, err
-	}
-
-	engine.pushEvent(event.NewCustomEvent(abiEvent, values, address))
-	return 0, nil
 }
 
 // GetFunction get host function for WebAssembly

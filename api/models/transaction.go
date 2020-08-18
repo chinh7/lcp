@@ -16,7 +16,7 @@ type Event struct {
 
 // Transaction cointans all transactions info
 type Transaction struct {
-	Block *Block `json:"block,omitempty"`
+	BlockHeight int64 `json:"block_height"`
 
 	Hash  string `json:"hash"`
 	Nonce uint64 `json:"nonce"`

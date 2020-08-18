@@ -1,85 +1,33 @@
 package consensus
 
 import (
-	cryptoRand "crypto/rand"
-	"encoding/hex"
-	"errors"
-	"io/ioutil"
+	"bytes"
+	"fmt"
 	"math/rand"
 	"os"
-	"path/filepath"
-	"reflect"
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/QuoineFinancial/liquid-chain/common"
+	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-	"github.com/QuoineFinancial/liquid-chain/db"
-	"github.com/QuoineFinancial/liquid-chain/event"
-	"github.com/QuoineFinancial/liquid-chain/gas"
-	"github.com/QuoineFinancial/liquid-chain/storage"
-	"github.com/QuoineFinancial/liquid-chain/token"
-	"github.com/tendermint/tendermint/abci/example/code"
+	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/abci/types"
-
-	"golang.org/x/crypto/ed25519"
 )
 
-const SEED = "0c61093a4983f5ba8cf83939efc6719e0c61093a4983f5ba8cf83939efc6719e"
-
-type TestResource struct {
-	app   *App
-	dbDir string
-}
-
-func NewTestResource() *TestResource {
+func newAppTestResource() *TestResource {
 	rand.Seed(time.Now().UTC().UnixNano())
 	dbDir := "./testdata/db/test_" + strconv.Itoa(rand.Intn(10000)) + "/"
 	err := os.MkdirAll(dbDir, os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
-	app := NewApp("testapp", dbDir, "")
-	blockInfo := &storage.BlockInfo{Height: 1, AppHash: common.Hash{}, Time: time.Now()}
-	app.loadState(blockInfo)
-
-	// Manually deploy contract
-	address, err := crypto.AddressFromString("LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
-	if err != nil {
-		panic(err)
-	}
-	// This file can be construct using liquid-chain-js
-	contract, err := ioutil.ReadFile("./testdata/deploy-contract.dat")
-	if err != nil {
-		panic(err)
-	}
-	_, err = app.state.CreateAccount(address, address, contract)
-	if err != nil {
-		panic(err)
-	}
-	_ = app.state.Commit()
-	app.gasContractAddress = "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7"
+	app := NewApp(dbDir, "")
+	app.state.LoadState(crypto.GenesisBlock.Header)
 
 	return &TestResource{app, dbDir}
-}
-
-func (tc *TestResource) CleanData() {
-	err := os.RemoveAll(tc.dbDir)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func loadPrivateKey(SEED string) ed25519.PrivateKey {
-	hexSeed, err := hex.DecodeString(SEED)
-	if err != nil {
-		panic(err)
-	}
-	return ed25519.NewKeyFromSeed(hexSeed)
 }
 
 func TestNewApp(t *testing.T) {
@@ -93,500 +41,348 @@ func TestNewApp(t *testing.T) {
 		_ = os.RemoveAll(dbDir)
 	}()
 
-	blockInfo := &storage.BlockInfo{
-		Height:  uint64(1),
-		AppHash: common.Hash{},
-		Time:    time.Now(),
-	}
-	bytes, _ := rlp.EncodeToBytes(blockInfo)
-	infoDB := db.NewRocksDB(filepath.Join(dbDir, "info.db"))
-	infoDB.Put([]byte("lastBlockInfo"), bytes)
-	infoDB.Close()
+	gasContractAddress := "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7"
 
-	app := NewApp("testapp", dbDir, "")
+	app := NewApp(dbDir, gasContractAddress)
 	assert.NotNil(t, app)
 }
 
 func TestApp_BeginBlock(t *testing.T) {
-	t.Run("Should load state", func(t *testing.T) {
-		tr := NewTestResource()
-		defer tr.CleanData()
-		app := tr.app
-		appHash := tr.app.state.Commit()
+	tr := newAppTestResource()
+	defer tr.cleanData()
+	app := tr.app
+
+	t.Run("Should load state from genesis block", func(t *testing.T) {
 		reqHeight := int64(0)
-		req := types.RequestBeginBlock{Header: types.Header{Height: reqHeight, AppHash: appHash.Bytes()}}
+		previousBlockHash := common.EmptyHash.Bytes()
+		stateRootHash, txRootHash := tr.app.state.Commit()
+
+		req := types.RequestBeginBlock{Header: types.Header{Height: reqHeight, AppHash: previousBlockHash}}
 		got := app.BeginBlock(req)
 		want := types.ResponseBeginBlock{}
-		if !reflect.DeepEqual(got, want) {
+		if !cmp.Equal(got, want) {
 			t.Errorf("App.BeginBlock() = %v, want %v", got, want)
 		}
 
 		// loadState() should be called
 		assert.NotNil(t, app.state)
-		assert.Equal(t, app.state.BlockInfo.Height, uint64(reqHeight))
-		assert.Equal(t, app.state.BlockInfo.AppHash, appHash)
+		assert.Equal(t, uint64(reqHeight), app.state.GetBlockHeader().Height)
+		assert.Equal(t, stateRootHash, app.state.Hash())
+		assert.Equal(t, txRootHash, app.state.Hash())
+	})
+
+	t.Run("Should load state", func(t *testing.T) {
+		stateRootHash, txRootHash := tr.app.state.Commit()
+		reqHeight := int64(1)
+
+		previousBlock := crypto.Block{
+			Header:       &crypto.BlockHeader{Height: uint64(reqHeight), Time: time.Now(), Parent: common.EmptyHash, StateRoot: stateRootHash, TransactionRoot: txRootHash},
+			Transactions: nil,
+		}
+
+		rawBlock, _ := previousBlock.Encode()
+		blockHash := previousBlock.Header.Hash()
+		app.block.Put(blockHash[:], rawBlock)
+
+		assert.NotNil(t, app.state)
+		assert.Equal(t, uint64(0), app.state.GetBlockHeader().Height)
+
+		req := types.RequestBeginBlock{Header: types.Header{Height: reqHeight, AppHash: blockHash.Bytes()}}
+		got := app.BeginBlock(req)
+		want := types.ResponseBeginBlock{}
+		if !cmp.Equal(got, want) {
+			t.Errorf("App.BeginBlock() = %v, want %v", got, want)
+		}
+
+		// loadState() should be called
+		assert.NotNil(t, app.state)
+		assert.Equal(t, uint64(reqHeight), app.state.GetBlockHeader().Height)
+		assert.Equal(t, stateRootHash, app.state.Hash())
+		assert.Equal(t, txRootHash, app.state.Hash())
 	})
 }
 
 func TestApp_Info(t *testing.T) {
-	tr := NewTestResource()
-	defer tr.CleanData()
+	tr := newAppTestResource()
+	defer tr.cleanData()
+	app := tr.app
 
 	t.Run("Should return valid response", func(t *testing.T) {
-		app := tr.app
-		appHash := tr.app.state.Commit()
-		blockInfo := &storage.BlockInfo{Height: 2, AppHash: appHash, Time: time.Now()}
-		app.loadState(blockInfo)
+		height := 2
+		stateRootHash, txRootHash := tr.app.state.Commit()
+		block := crypto.Block{
+			Header:       &crypto.BlockHeader{Height: uint64(height), Time: time.Now(), Parent: common.EmptyHash, StateRoot: stateRootHash, TransactionRoot: txRootHash},
+			Transactions: nil,
+		}
+		app.meta.StoreBlockIndexes(&block)
+
 		got := app.Info(types.RequestInfo{})
+		// returns correct current state
 		want := types.ResponseInfo{
-			Data:             "{\"version\":testapp}",
-			LastBlockHeight:  int64(blockInfo.Height),
-			LastBlockAppHash: blockInfo.AppHash[:],
+			LastBlockHeight:  int64(height),
+			LastBlockAppHash: block.Header.Hash().Bytes(),
 		}
 
-		if !reflect.DeepEqual(got, want) {
+		if !cmp.Equal(got, want) {
 			t.Errorf("Got app.Info() = %v, want %v", got, want)
 		}
 	})
 }
 
 func TestApp_CheckTx(t *testing.T) {
-	tr := NewTestResource()
-	defer tr.CleanData()
+	tr := newAppTestResource()
+	defer tr.cleanData()
 	app := tr.app
-	appHash := tr.app.state.Commit()
-	blockInfo := &storage.BlockInfo{Height: 1, AppHash: appHash, Time: time.Now()}
-	app.loadState(blockInfo)
 
-	t.Run("Deserialize tx error", func(t *testing.T) {
-		invalidTxBytes, err := ioutil.ReadFile("./testdata/invalid_tx.dat")
-		if err != nil {
-			panic(err)
-		}
-
-		got := app.CheckTx(types.RequestCheckTx{Tx: invalidTxBytes})
-		want := types.ResponseCheckTx{
-			Code: code.CodeTypeEncodingError,
-			Log:  "rlp: expected input list for crypto.Tx",
-		}
-
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("App.CheckTx() = %v, want %v", got, want)
-		}
+	app.BeginBlock(types.RequestBeginBlock{
+		Header: types.Header{
+			Height:  1,
+			Time:    time.Now(),
+			AppHash: []byte{},
+		},
 	})
+	deployTx, _ := tr.getDeployTx(0).Encode()
+	app.DeliverTx(types.RequestDeliverTx{Tx: deployTx})
+	app.Commit()
 
-	t.Run("Invalid tx", func(t *testing.T) {
-		invalidNonceTxBytes, err := ioutil.ReadFile("./testdata/invalid_nonce_tx.dat")
-		if err != nil {
-			panic(err)
-		}
-
-		got := app.CheckTx(types.RequestCheckTx{Tx: invalidNonceTxBytes})
-		want := types.ResponseCheckTx{
-			Code: code.CodeTypeBadNonce,
-			Log:  "Invalid nonce. Expected 0, got 10",
+	t.Run("CheckTx with error transactions", func(t *testing.T) {
+		type txRequest struct {
+			tx                      *crypto.Transaction
+			expectedResponseCheckTx types.ResponseCheckTx
 		}
 
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("App.CheckTx() = %v, want %v", got, want)
-		}
-	})
+		checkTxTestTable := []txRequest{{
+			tx:                      tr.getInvokeNilContractTx(1),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invoke nil contract"},
+		}, {
+			tx:                      tr.getInvalidMaxSizeTx(1),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: fmt.Sprintf("Transaction size exceed %vB", constant.MaxTransactionSize)},
+		}, {
+			tx:                      tr.getInvalidSignatureTx(1),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid signature"},
+		}, {
+			tx:                      tr.getInvalidNonceTx(2),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid nonce. Expected 1, got 2"},
+		}, {
+			tx:                      tr.getInvalidGasPriceTx(1),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid gas price"},
+		}, {
+			tx:                      tr.getInvokeNonContractTx(1),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invoke a non-contract account"},
+		}}
 
-	t.Run("Valid tx", func(t *testing.T) {
-		pubkey, prvkey, err := ed25519.GenerateKey(cryptoRand.Reader)
-		if err != nil {
-			panic(err)
-		}
-		txData := crypto.TxData{}
-		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize(), GasPrice: uint32(18)}
-		err = tx.Sign(prvkey)
-		if err != nil {
-			panic(err)
-		}
-		got := app.CheckTx(types.RequestCheckTx{Tx: tx.Serialize()})
-		want := types.ResponseCheckTx{Code: code.CodeTypeOK}
-
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("App.CheckTx() = %v, want %v", got, want)
-		}
-	})
-}
-
-func TestApp_validateTx(t *testing.T) {
-	// invalid tx size
-	t.Run("invalid size", func(t *testing.T) {
-		tr := NewTestResource()
-		defer tr.CleanData()
-		tx := &crypto.Tx{}
-		txSize := 1024*1024 + 1 // set to large number to produce error
-		wantErr := errors.New("Transaction size exceed 1048576B")
-		wantErrCode := CodeTypeExceedTransactionSize
-
-		got, err := tr.app.validateTx(tx, txSize)
-		if err == nil || wantErr.Error() != err.Error() {
-			t.Errorf("App.validateTx() error = %v, wantErr %v", err, wantErr)
-			return
-		}
-		if got != wantErrCode {
-			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
-		}
-	})
-
-	// invalid tx nonce
-	t.Run("invalid nonce", func(t *testing.T) {
-		tr := NewTestResource()
-		defer tr.CleanData()
-		signer := crypto.TxSigner{Nonce: uint64(10)} // Set nonce to any number but not 0 to trigger error
-		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 1, GasPrice: 1}
-		wantErr := errors.New("Invalid nonce. Expected 0, got 10")
-		wantErrCode := CodeTypeBadNonce
-
-		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
-		if err == nil || wantErr.Error() != err.Error() {
-			t.Errorf("App.validateTx() error = %v, wantErr %v", err, wantErr)
-			return
-		}
-		if got != wantErrCode {
-			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
-		}
-	})
-
-	// invalid public key
-	t.Run("invalid public key", func(t *testing.T) {
-		tr := NewTestResource()
-		defer tr.CleanData()
-		signer := crypto.TxSigner{Nonce: uint64(0)} // add signer without signature to trigger error
-		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 1, GasPrice: 1}
-		wantErr := errors.New("Invalid public key. Expected size of 32B, got 0B")
-		wantErrCode := CodeTypeInvalidPubKey
-
-		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
-		if err == nil || wantErr.Error() != err.Error() {
-			t.Errorf("App.validateTx() error = %v, wantErr %v", err, wantErr)
-			return
-		}
-		if got != wantErrCode {
-			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
-		}
-	})
-
-	// invalid signature
-	t.Run("invalid signature", func(t *testing.T) {
-		tr := NewTestResource()
-		defer tr.CleanData()
-		signer := crypto.TxSigner{Nonce: uint64(0)}          // add signer without signature to trigger error
-		_, priv, _ := ed25519.GenerateKey(cryptoRand.Reader) // generate random privkey to sign
-		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 1, GasPrice: 1}
-		// This step mainly to populate valid publickey
-		if err := tx.Sign(priv); err != nil {
-			panic(err)
-		}
-		tx.From.Signature = []byte{} // Remove valid private key to trigger error
-		wantErr := errors.New("Invalid signature")
-		wantErrCode := CodeTypeInvalidSignature
-
-		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
-		if err == nil || wantErr.Error() != err.Error() {
-			t.Errorf("App.validateTx() error = %v, wantErr %v", err, wantErr)
-			return
-		}
-		if got != wantErrCode {
-			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
-		}
-	})
-
-	// insufficient fee
-	t.Run("insufficient fee", func(t *testing.T) {
-		tr := NewTestResource()
-		defer tr.CleanData()
-
-		tr.app.SetGasStation(gas.NewDummyStation(tr.app)) // Set to dummy station to trigger insufficient fee check
-		signer := crypto.TxSigner{Nonce: uint64(0)}
-		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 0, GasPrice: 0}
-		privKey := loadPrivateKey(SEED)
-		if err := tx.Sign(privKey); err != nil {
-			panic(err)
-		}
-		wantErr := errors.New("Insufficient fee")
-		wantErrCode := CodeTypeInsufficientFee
-
-		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
-		if got != wantErrCode {
-			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
-		}
-		if err == nil || wantErr.Error() != err.Error() {
-			t.Errorf("App.validateTx() error = %+v, wantErr %v", err, wantErr)
-			return
-		}
-	})
-
-	// invalid gas fee
-	t.Run("invalid gas price", func(t *testing.T) {
-		tr := NewTestResource()
-		defer tr.CleanData()
-
-		tr.app.SetGasStation(gas.NewDummyStation(tr.app)) // Set to dummy station to trigger check gas price check
-		signer := crypto.TxSigner{Nonce: uint64(0)}
-		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 1, GasPrice: 1}
-		privKey := loadPrivateKey(SEED)
-		if err := tx.Sign(privKey); err != nil {
-			panic(err)
-		}
-		wantErr := errors.New("Invalid gas price")
-		wantErrCode := CodeTypeInvalidGasPrice
-
-		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
-		if got != wantErrCode {
-			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
-		}
-		if err == nil || wantErr.Error() != err.Error() {
-			t.Errorf("App.validateTx() error = %+v, wantErr %v", err, wantErr)
-			return
-		}
-	})
-
-	// invalid data
-	t.Run("invalid data", func(t *testing.T) {
-		tr := NewTestResource()
-		defer tr.CleanData()
-		signer := crypto.TxSigner{Nonce: uint64(0)}
-		// Provide un-deserialize-able data to trigger error
-		tx := &crypto.Tx{Data: []byte{0}, From: signer, GasLimit: 1000, GasPrice: 1000}
-		privKey := loadPrivateKey(SEED)
-		if err := tx.Sign(privKey); err != nil {
-			panic(err)
-		}
-		wantErrCode := CodeTypeInvalidData
-
-		got, _ := tr.app.validateTx(tx, len(tx.Serialize()))
-		if got != wantErrCode {
-			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
-		}
-	})
-
-	// non-existent contract account
-	t.Run("non-existent contract account", func(t *testing.T) {
-		tr := NewTestResource()
-		defer tr.CleanData()
-		// Create a random address
-		pub, _, _ := ed25519.GenerateKey(cryptoRand.Reader)
-		toAddr := crypto.AddressFromPubKey(pub)
-
-		// Create a sign tx
-		signer := crypto.TxSigner{Nonce: uint64(0)}
-		// Set To to non-exist account address to trigger error
-		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 1, GasPrice: 1, To: toAddr}
-		privKey := loadPrivateKey(SEED)
-		err := tx.Sign(privKey)
-		if err != nil {
-			panic(err)
-		}
-		wantErr := errors.New("contract account not exist")
-		wantErrCode := CodeTypeAccountNotExist
-
-		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
-		if err == nil || wantErr.Error() != err.Error() {
-			t.Errorf("App.validateTx() error = %v, wantErr %v", err, wantErr)
-			return
-		}
-		if got != wantErrCode {
-			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
-		}
-	})
-
-	// account exist but contains empty contract
-	t.Run("empty contract account", func(t *testing.T) {
-		tr := NewTestResource()
-		defer tr.CleanData()
-		// Create a random address
-		pub, _, _ := ed25519.GenerateKey(cryptoRand.Reader)
-		toAddr := crypto.AddressFromPubKey(pub)
-		_, err := tr.app.state.CreateAccount(toAddr, toAddr, []byte{})
-		if err != nil {
-			panic(err)
-		}
-
-		// Create a sign tx
-		signer := crypto.TxSigner{Nonce: uint64(0)} // add signer without signature to trigger error
-		// Set To to exist account but not contains a contract to trigger error
-		tx := &crypto.Tx{Data: nil, From: signer, GasLimit: 1, GasPrice: 1, To: toAddr}
-		privKey := loadPrivateKey(SEED)
-		err = tx.Sign(privKey)
-		if err != nil {
-			panic(err)
-		}
-		wantErr := errors.New("Invoke a non-contract account")
-		wantErrCode := CodeTypeNonContractAccount
-
-		got, err := tr.app.validateTx(tx, len(tx.Serialize()))
-		if err == nil || wantErr.Error() != err.Error() {
-			t.Errorf("App.validateTx() error = %v, wantErr %v", err, wantErr)
-			return
-		}
-		if got != wantErrCode {
-			t.Errorf("App.validateTx() code = %v, want %v", got, wantErrCode)
+		for i, checkTxTest := range checkTxTestTable {
+			rawTx, _ := checkTxTest.tx.Encode()
+			got := app.CheckTx(types.RequestCheckTx{Tx: rawTx})
+			want := checkTxTest.expectedResponseCheckTx
+			if diff := cmp.Diff(got, want); diff != "" {
+				t.Errorf("Case %d: App.CheckTx() is expected to be = %v, got %v", i+1, want, got)
+			}
 		}
 	})
 }
 
 func TestApp_DeliverTx(t *testing.T) {
-	tr := NewTestResource()
-	defer tr.CleanData()
+	tr := newAppTestResource()
+	defer tr.cleanData()
 	app := tr.app
-	appHash := tr.app.state.Commit()
-	blockInfo := &storage.BlockInfo{Height: 1, AppHash: appHash, Time: time.Now()}
-	app.loadState(blockInfo)
+
+	app.BeginBlock(types.RequestBeginBlock{
+		Header: types.Header{
+			Height:  1,
+			Time:    time.Now(),
+			AppHash: []byte{},
+		},
+	})
+	deployTx, _ := tr.getDeployTx(0).Encode()
+	app.DeliverTx(types.RequestDeliverTx{Tx: deployTx})
+	app.Commit()
 
 	t.Run("Deserialize tx error", func(t *testing.T) {
-		invalidTxBytes, err := ioutil.ReadFile("./testdata/invalid_tx.dat")
-		if err != nil {
-			panic(err)
-		}
+		got := app.DeliverTx(types.RequestDeliverTx{Tx: []byte{1, 2, 3}})
+		want := types.ResponseDeliverTx{Code: ResponseCodeNotOK}
 
-		got := app.DeliverTx(types.RequestDeliverTx{Tx: invalidTxBytes})
-		want := types.ResponseDeliverTx{
-			Code: code.CodeTypeEncodingError,
-			Log:  "rlp: expected input list for crypto.Tx",
-		}
-
-		if !reflect.DeepEqual(got, want) {
+		if !cmp.Equal(got, want) {
 			t.Errorf("App.DeliverTx() = %v, want %v", got, want)
 		}
 	})
 
-	t.Run("Invalid tx", func(t *testing.T) {
-		invalidNonceTxBytes, err := ioutil.ReadFile("./testdata/invalid_nonce_tx.dat")
-		if err != nil {
-			panic(err)
+	t.Run("DeliverTx with error transactions", func(t *testing.T) {
+		type txRequest struct {
+			tx                        *crypto.Transaction
+			expectedResponseDeliverTx types.ResponseDeliverTx
 		}
 
-		got := app.DeliverTx(types.RequestDeliverTx{Tx: invalidNonceTxBytes})
-		want := types.ResponseDeliverTx{
-			Code: code.CodeTypeBadNonce,
-			Log:  "Invalid nonce. Expected 0, got 10",
-		}
+		deliverTxTestTable := []txRequest{{
+			tx:                        tr.getInvokeNilContractTx(1),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeNotOK},
+		}, {
+			tx:                        tr.getInvalidMaxSizeTx(1),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeNotOK},
+		}, {
+			tx:                        tr.getInvalidSignatureTx(1),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeNotOK},
+		}, {
+			tx:                        tr.getInvalidNonceTx(2),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeNotOK},
+		}, {
+			tx:                        tr.getInvalidGasPriceTx(1),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeNotOK},
+		}, {
+			tx:                        tr.getInvokeNonContractTx(1),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeNotOK},
+		}}
 
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("App.DeliverTx() = %v, want %v", got, want)
+		for i, deliverTxTest := range deliverTxTestTable {
+			rawTx, _ := deliverTxTest.tx.Encode()
+			got := app.DeliverTx(types.RequestDeliverTx{Tx: rawTx})
+			want := deliverTxTest.expectedResponseDeliverTx
+			if diff := cmp.Diff(got, want); diff != "" {
+				t.Errorf("Case %d: App.DeliverTx() is expected to be = %v, got %v", i+1, want, got)
+			}
 		}
 	})
 
-	t.Run("Deploy transaction", func(t *testing.T) {
-		pubkey, prvkey, err := ed25519.GenerateKey(cryptoRand.Reader)
-		if err != nil {
-			panic(err)
+	t.Run("DeliverTx with success transactions", func(t *testing.T) {
+		type txRequest struct {
+			tx                        *crypto.Transaction
+			expectedResponseDeliverTx types.ResponseDeliverTx
 		}
-		txData := crypto.TxData{}
-		gasPrice := uint32(18)
-		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize(), GasPrice: gasPrice}
-		err = tx.Sign(prvkey)
-		if err != nil {
-			panic(err)
-		}
-		req := types.RequestDeliverTx{Tx: tx.Serialize()}
-		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0, gasPrice)
-		got := app.DeliverTx(req)
 
-		// Detail event must equal
-		assert.Equal(t, detailEvent.ToTMEvent(), got.Events[len(got.Events)-1])
-		assert.Equal(t, code.CodeTypeOK, got.Code)
-		assert.Equal(t, "ok", got.Info)
-		assert.Equal(t, int64(tx.GasLimit), got.GasWanted)
-		assert.Equal(t, int64(0), got.GasUsed)
-	})
+		deliverTxTestTable := []txRequest{{
+			tx:                        tr.getDeployTx(1),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeOK},
+		}, {
+			tx:                        tr.getInvokeTx(2),
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeOK},
+		}}
 
-	t.Run("Invoke transaction", func(t *testing.T) {
-		pubkey, prvkey, err := ed25519.GenerateKey(cryptoRand.Reader)
-		if err != nil {
-			panic(err)
+		for i, deliverTxTest := range deliverTxTestTable {
+			rawTx, _ := deliverTxTest.tx.Encode()
+			got := app.DeliverTx(types.RequestDeliverTx{Tx: rawTx})
+			want := deliverTxTest.expectedResponseDeliverTx
+			if diff := cmp.Diff(got, want); diff != "" {
+				t.Errorf("Case %d: App.DeliverTx() is expected to be = %v, got %v", i+1, want, got)
+			}
 		}
-		txData := crypto.TxData{}
-		gasPrice := uint32(18)
-		tx := &crypto.Tx{From: crypto.TxSigner{PubKey: pubkey}, Data: txData.Serialize(), GasPrice: gasPrice}
-		err = tx.Sign(prvkey)
-		if err != nil {
-			panic(err)
-		}
-		req := types.RequestDeliverTx{Tx: tx.Serialize()}
-		detailEvent := event.NewDetailsEvent(1, tx.From.Address(), tx.To, tx.From.Nonce, 0, gasPrice)
-		got := app.DeliverTx(req)
-
-		// Detail event must equal
-		assert.Equal(t, detailEvent.ToTMEvent(), got.Events[len(got.Events)-1])
-		assert.Equal(t, code.CodeTypeOK, got.Code)
-		assert.Equal(t, "ok", got.Info)
-		assert.Equal(t, int64(tx.GasLimit), got.GasWanted)
-		assert.Equal(t, int64(0), got.GasUsed)
 	})
 }
 
-func TestApp_Commit(t *testing.T) {
-	tr := NewTestResource()
-	defer tr.CleanData()
-	appHash := tr.app.state.Commit()
-	blockInfo := &storage.BlockInfo{Height: 1, AppHash: appHash, Time: time.Now()}
-	tr.app.loadState(blockInfo)
-
-	got := tr.app.Commit()
-	want := types.ResponseCommit{Data: appHash.Bytes()}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("App.Commit() = %v, want %v", got, want)
-	}
-}
-
-func TestApp_GetGasContractToken(t *testing.T) {
-	// test config for gasContractAddress not exist & gasContractAddress exist, contract not exist
-	rand.Seed(time.Now().UTC().UnixNano())
-	dbDir := "./testdata/db/test_" + strconv.Itoa(rand.Intn(10000)) + "/"
-	err := os.MkdirAll(dbDir, os.ModePerm)
-	defer os.RemoveAll(dbDir)
-	if err != nil {
-		panic(err)
-	}
-
-	// init app and loadState without switching gas station
-	app := NewApp("testapp", dbDir, "")
-	blockInfo := &storage.BlockInfo{Height: 1, AppHash: common.Hash{}, Time: time.Now()}
-	app.loadState(blockInfo)
-
-	// Set gasContractAddress to trigger panic
-	app.gasContractAddress = "LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7"
-
-	// test config for gasContractAddress exist, contract exist
-	tr2 := NewTestResource()
-	defer tr2.CleanData()
-	address, _ := crypto.AddressFromString("LACWIGXH6CZCRRHFSK2F4BINXGUGUS2FSX5GSYG3RMP5T55EV72DHAJ7")
-	// Get gasContractAccount to create a dummy token
-	account, err := tr2.app.state.GetAccount(address)
-	if err != nil {
-		panic(err)
-	}
-	token := token.NewToken(tr2.app.state, account)
+func TestBlockHashAndAppHashConversion(t *testing.T) {
 	tests := []struct {
-		name    string
-		app     *App
-		want    gas.Token
-		wantErr error
-	}{
-		{"gasContractAddress not exist", &App{}, nil, nil},
-		{"gasContractAddress exist, contract not exist", app, nil, storage.ErrAccountNotExist},
-		{"gasContractAddress exist, contract exist", tr2.app, token, nil},
-	}
+		name      string
+		appHash   []byte
+		blockHash common.Hash
+	}{{
+		name:      "Empty",
+		appHash:   []byte{},
+		blockHash: common.EmptyHash,
+	}, {
+		name:      "Normal",
+		appHash:   []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 34},
+		blockHash: common.Hash{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 34},
+	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer func() {
-				if r := recover(); r != nil {
-					err := r.(error)
-					if err != tt.wantErr {
-						t.Errorf("App.GetGasContractToken() got error = %v, want error %v", err, tt.wantErr)
-					}
-				}
-			}()
+			if got := blockHashToAppHash(tt.blockHash); !cmp.Equal(got, tt.appHash) {
+				t.Errorf("blockHashToAppHash() = %v, want %v", got, tt.appHash)
+			}
 
-			app := tt.app
-			if got := app.GetGasContractToken(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("App.GetGasContractToken() = %v, want %v", got, tt.want)
+			if got := appHashToBlockHash(tt.appHash); !cmp.Equal(got, tt.blockHash) {
+				t.Errorf("appHashToBlockHash() = %v, want %v", got, tt.blockHash)
 			}
 		})
+	}
+}
+
+func TestFullAppFlow(t *testing.T) {
+	tr := newAppTestResource()
+	defer tr.cleanData()
+	app := tr.app
+
+	type txRequest struct {
+		tx                        *crypto.Transaction
+		expectedResponseCheckTx   types.ResponseCheckTx
+		expectedResponseDeliverTx types.ResponseDeliverTx
+	}
+
+	type round struct {
+		height int64
+		time   time.Time
+
+		txRequests []txRequest
+	}
+
+	rounds := []round{{
+		height: 1,
+		time:   time.Unix(0, 1),
+		txRequests: []txRequest{{
+			tx:                        tr.getDeployTx(0),
+			expectedResponseCheckTx:   types.ResponseCheckTx{Code: ResponseCodeOK},
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeOK},
+		}},
+	}, {
+		height: 2,
+		time:   time.Unix(0, 2),
+		txRequests: []txRequest{{
+			tx:                        tr.getInvokeTx(1),
+			expectedResponseCheckTx:   types.ResponseCheckTx{Code: ResponseCodeOK},
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: ResponseCodeOK},
+		}},
+	}, {
+		height: 3,
+		time:   time.Unix(0, 3),
+		txRequests: []txRequest{{
+			tx:                      tr.getInvokeNilContractTx(2),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invoke nil contract"},
+		}, {
+			tx:                      tr.getInvalidMaxSizeTx(2),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: fmt.Sprintf("Transaction size exceed %vB", constant.MaxTransactionSize)},
+		}, {
+			tx:                      tr.getInvalidSignatureTx(2),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid signature"},
+		}, {
+			tx:                      tr.getInvalidNonceTx(123),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid nonce. Expected 2, got 123"},
+		}, {
+			tx:                      tr.getInvalidGasPriceTx(2),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invalid gas price"},
+		}, {
+			tx:                      tr.getInvokeNonContractTx(2),
+			expectedResponseCheckTx: types.ResponseCheckTx{Code: ResponseCodeNotOK, Log: "Invoke a non-contract account"},
+		}},
+	}}
+
+	appHash := []byte{}
+	for _, round := range rounds {
+		app.BeginBlock(types.RequestBeginBlock{
+			Header: types.Header{
+				Height:  round.height,
+				Time:    round.time,
+				AppHash: appHash,
+			},
+		})
+
+		for _, txRequest := range round.txRequests {
+			rawTx, _ := txRequest.tx.Encode()
+			responseCheckTx := app.CheckTx(types.RequestCheckTx{Tx: rawTx})
+			if !cmp.Equal(responseCheckTx, txRequest.expectedResponseCheckTx) {
+				t.Errorf("app.CheckTx error, got %v, want %v", responseCheckTx, txRequest.expectedResponseCheckTx)
+			}
+
+			if responseCheckTx.Code == ResponseCodeOK {
+				responseDeliverTx := app.DeliverTx(types.RequestDeliverTx{Tx: rawTx})
+				if !cmp.Equal(responseDeliverTx, txRequest.expectedResponseDeliverTx) {
+					t.Errorf("app.CheckTx error, got %v, want %v", responseDeliverTx, txRequest.expectedResponseDeliverTx)
+				}
+			}
+		}
+
+		responseCommit := app.Commit()
+		appHash = responseCommit.Data
+		info := app.Info(types.RequestInfo{})
+		if !bytes.Equal(info.LastBlockAppHash, appHash) {
+			t.Errorf("Commit app hash = %v, is different from info app hash = %v", appHash, info.LastBlockAppHash)
+		}
 	}
 }

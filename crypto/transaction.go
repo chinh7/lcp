@@ -1,159 +1,69 @@
 package crypto
 
 import (
-	"encoding/hex"
-	"errors"
-	"fmt"
+	"crypto/ed25519"
 
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"golang.org/x/crypto/blake2b"
-
-	cdc "github.com/QuoineFinancial/liquid-chain-rlp/rlp"
-	"golang.org/x/crypto/ed25519"
 )
 
-const (
-	// MethodNameByteLength is number of bytes preservered for method name
-	MethodNameByteLength = 64
-)
-
-var (
-	// ErrInvalidPubKeyLength happens when public key length is not equal ed25519.PublicKeySize
-	ErrInvalidPubKeyLength = errors.New("crypto: invalid public key length")
-	// ErrInvalidSignature happens when signature of message by publicKey is invalid
-	ErrInvalidSignature = errors.New("crypto: invalid signature")
-)
-
-// TxData data for contract deploy/invoke
-type TxData struct {
-	ContractCode []byte
-	Method       string
-	Params       []byte
-}
-
-// TxSigner information about transaction signer
-type TxSigner struct {
-	PubKey    []byte
-	Nonce     uint64
-	Signature []byte
-}
-
-// Tx transaction
-type Tx struct {
-	From     TxSigner
+// TxEvent is emitted while executing transactions
+type TxEvent struct {
+	Contract Address
+	Index    uint32
 	Data     []byte
-	To       Address
-	GasLimit uint32
-	GasPrice uint32
 }
 
-// Address derived from TxSigner PubKey
-func (txSigner *TxSigner) Address() Address {
-	return AddressFromPubKey(txSigner.PubKey)
+// TxReceipt reflects corresponding Transaction execution result
+type TxReceipt struct {
+	Result  uint64
+	GasUsed uint32
+	Code    ReceiptCode
+	Events  []*TxEvent
 }
 
-// CreateAddress create a new contract address based on pubkey and nonce
-func (txSigner *TxSigner) CreateAddress() Address {
-	cloned := &TxSigner{PubKey: txSigner.PubKey, Nonce: txSigner.Nonce}
-	res := blake2b.Sum256(cloned.Serialize())
-	return AddressFromPubKey(res[:])
+// TxSender is sender of transaction
+type TxSender struct {
+	PublicKey ed25519.PublicKey
+	Nonce     uint64
 }
 
-// String TxSigner string presentation
-func (txSigner TxSigner) String() string {
-	return fmt.Sprintf("Nonce: %d Pubkey: %X Signature: %X", txSigner.Nonce, txSigner.PubKey, txSigner.Signature)
+// TxPayload contains data to interact with smart contract
+type TxPayload struct {
+	Contract []byte
+	Method   string
+	Params   []byte
 }
 
-// String Tx string presentation
-func (tx Tx) String() string {
-	return fmt.Sprintf("Data: %s To: %s Signer: %s", hex.EncodeToString(tx.Data), tx.To.String(), tx.From.String())
+// Transaction is transaction of liquid-chain
+type Transaction struct {
+	Version   uint16
+	Sender    *TxSender
+	Receiver  Address
+	Payload   *TxPayload
+	GasPrice  uint32
+	GasLimit  uint32
+	Signature []byte
+	Receipt   *TxReceipt
 }
 
-// GetSigHash get the transaction data used for signing
-func (tx *Tx) GetSigHash() ([]byte, error) {
-	clone := *tx
-	clone.From.Signature = nil
-	txBytes, err := cdc.EncodeToBytes(clone)
-	if err != nil {
+// Encode returns bytes representation of transaction
+func (tx Transaction) Encode() ([]byte, error) {
+	return rlp.EncodeToBytes(tx)
+}
+
+// DecodeTransaction returns Transaction from bytes representation
+func DecodeTransaction(raw []byte) (*Transaction, error) {
+	var tx Transaction
+	if err := rlp.DecodeBytes(raw, &tx); err != nil {
 		return nil, err
 	}
-	hash := blake2b.Sum256(txBytes)
-	return hash[:], nil
+	return &tx, nil
 }
 
-// GetFee gets transaction fee limit
-func (tx *Tx) GetFee() (uint64, error) {
-	if tx.GasLimit == 0 || tx.GasPrice == 0 {
-		return 0, nil
-	}
-	fee := uint64(tx.GasLimit) * uint64(tx.GasPrice)
-	return fee, nil
-}
-
-// Sign signs a transaction provided a private key
-func (tx *Tx) Sign(privKey ed25519.PrivateKey) error {
-	pubKey := make([]byte, ed25519.PublicKeySize)
-	copy(pubKey, privKey[32:])
-	tx.From.PubKey = pubKey
-
-	sigHash, err := tx.GetSigHash()
-	if err != nil {
-		return err
-	}
-	tx.From.Signature = ed25519.Sign(privKey, sigHash)
-	return nil
-}
-
-// VerifySignature returns error when transaction signature is incorrect
-func (tx *Tx) VerifySignature() error {
-	signature := tx.From.Signature
-	sigHash, err := tx.GetSigHash()
-	if err != nil {
-		return err
-	}
-
-	if len(tx.From.PubKey) != ed25519.PublicKeySize {
-		return ErrInvalidPubKeyLength
-	}
-
-	if !ed25519.Verify(tx.From.PubKey, sigHash, signature) {
-		return ErrInvalidSignature
-	}
-
-	return nil
-}
-
-// Serialize a Tx to bytes
-func (tx *Tx) Serialize() []byte {
-	bytes, _ := cdc.EncodeToBytes(tx)
-	return bytes
-}
-
-// Serialize a TxData to bytes
-func (txData *TxData) Serialize() []byte {
-	bytes, _ := cdc.EncodeToBytes(txData)
-	return bytes
-}
-
-// Serialize a TxData to bytes
-func (txSigner *TxSigner) Serialize() []byte {
-	bytes, _ := cdc.EncodeToBytes(txSigner)
-	return bytes
-}
-
-// Deserialize converts bytes to Tx
-func (tx *Tx) Deserialize(bz []byte) error {
-	if err := cdc.DecodeBytes(bz, &tx); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Deserialize converts bytes to TxData
-func (txData *TxData) Deserialize(bz []byte) error {
-	return cdc.DecodeBytes(bz, &txData)
-}
-
-// Deserialize converts bytes to txSigner
-func (txSigner *TxSigner) Deserialize(bz []byte) error {
-	return cdc.DecodeBytes(bz, &txSigner)
+// Hash returns hash for storing transaction
+func (tx Transaction) Hash() common.Hash {
+	hash, _ := tx.Encode()
+	return blake2b.Sum256(hash)
 }

@@ -8,18 +8,17 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/engine"
-	"github.com/QuoineFinancial/liquid-chain/event"
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
 )
 
 // Token contract
 type Token struct {
-	state    *storage.State
+	state    *storage.StateStorage
 	contract *storage.Account
 }
 
-func (token *Token) invokeContract(caller crypto.Address, method string, values []string) (uint64, []event.Event, error) {
+func (token *Token) invokeContract(caller crypto.Address, method string, values []string) (uint64, []*crypto.TxEvent, error) {
 	contract, err := token.contract.GetContract()
 	if err != nil {
 		return 0, nil, err
@@ -48,7 +47,7 @@ func (token *Token) GetBalance(addr crypto.Address) (uint64, error) {
 }
 
 // Transfer transfer token from caller address to another address
-func (token *Token) Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]event.Event, error) {
+func (token *Token) Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]*crypto.TxEvent, error) {
 	ret, events, err := token.invokeContract(caller, "transfer", []string{addr.String(), strconv.FormatUint(amount, 10)})
 	if ret > math.MaxInt32 {
 		return events, errors.New("Token transfer failed")
@@ -62,7 +61,7 @@ func (token *Token) GetContract() *storage.Account {
 }
 
 // NewToken from contract
-func NewToken(state *storage.State, contract *storage.Account) *Token {
+func NewToken(state *storage.StateStorage, contract *storage.Account) *Token {
 	return &Token{
 		state:    state,
 		contract: contract,

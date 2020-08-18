@@ -4,8 +4,8 @@ import (
 	"hash"
 	"sync"
 
-	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
+	"github.com/QuoineFinancial/liquid-chain/db"
 	"golang.org/x/crypto/blake2b"
 )
 

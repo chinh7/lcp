@@ -8,7 +8,11 @@ import (
 )
 
 func main() {
-	rootDir := os.ExpandEnv(filepath.Join("$HOME", ".liquid"))
+	defaultRootDir := filepath.Join(os.ExpandEnv("HOME"), ".liquid-chain")
+	rootDir := defaultRootDir
+	if rootDirEnv, ok := os.LookupEnv("ROOT_DIR"); ok {
+		rootDir = rootDirEnv
+	}
 
 	// TODO: Get gasContractAddress from genesis file
 	gasContractAddress := os.Getenv("GAS_CONTRACT_ADDRESS")

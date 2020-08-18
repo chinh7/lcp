@@ -73,41 +73,6 @@ func (ts *testServer) stopNode() {
 	time.Sleep(500 * time.Millisecond)
 }
 
-func createDeployTx(codePath string, headerPath string, initFuncName string, params []string) string {
-	serializedTxData, err := util.BuildDeployTxData(codePath, headerPath, initFuncName, params)
-	if err != nil {
-		panic(err)
-	}
-	signer := crypto.TxSigner{Nonce: uint64(0)}
-	tx := &crypto.Tx{Data: serializedTxData, From: signer, GasLimit: 1, GasPrice: 1}
-
-	privKey := loadPrivateKey(SEED)
-	if err = tx.Sign(privKey); err != nil {
-		panic(err)
-	}
-	return base64.StdEncoding.EncodeToString(tx.Serialize())
-}
-
-func createInvokeTx(contractAddress string, nonce uint64, headerPath string, functionName string, params []string) string {
-	to, err := crypto.AddressFromString(contractAddress)
-	if err != nil {
-		panic(err)
-	}
-
-	serializedTxData, err := util.BuildInvokeTxData(headerPath, functionName, params)
-	if err != nil {
-		panic(err)
-	}
-	signer := crypto.TxSigner{Nonce: uint64(nonce)}
-	tx := &crypto.Tx{Data: serializedTxData, From: signer, To: to, GasLimit: 1, GasPrice: 1}
-
-	privKey := loadPrivateKey(SEED)
-	if err = tx.Sign(privKey); err != nil {
-		panic(err)
-	}
-	return base64.StdEncoding.EncodeToString(tx.Serialize())
-}
-
 func loadPrivateKey(SEED string) ed25519.PrivateKey {
 	hexSeed, err := hex.DecodeString(SEED)
 	if err != nil {
@@ -124,16 +89,38 @@ func TestBroadcastTx(t *testing.T) {
 	api := api.NewAPI(":5555", api.Config{
 		HomeDir: ts.node.rootDir,
 		NodeURL: "tcp://localhost:26657",
-		DB:      ts.node.app.StateDB,
 	})
 
 	router := api.Router
+	seed := make([]byte, 32)
+	privateKey := ed25519.NewKeyFromSeed(seed)
+	sender := crypto.TxSender{
+		Nonce:     uint64(0),
+		PublicKey: privateKey.Public().(ed25519.PublicKey),
+	}
+	payload, err := util.BuildDeployTxPayload("./testdata/contract.wasm", "./testdata/contract-abi.json", "init", []string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployTx := &crypto.Transaction{
+		Sender:    &sender,
+		Payload:   payload,
+		Receiver:  crypto.EmptyAddress,
+		GasLimit:  0,
+		GasPrice:  1,
+		Signature: nil,
+		Receipt:   &crypto.TxReceipt{},
+	}
+	dataToSign := crypto.GetSigHash(deployTx)
+	deployTx.Signature = crypto.Sign(privateKey, dataToSign[:])
+	rawTx, _ := deployTx.Encode()
+	serializedTx := base64.StdEncoding.EncodeToString(rawTx)
 	testcases := []testCase{
 		{
 			name:   "Broadcast",
 			method: "chain.Broadcast",
-			params: fmt.Sprintf(`{"rawTx": "%s"}`, createDeployTx("./testdata/contract.wasm", "./testdata/contract-abi.json", "init", []string{})),
-			result: `{"jsonrpc":"2.0","result":{"hash":"53E3715C74FCFCC008AA9E2D7E99C51F109FFCC4EFBFA524D9BA6469EF4F5453","code":0,"log":""},"id":1}`,
+			params: fmt.Sprintf(`{"rawTx": "%s"}`, serializedTx),
+			result: `{"jsonrpc":"2.0","result":{"hash":"7E43B44AC44FFA3FAF53078D6BBCC55ACC7D9BB01AE20860D617226F69A168F5","code":0,"log":""},"id":1}`,
 		},
 	}
 

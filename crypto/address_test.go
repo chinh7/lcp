@@ -2,8 +2,9 @@ package crypto
 
 import (
 	"errors"
-	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestAddressFromString(t *testing.T) {
@@ -47,6 +48,12 @@ func TestAddressFromString(t *testing.T) {
 			want: Address{},
 			err:  errors.New("Unexpected version 8"),
 		},
+		{
+			name: "invalid length",
+			args: args{address: "AE======"},
+			want: Address{},
+			err:  errors.New("encoded value is 1 bytes; minimum valid length is 3"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -54,7 +61,7 @@ func TestAddressFromString(t *testing.T) {
 			if err != nil && err.Error() != tt.err.Error() {
 				t.Errorf("AddressFromString() err = %v, want %v", err, tt.err)
 			}
-			if err == nil && !reflect.DeepEqual(got, tt.want) {
+			if err == nil && !cmp.Equal(got, tt.want) {
 				t.Errorf("AddressFromString() = %v, want %v", got, tt.want)
 			}
 		})
@@ -98,6 +105,69 @@ func TestAddressFromBytes(t *testing.T) {
 			}
 			if err == nil && tt.want != got.String() {
 				t.Errorf("AddressFromBytes() = %s, want %s", got.String(), tt.want)
+			}
+		})
+	}
+}
+
+func TestNewDeploymentAddress(t *testing.T) {
+	sender, _ := AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
+	contract, _ := AddressFromString("LB5EPP7RST6IROFHLNKTLGKAFQTXGNY45CEAXPTGVT3K53ZXFMMAW575")
+	contract2, _ := AddressFromString("LADAUIL4G5BB6DXOZPG4ES6UHVK4DJND4GADTMW7TDRI4P2B4O7NLJYF")
+	type args struct {
+		senderAddress Address
+		senderNonce   uint64
+	}
+	tests := []struct {
+		name string
+		args args
+		want Address
+	}{{
+		args: args{
+			senderAddress: sender,
+			senderNonce:   0,
+		},
+		want: contract,
+	}, {
+		args: args{
+			senderAddress: sender,
+			senderNonce:   1234,
+		},
+		want: contract2,
+	}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewDeploymentAddress(tt.args.senderAddress, tt.args.senderNonce); !cmp.Equal(got, tt.want) {
+				t.Errorf("NewDeploymentAddress() = %v, want %v", got.String(), tt.want.String())
+			}
+		})
+	}
+}
+
+func TestAddress_setBytes(t *testing.T) {
+	tests := []struct {
+		name string
+		b    []byte
+		want Address
+	}{{
+		name: "empty bytes",
+		b:    []byte{},
+		want: Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	}, {
+		name: "overwhelm bytes",
+		b:    []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
+		want: Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
+	}, {
+		name: "normal bytes",
+		b:    []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+		want: Address{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got Address
+			got.setBytes(tt.b)
+			if !cmp.Equal(got, tt.want) {
+				t.Errorf("setBytes() = %v, want %v", got.String(), tt.want.String())
 			}
 		})
 	}

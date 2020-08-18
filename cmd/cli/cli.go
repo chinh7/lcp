@@ -18,7 +18,6 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/api/chain"
 	"github.com/QuoineFinancial/liquid-chain/api/storage"
 	"github.com/QuoineFinancial/liquid-chain/consensus"
-	"github.com/QuoineFinancial/liquid-chain/core"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/util"
 )
@@ -31,7 +30,7 @@ func broadcast(endpoint string, hexTx []byte) {
 		var result chain.BroadcastResult
 		postJSON(endpoint, "chain.Broadcast", chain.BroadcastParams{RawTransaction: serializedTx}, &result)
 
-		if result.Code == consensus.CodeTypeOK {
+		if result.Code == consensus.ResponseCodeOK {
 			log.Println("Broadcast SUCCESS")
 			log.Printf("Code: %d\n", result.Code)
 			log.Printf("Transaction hash: %s\n", result.TransactionHash)
@@ -63,39 +62,68 @@ func deploy(cmd *cobra.Command, args []string) {
 	seedPath, endpoint, nonce, gas, price, _ := parseFlags(cmd)
 	privateKey := loadPrivateKey(seedPath)
 
-	data, err := util.BuildDeployTxData(args[0], args[1], core.InitFunctionName, args[2:])
+	payload, err := util.BuildDeployTxPayload(args[0], args[1], consensus.InitFunctionName, args[2:])
 	if err != nil {
 		panic(err)
 	}
 
-	signer := crypto.TxSigner{Nonce: uint64(nonce)}
-	tx := &crypto.Tx{Data: data, From: signer, GasLimit: gas, GasPrice: price}
-	if err = tx.Sign(privateKey); err != nil {
-		panic(err)
+	tx := &crypto.Transaction{
+		Version: 1,
+		Payload: payload,
+		Sender: &crypto.TxSender{
+			Nonce:     uint64(nonce),
+			PublicKey: privateKey.Public().(ed25519.PublicKey),
+		},
+		Receiver:  crypto.EmptyAddress,
+		GasLimit:  gas,
+		GasPrice:  price,
+		Signature: nil,
+		Receipt:   &crypto.TxReceipt{},
 	}
-	broadcast(endpoint, tx.Serialize())
+	dataToSign := crypto.GetSigHash(tx)
+	tx.Signature = crypto.Sign(privateKey, dataToSign[:])
+
+	if rawTx, err := tx.Encode(); err != nil {
+		panic(err)
+	} else {
+		broadcast(endpoint, rawTx)
+	}
 }
 
 func invoke(cmd *cobra.Command, args []string) {
 	seedPath, endpoint, nonce, gas, price, _ := parseFlags(cmd)
 	privateKey := loadPrivateKey(seedPath)
 
-	signer := crypto.TxSigner{Nonce: uint64(nonce)}
-	to, err := crypto.AddressFromString(args[0])
+	receiver, err := crypto.AddressFromString(args[0])
 	if err != nil {
 		panic(err)
 	}
 
-	data, err := util.BuildInvokeTxData(args[1], args[2], args[3:])
+	payload, err := util.BuildInvokeTxPayload(args[1], args[2], args[3:])
 	if err != nil {
 		panic(err)
 	}
-	tx := &crypto.Tx{Data: data, From: signer, To: to, GasLimit: gas, GasPrice: price}
-
-	if err = tx.Sign(privateKey); err != nil {
-		panic(err)
+	tx := &crypto.Transaction{
+		Version: 1,
+		Payload: payload,
+		Sender: &crypto.TxSender{
+			Nonce:     uint64(nonce),
+			PublicKey: privateKey.Public().(ed25519.PublicKey),
+		},
+		Receiver:  receiver,
+		GasLimit:  gas,
+		GasPrice:  price,
+		Signature: nil,
+		Receipt:   &crypto.TxReceipt{},
 	}
-	broadcast(endpoint, tx.Serialize())
+	dataToSign := crypto.GetSigHash(tx)
+	tx.Signature = crypto.Sign(privateKey, dataToSign[:])
+
+	if rawTx, err := tx.Encode(); err != nil {
+		panic(err)
+	} else {
+		broadcast(endpoint, rawTx)
+	}
 }
 
 func call(cmd *cobra.Command, args []string) {

@@ -1,148 +1,201 @@
 package crypto
 
 import (
-	"crypto/rand"
 	"testing"
 
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/google/go-cmp/cmp"
 	"golang.org/x/crypto/ed25519"
 )
 
-func TestTxSerialization(t *testing.T) {
-	toAddress, err := AddressFromString("LB3Z6N6HTFUPQ573QENJ4OCFFUPENY2EW7ZHQZSSIO4AODT3HHE53N52")
-	if err != nil {
-		panic(err)
-	}
-	txSigner := TxSigner{Nonce: 10}
-	tx := &Tx{To: toAddress, From: txSigner, GasLimit: 100}
-	txRecouped := &Tx{}
-	txRecouped.Deserialize(tx.Serialize())
-	if tx.String() != txRecouped.String() {
-		t.Errorf("Expect deserialization to produce the same value, expected: %s, got %s", tx.String(), txRecouped.String())
-	}
-}
-
-func TestTxDataSerialization(t *testing.T) {
-	params := []byte{0, 0, 1, 1, 0, 1, 1}
-	var txDataRecouped TxData
-
-	txData := TxData{Method: "method", Params: params, ContractCode: []byte{}}
-	txDataRecouped.Deserialize(txData.Serialize())
-	if diff := cmp.Diff(txData, txDataRecouped); diff != "" {
-		t.Errorf("Decoding of %v is incorrect, expected: %v, got: %v, diff: %v", txData, txData, txDataRecouped, diff)
-	}
-}
-
-func TestTxSignerSerialization(t *testing.T) {
-	txSigner := &TxSigner{Nonce: 10}
-	txSignerRecouped := &TxSigner{}
-	txSignerRecouped.Deserialize(txSigner.Serialize())
-	if txSigner.String() != txSignerRecouped.String() {
-		t.Errorf("Expect deserialization to produce the same value, expected: %s, got %s", txSigner.String(), txSignerRecouped.String())
-	}
-}
-
-func TestTxSignature(t *testing.T) {
-	pubkey, prvkey, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		panic(err)
-	}
-	_, invalidPrv, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		panic(err)
-	}
-	tests := []struct {
-		name   string
-		want   error
-		prvkey ed25519.PrivateKey
-		pubkey ed25519.PublicKey
-	}{
-		{
-			name:   "valid private key",
-			prvkey: prvkey,
-			pubkey: pubkey,
-			want:   nil,
-		},
-		{
-			name:   "invalid private key",
-			prvkey: invalidPrv,
-			pubkey: pubkey,
-			want:   ErrInvalidSignature,
-		},
-		{
-			name:   "invalid public key length",
-			prvkey: prvkey,
-			pubkey: []byte{},
-			want:   ErrInvalidPubKeyLength,
-		},
-	}
-
-	if err != nil {
-		panic(err)
-	}
-
-	tx := &Tx{From: TxSigner{}}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := tx.Sign(tt.prvkey); err != nil {
-				panic(err)
-			}
-			tx.From.PubKey = tt.pubkey
-			err = tx.VerifySignature()
-			if err != tt.want {
-				t.Errorf("Tx.VerifySignature() = %v, want %v", tx.VerifySignature(), tt.want)
-			}
-		})
-	}
-
-}
-
-func TestCreateAddress(t *testing.T) {
-	prvkey := ed25519.NewKeyFromSeed([]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31})
-	pubkey := prvkey[32:]
-	txSigner := TxSigner{Nonce: 7, PubKey: pubkey}
-	generatedAddress := txSigner.CreateAddress()
-	expected := "LD6QC6YFHIZ6DCN452PJULI5WHVKYRCNIJHKRQUOF6QOKQ6WPFGT5CYW"
-	if generatedAddress.String() != expected {
-		t.Errorf("CreateAddress = %v, want %v", generatedAddress.String(), expected)
-	}
-
-}
-
-func TestTxGetFee(t *testing.T) {
+func TestTransaction_Serialize(t *testing.T) {
 	type fields struct {
-		GasLimit uint32
-		GasPrice uint32
+		Version   uint16
+		Sender    *TxSender
+		Receiver  Address
+		Payload   *TxPayload
+		GasPrice  uint32
+		GasLimit  uint32
+		Signature []byte
+		Receipt   *TxReceipt
 	}
 	tests := []struct {
 		name    string
 		fields  fields
-		want    uint64
-		wantErr string
-	}{
-		{
-			name:   "zero gas",
-			fields: fields{GasLimit: 0, GasPrice: 0},
-			want:   0,
+		want    []byte
+		wantErr bool
+	}{{
+		fields: fields{
+			Version: 1,
+			Sender: &TxSender{
+				Nonce:     uint64(0),
+				PublicKey: ed25519.NewKeyFromSeed(make([]byte, 32)).Public().(ed25519.PublicKey),
+			},
+			Receiver: Address{},
+			Payload: &TxPayload{
+				Contract: []byte{1, 2, 3},
+				Method:   "Transfer",
+				Params:   []byte{4, 5, 6},
+			},
+			GasPrice:  1,
+			GasLimit:  2,
+			Signature: []byte{7, 8, 9},
+			Receipt: &TxReceipt{
+				Result:  1,
+				GasUsed: 2,
+				Code:    ReceiptCodeOK,
+				Events: []*TxEvent{{
+					Contract: Address{},
+					Data:     []byte{10, 11, 12},
+				}},
+			},
 		},
-		{
-			name:   "valid fee",
-			fields: fields{GasLimit: 250, GasPrice: 5},
-			want:   250 * 5,
-		},
-	}
+		want:    []byte{248, 143, 1, 226, 160, 59, 106, 39, 188, 206, 182, 164, 45, 98, 163, 168, 208, 42, 111, 13, 115, 101, 50, 21, 119, 29, 226, 67, 166, 58, 192, 72, 161, 139, 89, 218, 41, 128, 163, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 209, 131, 1, 2, 3, 136, 84, 114, 97, 110, 115, 102, 101, 114, 131, 4, 5, 6, 1, 2, 131, 7, 8, 9, 238, 1, 2, 128, 234, 233, 163, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 131, 10, 11, 12},
+		wantErr: false,
+	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tx := &Tx{
-				GasLimit: tt.fields.GasLimit,
-				GasPrice: tt.fields.GasPrice,
+			tx := Transaction{
+				Version:   tt.fields.Version,
+				Sender:    tt.fields.Sender,
+				Receiver:  tt.fields.Receiver,
+				Payload:   tt.fields.Payload,
+				GasPrice:  tt.fields.GasPrice,
+				GasLimit:  tt.fields.GasLimit,
+				Signature: tt.fields.Signature,
+				Receipt:   tt.fields.Receipt,
 			}
-			got, err := tx.GetFee()
-			if err != nil && err.Error() != tt.wantErr {
-				t.Errorf("Tx.GetFee() error = %v, wantErr %v", err.Error(), tt.wantErr)
+			got, err := tx.Encode()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Transaction.Serialize() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
-			if got != tt.want {
-				t.Errorf("Tx.GetFee() = %v, want %v", got, tt.want)
+			if !cmp.Equal(got, tt.want) {
+				t.Errorf("Transaction.Serialize() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTransaction_Deserialize(t *testing.T) {
+	type args struct {
+		raw []byte
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    Transaction
+		wantErr bool
+	}{{
+		name: "invalid",
+		args: args{
+			raw: []byte{1, 2, 3},
+		},
+		wantErr: true,
+	}, {
+		name: "valid",
+		args: args{
+			raw: []byte{248, 143, 1, 226, 160, 59, 106, 39, 188, 206, 182, 164, 45, 98, 163, 168, 208, 42, 111, 13, 115, 101, 50, 21, 119, 29, 226, 67, 166, 58, 192, 72, 161, 139, 89, 218, 41, 128, 163, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 209, 131, 1, 2, 3, 136, 84, 114, 97, 110, 115, 102, 101, 114, 131, 4, 5, 6, 1, 2, 131, 7, 8, 9, 238, 1, 2, 128, 234, 233, 163, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 131, 10, 11, 12},
+		},
+		want: Transaction{
+			Version: 1,
+			Sender: &TxSender{
+				Nonce:     uint64(0),
+				PublicKey: ed25519.NewKeyFromSeed(make([]byte, 32)).Public().(ed25519.PublicKey),
+			},
+			Receiver: Address{},
+			Payload: &TxPayload{
+				Contract: []byte{1, 2, 3},
+				Method:   "Transfer",
+				Params:   []byte{4, 5, 6},
+			},
+			GasPrice:  1,
+			GasLimit:  2,
+			Signature: []byte{7, 8, 9},
+			Receipt: &TxReceipt{
+				Result:  1,
+				GasUsed: 2,
+				Code:    ReceiptCodeOK,
+				Events: []*TxEvent{{
+					Contract: Address{},
+					Data:     []byte{10, 11, 12},
+				}},
+			},
+		},
+		wantErr: false,
+	}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx, err := DecodeTransaction(tt.args.raw)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DecodeTransaction() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err == nil {
+				if equal := cmp.Equal((*tx), tt.want); !equal {
+					t.Errorf("Transaction.Deserialize() %v, want %v", tx, tt.wantErr)
+				}
+			}
+		})
+	}
+}
+
+func TestTransaction_Hash(t *testing.T) {
+	type fields struct {
+		Version   uint16
+		Sender    *TxSender
+		Receiver  Address
+		Payload   *TxPayload
+		GasPrice  uint32
+		GasLimit  uint32
+		Signature []byte
+		Receipt   *TxReceipt
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   common.Hash
+	}{{
+		fields: fields{
+			Version: 1,
+			Sender: &TxSender{
+				Nonce:     uint64(0),
+				PublicKey: ed25519.NewKeyFromSeed(make([]byte, 32)).Public().(ed25519.PublicKey),
+			},
+			Receiver: Address{},
+			Payload: &TxPayload{
+				Contract: []byte{1, 2, 3},
+				Method:   "Transfer",
+				Params:   []byte{4, 5, 6},
+			},
+			GasPrice:  1,
+			GasLimit:  2,
+			Signature: []byte{7, 8, 9},
+			Receipt: &TxReceipt{
+				Result:  1,
+				GasUsed: 2,
+				Code:    ReceiptCodeOK,
+				Events: []*TxEvent{{
+					Contract: Address{},
+					Data:     []byte{10, 11, 12},
+				}},
+			},
+		},
+		want: common.HexToHash("6273e575da7972ec3601c0f57111ec7eb0131fcb4c5c6296adfded0daf0e19c0"),
+	}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := Transaction{
+				Version:   tt.fields.Version,
+				Sender:    tt.fields.Sender,
+				Receiver:  tt.fields.Receiver,
+				Payload:   tt.fields.Payload,
+				GasPrice:  tt.fields.GasPrice,
+				GasLimit:  tt.fields.GasLimit,
+				Signature: tt.fields.Signature,
+				Receipt:   tt.fields.Receipt,
+			}
+			if got := tx.Hash(); !cmp.Equal(got, tt.want) {
+				t.Errorf("Transaction.Hash() = %v, want %v", got, tt.want)
 			}
 		})
 	}
