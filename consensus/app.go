@@ -147,16 +147,10 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 	if err := app.block.FinalizeBlock(stateRootHash, txRootHash); err != nil {
 		panic(err)
 	}
-
-	blockHash, err := app.block.Commit()
-	if err != nil {
-		panic(err)
-	}
-
+	blockHash := app.block.Commit()
 	if err := app.meta.StoreBlockIndexes(app.block.MustGetBlock(blockHash)); err != nil {
 		log.Println("unable to store index for block", blockHash)
 	}
-
 	return abciTypes.ResponseCommit{Data: blockHashToAppHash(blockHash)}
 }
 

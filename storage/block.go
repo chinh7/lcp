@@ -37,18 +37,18 @@ func (bs *BlockStorage) FinalizeBlock(stateRoot, txRoot common.Hash) error {
 }
 
 // Commit puts currentBlock to storage
-func (bs *BlockStorage) Commit() (common.Hash, error) {
+func (bs *BlockStorage) Commit() common.Hash {
 	if bs.currentBlock == nil {
-		return common.EmptyHash, errors.New("BlockStorage.currentBlock is nil")
+		panic("BlockStorage.currentBlock is nil")
 	}
 
 	hash := bs.currentBlock.Header.Hash()
 	rawBlock, err := bs.currentBlock.Encode()
 	if err != nil {
-		return common.EmptyHash, err
+		panic(err)
 	}
 	bs.Put(hash.Bytes(), rawBlock)
-	return hash, nil
+	return hash
 }
 
 // AddTransaction add tx to currentBlock
