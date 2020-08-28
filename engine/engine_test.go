@@ -1,8 +1,11 @@
 package engine
 
 import (
+	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"math"
+	"strings"
 	"time"
 
 	"testing"
@@ -13,6 +16,8 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/db"
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
+	"golang.org/x/crypto/blake2b"
+	"golang.org/x/crypto/ed25519"
 )
 
 func loadContract(abiPath, wasmPath string) *abi.Contract {
@@ -198,5 +203,82 @@ func TestEngineIgnite(t *testing.T) {
 				t.Errorf("Engine.Ignite() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestDelegatedCall(t *testing.T) {
+	seedStr := "38621fc10a1e56089192360454da6277ce6289bc8f6ef29f34c62a0267940e50"
+	trigger, _ := crypto.AddressFromString("LCVYYRXAH2OJY7ONOO5QNRWOAVQXPXIA6T2C6PE2BFBEZX56UBZOJ5GX")
+	holder, _ := crypto.AddressFromString("LCFDZPMMHQTNPX64NQR2D5GBJVITHC2M7VFVFLP24YVRKOSI5CSDV4SS")
+	contract, _ := crypto.AddressFromString("LBHYGTPXRBYOVQ74XAWIZPJL3ZM4XN27QP53ERQQTKF4BQE4RMIVYBWT")
+	amount := uint64(50)
+	nonce := uint32(0)
+	values := []interface{}{trigger, contract, amount, nonce}
+	parameters := []*abi.Parameter{
+		&abi.Parameter{Type: abi.Address},
+		&abi.Parameter{Type: abi.Address},
+		&abi.Parameter{Type: abi.Uint64},
+		&abi.Parameter{Type: abi.Uint32},
+	}
+	result, err := abi.Encode(parameters, values)
+	if err != nil {
+		panic(err)
+	}
+	seed, err := hex.DecodeString(seedStr)
+	if err != nil {
+		panic(err)
+	}
+	hash := blake2b.Sum256(result)
+	privKey := ed25519.NewKeyFromSeed(seed)
+	signature := ed25519.Sign(privKey, hash[:])
+
+	pubkey, _ := holder.PubKey()
+	if !ed25519.Verify(pubkey, hash[:], signature) {
+		panic("invalid signature")
+	}
+
+	abiContract := loadContract("testdata/delegated-token-abi.json", "testdata/delegated-token.wasm")
+	contractBytes, _ := rlp.EncodeToBytes(abiContract)
+	state := storage.NewStateStorage(db.NewMemoryDB())
+	if err = state.LoadState(&crypto.BlockHeader{
+		Height: 1,
+		Time:   time.Unix(1578905663, 0),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	contractAccount, _ := state.CreateAccount(holder, contract, contractBytes)
+	execEngine := NewEngine(state, contractAccount, holder, &gas.FreePolicy{}, 0)
+
+	function, err := abiContract.Header.GetFunction("mint")
+	if err != nil {
+		panic(err)
+	}
+	args, err := abi.EncodeFromString(function.Parameters, []string{fmt.Sprintf("%v", amount)})
+	if err != nil {
+		panic(err)
+	}
+	got, err := execEngine.Ignite("mint", args)
+	if err != nil {
+		panic(err)
+	}
+
+	function, err = abiContract.Header.GetFunction("delegated_transfer")
+	if err != nil {
+		panic(err)
+	}
+	args, err = abi.EncodeFromString(function.Parameters, []string{
+		trigger.String(),
+		fmt.Sprintf("%v", amount),
+		holder.String(),
+		fmt.Sprintf("%v", nonce),
+		strings.Join(strings.Split(fmt.Sprint(signature), " "), ","),
+	})
+	if err != nil {
+		panic(err)
+	}
+	got, err = execEngine.Ignite("delegated_transfer", args)
+	if got != 0 {
+		t.Errorf("Engine.Ignite() = %v, want %v", got, 0)
 	}
 }

@@ -34,6 +34,11 @@ func (address *Address) String() string {
 	return base32.StdEncoding.EncodeToString(address[:])
 }
 
+// PubKey retrieves public key of an address
+func (address *Address) PubKey() (ed25519.PublicKey, error) {
+	return decodeAddressBytes(address[:])
+}
+
 // AddressFromPubKey create an address from public key
 func AddressFromPubKey(publicKey ed25519.PublicKey) Address {
 	data := append([]byte{versionByteAccountID}, publicKey...)

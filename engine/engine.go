@@ -159,6 +159,10 @@ func (engine *Engine) ptrArgSizeGet(ptr int) (int, error) {
 	return size, nil
 }
 
+func (engine *Engine) ptrArgSizeSet(ptr int, size int) {
+	engine.ptrArgSizeMap[ptr] = size
+}
+
 func (engine *Engine) pushEvent(event *crypto.TxEvent) {
 	if engine.parent != nil {
 		engine.parent.pushEvent(event)

@@ -5,10 +5,15 @@ import (
 	"errors"
 	"fmt"
 
+	"golang.org/x/crypto/blake2b"
+
+	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
+
 	"github.com/vertexdlt/vertexvm/vm"
+	"golang.org/x/crypto/ed25519"
 )
 
 const pointerSize = int(4)
@@ -85,7 +90,7 @@ func (engine *Engine) chainPtrArgSizeGet(vm *vm.VM, args ...uint64) (uint64, err
 }
 
 func (engine *Engine) chainPtrArgSizeSet(vm *vm.VM, args ...uint64) (uint64, error) {
-	engine.ptrArgSizeMap[int(args[0])] = int(args[1])
+	engine.ptrArgSizeSet(int(args[0]), int(args[1]))
 	return 0, nil
 }
 
@@ -120,6 +125,84 @@ func (engine *Engine) chainBlockHeight(vm *vm.VM, args ...uint64) (uint64, error
 
 func (engine *Engine) chainBlockTime(vm *vm.VM, args ...uint64) (uint64, error) {
 	return uint64(engine.state.GetBlockHeader().Time.Unix()), nil
+}
+
+func (engine *Engine) chainArgsWrite(vm *vm.VM, args ...uint64) (uint64, error) {
+	bufferPtr, valuePtr, valueSize := int(args[0]), int(args[1]), int(args[2])
+	bufferSize, _ := engine.ptrArgSizeGet(bufferPtr)
+	memorySize := 4
+	buf := make([]byte, memorySize)
+	binary.LittleEndian.PutUint32(buf, uint32(valuePtr))
+	_, err := vm.MemWrite(buf, bufferPtr+bufferSize)
+	if err != nil {
+		return 0, err
+	}
+	engine.ptrArgSizeSet(valuePtr, valueSize)
+	engine.ptrArgSizeSet(bufferPtr, bufferSize+memorySize)
+	return uint64(bufferPtr), nil
+}
+
+func (engine *Engine) chainArgsHash(vm *vm.VM, args ...uint64) (uint64, error) {
+	bufferPtr, hashPtr := int(args[0]), int(args[1])
+	bufferSize, err := engine.ptrArgSizeGet(bufferPtr)
+	if err != nil {
+		return 0, err
+	}
+	memorySize := 4
+	argCnt := bufferSize / memorySize
+	var values [][]byte
+	for i := 0; i < argCnt; i++ {
+		ptrMem, err := readAt(vm, bufferPtr+i*memorySize, memorySize)
+		ptr := int(binary.LittleEndian.Uint32(ptrMem))
+		ptrSize, err := engine.ptrArgSizeGet(ptr)
+		if err != nil {
+			return 0, err
+		}
+		value, err := readAt(vm, ptr, ptrSize)
+		if err != nil {
+			return 0, err
+		}
+		values = append(values, value)
+	}
+	result, err := rlp.EncodeToBytes(values)
+	if err != nil {
+		return 0, err
+	}
+	hash := blake2b.Sum256(result)
+	vm.MemWrite(hash[:], hashPtr)
+	return 0, nil
+}
+
+func (engine *Engine) chainEd25519Verify(vm *vm.VM, args ...uint64) (uint64, error) {
+	addressPtr, hasherPtr, signaturePtr := int(args[0]), int(args[1]), int(args[2])
+	addressBytes, err := readAt(vm, addressPtr, crypto.AddressLength)
+	if err != nil {
+		return 0, err
+	}
+	address, err := crypto.AddressFromBytes(addressBytes)
+	if err != nil {
+		return 0, err
+	}
+	hasher, err := readAt(vm, hasherPtr, 32)
+	if err != nil {
+		return 0, err
+	}
+	signature, err := readAt(vm, signaturePtr, 64)
+	if err != nil {
+		return 0, err
+	}
+	pubkey, err := address.PubKey()
+	if !ed25519.Verify(pubkey, hasher, signature) {
+		return 0, nil
+	}
+	return 1, nil
+}
+
+func (engine *Engine) chainGetContractAddress(vm *vm.VM, args ...uint64) (uint64, error) {
+	addressPtr := int(args[0])
+	contractAddr := engine.account.GetAddress()
+	vm.MemWrite(contractAddr[:], addressPtr)
+	return uint64(addressPtr), nil
 }
 
 func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM, args ...uint64) (uint64, error) {
@@ -207,6 +290,14 @@ func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 			return engine.chainBlockHeight
 		case "chain_block_time":
 			return engine.chainBlockTime
+		case "chain_args_write":
+			return engine.chainArgsWrite
+		case "chain_args_hash":
+			return engine.chainArgsHash
+		case "chain_ed25519_verify":
+			return engine.chainEd25519Verify
+		case "chain_get_contract_address":
+			return engine.chainGetContractAddress
 		default:
 			contract, _ := engine.account.GetContract()
 			if event, err := contract.Header.GetEvent(name); err == nil {
