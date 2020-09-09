@@ -1,8 +1,7 @@
 version: 2.1
+
 jobs:
   test:
-    environment:
-      CC_TEST_REPORTER_ID: c15d7b2d5edf0ca5a041a71d52900f892e781bf9cc01c3232ac1ce545edb2044
     working_directory: ~/liquid
     docker:
       - image: quoine/rocksdb:latest
@@ -13,6 +12,7 @@ jobs:
       - restore_cache: # restores saved cache if no changes are detected since last run
       # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
           keys:
+            - v1-pkg-cache-{{ checksum "go.sum" }}
             - v1-pkg-cache
       - run:
           name: "Create a temp directory for artifacts"
@@ -35,16 +35,46 @@ jobs:
             go get -v github.com/mattn/goveralls
             $GOPATH/bin/goveralls -coverprofile=c.out -service=circle-ci -repotoken=$COVERALLS_REPO_TOKEN
       - save_cache: # Store cache in the /go/pkg directory
-          key: v1-pkg-cache
+          key: v1-pkg-cache-{{ checksum "go.sum" }}
           paths:
             - "/go/pkg"
       - store_artifacts:
           path: /tmp/artifacts
-      - store_test_results: # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
-          path: /tmp/artifacts
+
+  build-and-push-image:
+    docker:
+      - image: circleci/buildpack-deps:stretch
+    environment:
+      IMAGE_NAME: liquidchaindev/liquid-chain
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build Docker image
+          command: |
+            MAJOR="$(echo $CIRCLE_TAG | cut -d '.' -f1)"
+            MINOR="$(echo $CIRCLE_TAG | cut -d '.' -f2)"
+            PATCH="$(echo $CIRCLE_TAG | cut -d '.' -f3)"
+            docker build -f ./dockers/liquid.Dockerfile -t $IMAGE_NAME:$MAJOR -t $IMAGE_NAME:"$MAJOR.$MINOR" -t $IMAGE_NAME:"$MAJOR.$MINOR.$PATCH" .
+      - run:
+          name: Push Docker image
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u $DOCKERHUB_USERNAME --password-stdin
+            docker push $IMAGE_NAME # This will push all tags
 
 workflows:
   version: 2
-  qws-test-deploy:
+  test-deploy:
     jobs:
-      - test
+      - test:
+          filters:
+            tags:
+              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+      - build-and-push-image:
+          requires:
+            - test
+          filters:
+            tags:
+              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+            branches:
+              ignore: /.*/
