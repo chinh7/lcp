@@ -16,7 +16,7 @@ func (station *DummyStation) Sufficient(addr crypto.Address, gas uint64) bool {
 }
 
 // Burn gas, do nothing
-func (station *DummyStation) Burn(addr crypto.Address, gas uint64) []*crypto.TxEvent {
+func (station *DummyStation) Burn(addr crypto.Address, gas uint64) []*crypto.Event {
 	return nil
 }
 

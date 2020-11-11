@@ -17,13 +17,19 @@ import (
 	abciTypes "github.com/tendermint/tendermint/abci/types"
 )
 
+const (
+	metaDBDir  = "meta.db"
+	stateDBDir = "state.db"
+	chainDBDir = "chain.db"
+)
+
 // App basic Tendermint base app
 type App struct {
 	abciTypes.BaseApplication
 
-	meta  *storage.MetaStorage
-	state *storage.StateStorage
-	block *storage.BlockStorage
+	Meta  *storage.MetaStorage
+	State *storage.StateStorage
+	Chain *storage.ChainStorage
 
 	gasStation         gas.Station
 	gasContractAddress string
@@ -56,9 +62,9 @@ func NewApp(dbDir string, gasContractAddress string) *App {
 		os.Mkdir(dbDir, os.ModePerm)
 	}
 	app := &App{
-		meta:               storage.NewMetaStorage(db.NewRocksDB(filepath.Join(dbDir, "index.db"))),
-		state:              storage.NewStateStorage(db.NewRocksDB(filepath.Join(dbDir, "state.db"))),
-		block:              storage.NewBlockStorage(db.NewRocksDB(filepath.Join(dbDir, "block.db"))),
+		Meta:               storage.NewMetaStorage(db.NewRocksDB(filepath.Join(dbDir, metaDBDir))),
+		State:              storage.NewStateStorage(db.NewRocksDB(filepath.Join(dbDir, stateDBDir))),
+		Chain:              storage.NewChainStorage(db.NewRocksDB(filepath.Join(dbDir, chainDBDir))),
 		gasContractAddress: gasContractAddress,
 	}
 	app.SetGasStation(gas.NewFreeStation(app))
@@ -68,9 +74,9 @@ func NewApp(dbDir string, gasContractAddress string) *App {
 // BeginBlock begins new block
 func (app *App) BeginBlock(req abciTypes.RequestBeginBlock) abciTypes.ResponseBeginBlock {
 	lastBlockHash := appHashToBlockHash(req.Header.AppHash)
-	previousBlock := app.block.MustGetBlock(lastBlockHash)
-	app.state.MustLoadState(previousBlock.Header)
-	app.block.ComposeBlock(previousBlock, req.Header.Time)
+	previousBlock := app.Chain.MustGetBlock(lastBlockHash)
+	app.State.MustLoadState(previousBlock)
+	app.Chain.ComposeBlock(previousBlock, req.Header.Time)
 	for app.gasStation.Switch() {
 	}
 	return abciTypes.ResponseBeginBlock{}
@@ -78,8 +84,8 @@ func (app *App) BeginBlock(req abciTypes.RequestBeginBlock) abciTypes.ResponseBe
 
 // Info returns application chain info
 func (app *App) Info(req abciTypes.RequestInfo) (resInfo abciTypes.ResponseInfo) {
-	lastBlockHeight := app.meta.LatestBlockHeight()
-	lastBlockHash := app.meta.BlockHeightToBlockHash(lastBlockHeight)
+	lastBlockHeight := app.Meta.LatestBlockHeight()
+	lastBlockHash := app.Meta.BlockHeightToBlockHash(lastBlockHeight)
 	return abciTypes.ResponseInfo{
 		LastBlockHeight:  int64(lastBlockHeight),
 		LastBlockAppHash: blockHashToAppHash(lastBlockHash),
@@ -124,17 +130,13 @@ func (app *App) DeliverTx(req abciTypes.RequestDeliverTx) abciTypes.ResponseDeli
 		return abciTypes.ResponseDeliverTx{Code: ResponseCodeNotOK}
 	}
 
-	if receipt, err := app.applyTransaction(tx); err != nil {
-		panic(err)
-	} else {
-		tx.Receipt = receipt
-	}
-
-	if err := app.state.AddTransaction(tx); err != nil {
+	receipt, err := app.applyTransaction(tx)
+	if err != nil {
 		panic(err)
 	}
 
-	if err := app.block.AddTransaction(tx); err != nil {
+	app.State.Commit()
+	if err := app.Chain.AddTransaction(tx, receipt); err != nil {
 		panic(err)
 	}
 
@@ -143,12 +145,8 @@ func (app *App) DeliverTx(req abciTypes.RequestDeliverTx) abciTypes.ResponseDeli
 
 // Commit returns the state root of application storage. Called once all block processing is complete
 func (app *App) Commit() abciTypes.ResponseCommit {
-	stateRootHash, txRootHash := app.state.Commit()
-	if err := app.block.FinalizeBlock(stateRootHash, txRootHash); err != nil {
-		panic(err)
-	}
-	blockHash := app.block.Commit()
-	if err := app.meta.StoreBlockIndexes(app.block.MustGetBlock(blockHash)); err != nil {
+	blockHash := app.Chain.Commit(app.State.Commit())
+	if err := app.Meta.StoreBlockMetas(app.Chain.CurrentBlock); err != nil {
 		log.Println("unable to store index for block", blockHash)
 	}
 	return abciTypes.ResponseCommit{Data: blockHashToAppHash(blockHash)}
@@ -166,11 +164,14 @@ func (app *App) GetGasContractToken() gas.Token {
 		if err != nil {
 			panic(err)
 		}
-		contract, err := app.state.GetAccount(address)
+		contract, err := app.State.LoadAccount(address)
 		if err != nil {
 			panic(err)
 		}
-		return token.NewToken(app.state, contract)
+		if contract == nil {
+			return nil
+		}
+		return token.NewToken(app.State, contract)
 	}
 	return nil
 }

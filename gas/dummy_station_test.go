@@ -41,7 +41,7 @@ func TestDummyStation_Burn(t *testing.T) {
 	}
 	pub, _, _ := ed25519.GenerateKey(cryptoRand.Reader)
 	addr := crypto.AddressFromPubKey(pub)
-	var want []*crypto.TxEvent
+	var want []*crypto.Event
 	if got := station.Burn(addr, uint64(0)); !cmp.Equal(got, want) {
 		t.Errorf("DummyStation.Burn() = %v, want %v", got, want)
 	}

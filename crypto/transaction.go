@@ -8,44 +8,28 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-// TxEvent is emitted while executing transactions
-type TxEvent struct {
-	Contract Address
-	Index    uint32
-	Data     []byte
-}
-
-// TxReceipt reflects corresponding Transaction execution result
-type TxReceipt struct {
-	Result  uint64
-	GasUsed uint32
-	Code    ReceiptCode
-	Events  []*TxEvent
-}
-
 // TxSender is sender of transaction
 type TxSender struct {
-	PublicKey ed25519.PublicKey
-	Nonce     uint64
+	PublicKey ed25519.PublicKey `json:"publicKey"`
+	Nonce     uint64            `json:"nonce"`
 }
 
 // TxPayload contains data to interact with smart contract
 type TxPayload struct {
-	Contract []byte
-	Method   string
-	Params   []byte
+	ID       MethodID `json:"signature"`
+	Args     []byte   `json:"args"`
+	Contract []byte   `json:"contract"`
 }
 
 // Transaction is transaction of liquid-chain
 type Transaction struct {
-	Version   uint16
-	Sender    *TxSender
-	Receiver  Address
-	Payload   *TxPayload
-	GasPrice  uint32
-	GasLimit  uint32
-	Signature []byte
-	Receipt   *TxReceipt
+	Version   uint16     `json:"version"`
+	Sender    *TxSender  `json:"sender"`
+	Receiver  Address    `json:"receiver"`
+	Payload   *TxPayload `json:"payload"`
+	GasPrice  uint32     `json:"gasPrice"`
+	GasLimit  uint32     `json:"gasLimit"`
+	Signature []byte     `json:"signature"`
 }
 
 // Encode returns bytes representation of transaction

@@ -17,7 +17,7 @@ func TestTransaction_Serialize(t *testing.T) {
 		GasPrice  uint32
 		GasLimit  uint32
 		Signature []byte
-		Receipt   *TxReceipt
+		Receipt   *Receipt
 	}
 	tests := []struct {
 		name    string
@@ -34,23 +34,23 @@ func TestTransaction_Serialize(t *testing.T) {
 			Receiver: Address{},
 			Payload: &TxPayload{
 				Contract: []byte{1, 2, 3},
-				Method:   "Transfer",
-				Params:   []byte{4, 5, 6},
+				ID:       GetMethodID("Transfer"),
+				Args:     []byte{4, 5, 6},
 			},
 			GasPrice:  1,
 			GasLimit:  2,
 			Signature: []byte{7, 8, 9},
-			Receipt: &TxReceipt{
+			Receipt: &Receipt{
 				Result:  1,
 				GasUsed: 2,
 				Code:    ReceiptCodeOK,
-				Events: []*TxEvent{{
+				Events: []*Event{{
 					Contract: Address{},
-					Data:     []byte{10, 11, 12},
+					Args:     []byte{10, 11, 12},
 				}},
 			},
 		},
-		want:    []byte{248, 143, 1, 226, 160, 59, 106, 39, 188, 206, 182, 164, 45, 98, 163, 168, 208, 42, 111, 13, 115, 101, 50, 21, 119, 29, 226, 67, 166, 58, 192, 72, 161, 139, 89, 218, 41, 128, 163, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 209, 131, 1, 2, 3, 136, 84, 114, 97, 110, 115, 102, 101, 114, 131, 4, 5, 6, 1, 2, 131, 7, 8, 9, 238, 1, 2, 128, 234, 233, 163, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 131, 10, 11, 12},
+		want:    []byte{248, 92, 1, 226, 160, 59, 106, 39, 188, 206, 182, 164, 45, 98, 163, 168, 208, 42, 111, 13, 115, 101, 50, 21, 119, 29, 226, 67, 166, 58, 192, 72, 161, 139, 89, 218, 41, 128, 163, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 205, 132, 34, 60, 57, 226, 131, 4, 5, 6, 131, 1, 2, 3, 1, 2, 131, 7, 8, 9},
 		wantErr: false,
 	}}
 	for _, tt := range tests {
@@ -63,7 +63,6 @@ func TestTransaction_Serialize(t *testing.T) {
 				GasPrice:  tt.fields.GasPrice,
 				GasLimit:  tt.fields.GasLimit,
 				Signature: tt.fields.Signature,
-				Receipt:   tt.fields.Receipt,
 			}
 			got, err := tx.Encode()
 			if (err != nil) != tt.wantErr {
@@ -95,7 +94,7 @@ func TestTransaction_Deserialize(t *testing.T) {
 	}, {
 		name: "valid",
 		args: args{
-			raw: []byte{248, 143, 1, 226, 160, 59, 106, 39, 188, 206, 182, 164, 45, 98, 163, 168, 208, 42, 111, 13, 115, 101, 50, 21, 119, 29, 226, 67, 166, 58, 192, 72, 161, 139, 89, 218, 41, 128, 163, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 209, 131, 1, 2, 3, 136, 84, 114, 97, 110, 115, 102, 101, 114, 131, 4, 5, 6, 1, 2, 131, 7, 8, 9, 238, 1, 2, 128, 234, 233, 163, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 131, 10, 11, 12},
+			raw: []byte{248, 92, 1, 226, 160, 59, 106, 39, 188, 206, 182, 164, 45, 98, 163, 168, 208, 42, 111, 13, 115, 101, 50, 21, 119, 29, 226, 67, 166, 58, 192, 72, 161, 139, 89, 218, 41, 128, 163, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 205, 132, 34, 60, 57, 226, 131, 4, 5, 6, 131, 1, 2, 3, 1, 2, 131, 7, 8, 9},
 		},
 		want: Transaction{
 			Version: 1,
@@ -106,21 +105,12 @@ func TestTransaction_Deserialize(t *testing.T) {
 			Receiver: Address{},
 			Payload: &TxPayload{
 				Contract: []byte{1, 2, 3},
-				Method:   "Transfer",
-				Params:   []byte{4, 5, 6},
+				ID:       GetMethodID("Transfer"),
+				Args:     []byte{4, 5, 6},
 			},
 			GasPrice:  1,
 			GasLimit:  2,
 			Signature: []byte{7, 8, 9},
-			Receipt: &TxReceipt{
-				Result:  1,
-				GasUsed: 2,
-				Code:    ReceiptCodeOK,
-				Events: []*TxEvent{{
-					Contract: Address{},
-					Data:     []byte{10, 11, 12},
-				}},
-			},
 		},
 		wantErr: false,
 	}}
@@ -148,7 +138,7 @@ func TestTransaction_Hash(t *testing.T) {
 		GasPrice  uint32
 		GasLimit  uint32
 		Signature []byte
-		Receipt   *TxReceipt
+		Receipt   *Receipt
 	}
 	tests := []struct {
 		name   string
@@ -164,23 +154,23 @@ func TestTransaction_Hash(t *testing.T) {
 			Receiver: Address{},
 			Payload: &TxPayload{
 				Contract: []byte{1, 2, 3},
-				Method:   "Transfer",
-				Params:   []byte{4, 5, 6},
+				ID:       GetMethodID("Transfer"),
+				Args:     []byte{4, 5, 6},
 			},
 			GasPrice:  1,
 			GasLimit:  2,
 			Signature: []byte{7, 8, 9},
-			Receipt: &TxReceipt{
+			Receipt: &Receipt{
 				Result:  1,
 				GasUsed: 2,
 				Code:    ReceiptCodeOK,
-				Events: []*TxEvent{{
+				Events: []*Event{{
 					Contract: Address{},
-					Data:     []byte{10, 11, 12},
+					Args:     []byte{10, 11, 12},
 				}},
 			},
 		},
-		want: common.HexToHash("6273e575da7972ec3601c0f57111ec7eb0131fcb4c5c6296adfded0daf0e19c0"),
+		want: common.HexToHash("146dc33a1f41bc435a323ce1bd0c3ceaf49fe14dc869b4da7ba482fb52735f41"),
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -192,7 +182,6 @@ func TestTransaction_Hash(t *testing.T) {
 				GasPrice:  tt.fields.GasPrice,
 				GasLimit:  tt.fields.GasLimit,
 				Signature: tt.fields.Signature,
-				Receipt:   tt.fields.Receipt,
 			}
 			if got := tx.Hash(); !cmp.Equal(got, tt.want) {
 				t.Errorf("Transaction.Hash() = %v, want %v", got, tt.want)

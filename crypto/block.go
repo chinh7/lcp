@@ -5,60 +5,87 @@ import (
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/common"
+	"github.com/QuoineFinancial/liquid-chain/trie"
 	"golang.org/x/crypto/blake2b"
 )
 
 // GenesisBlock is the first block of liquid chain
 var GenesisBlock = Block{
-	Header: &BlockHeader{
-		Height:          0,
-		Time:            time.Unix(0, 0),
-		Parent:          common.EmptyHash,
-		StateRoot:       common.EmptyHash,
-		TransactionRoot: common.EmptyHash,
-	},
-	Transactions: nil,
-}
-
-// BlockHeader contains basic info and root hash of storage, transactions and receipts
-type BlockHeader struct {
-	Height          uint64
-	Time            time.Time
-	Parent          common.Hash
-	StateRoot       common.Hash
-	TransactionRoot common.Hash
+	Height:          0,
+	Time:            0,
+	Parent:          common.EmptyHash,
+	StateRoot:       common.EmptyHash,
+	TransactionRoot: common.EmptyHash,
 }
 
 // Block is unit of Liquid chain
 type Block struct {
-	Header       *BlockHeader
-	Transactions []*Transaction
+	hash         common.Hash
+	transactions []*Transaction
+	receipts     []*Receipt
+	txTrie       *trie.Trie
+	receiptTrie  *trie.Trie
+
+	Height          uint64      `json:"height"`
+	Time            uint64      `json:"time"`
+	Parent          common.Hash `json:"parent"`
+	StateRoot       common.Hash `json:"stateRoot"`
+	TransactionRoot common.Hash `json:"transactionRoot"`
+	ReceiptRoot     common.Hash `json:"receiptRoot"`
 }
 
-// SetStateRoot set StateRoot of header
-func (blockHeader *BlockHeader) SetStateRoot(hash common.Hash) {
-	blockHeader.StateRoot.SetBytes(hash.Bytes())
+// Transactions returns transactions of block
+func (block *Block) Transactions() []*Transaction {
+	return block.transactions
 }
 
-// SetTransactionRoot set TransactionRoot of header
-func (blockHeader *BlockHeader) SetTransactionRoot(hash common.Hash) {
-	blockHeader.TransactionRoot.SetBytes(hash.Bytes())
+// Receipts returns transactions of block
+func (block *Block) Receipts() []*Receipt {
+	return block.receipts
 }
 
-// Hash returns blake2b hash of rlp encoding of block header
-func (blockHeader *BlockHeader) Hash() common.Hash {
-	encoded, _ := rlp.EncodeToBytes(blockHeader)
-	return blake2b.Sum256(encoded)
+// AddTransactions adds transactions to block
+func (block *Block) AddTransactions(txs ...*Transaction) {
+	block.transactions = append(block.transactions, txs...)
 }
 
-// NewEmptyBlock create empty block
+// AddReceipts adds receipts to block
+func (block *Block) AddReceipts(receipts ...*Receipt) {
+	block.receipts = append(block.receipts, receipts...)
+}
+
+// SetStateRoot sets StateRoot of block
+func (block *Block) SetStateRoot(hash common.Hash) {
+	block.StateRoot.SetBytes(hash.Bytes())
+}
+
+// SetTransactionRoot sets TransactionRoot of block
+func (block *Block) SetTransactionRoot(hash common.Hash) {
+	block.TransactionRoot.SetBytes(hash.Bytes())
+}
+
+// SetReceiptRoot sets ReceiptRoot of block
+func (block *Block) SetReceiptRoot(hash common.Hash) {
+	block.ReceiptRoot.SetBytes(hash.Bytes())
+}
+
+// Hash returns blake2b hash of rlp encoding of block
+func (block *Block) Hash() common.Hash {
+	if block.hash == common.EmptyHash {
+		encoded, _ := rlp.EncodeToBytes(block)
+		blockChecksum := blake2b.Sum256(encoded)
+		blockHash := common.BytesToHash(blockChecksum[:])
+		block.hash = blockHash
+	}
+	return block.hash
+}
+
+// NewEmptyBlock creates empty block
 func NewEmptyBlock(parent common.Hash, height uint64, blockTime time.Time) *Block {
 	return &Block{
-		Header: &BlockHeader{
-			Parent: parent,
-			Height: height,
-			Time:   blockTime,
-		},
+		Parent: parent,
+		Height: height,
+		Time:   uint64(blockTime.UTC().Unix()),
 	}
 }
 
@@ -76,7 +103,7 @@ func DecodeBlock(rawBlock []byte) (*Block, error) {
 	return &block, nil
 }
 
-// MustDecodeBlock acts like DecodeBlock, but panic in case of error
+// MustDecodeBlock returns block from encoded byte array. It will panic in case of error
 func MustDecodeBlock(rawBlock []byte) *Block {
 	block, err := DecodeBlock(rawBlock)
 	if err != nil {

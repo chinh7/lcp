@@ -28,7 +28,8 @@ func TestDecodeContract(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	opts := cmpopts.IgnoreUnexported(Event{})
+	opts := cmpopts.IgnoreUnexported(Event{}, Function{})
+
 	if diff := cmp.Diff(*decodedContract, contract, opts); diff != "" {
 		t.Errorf("Decode contract %v is incorrect, expected: %v, got: %v, diff: %v", contract, contract, decodedContract, diff)
 	}

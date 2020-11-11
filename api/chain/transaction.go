@@ -1,83 +1,88 @@
 package chain
 
 import (
+	"encoding/hex"
+	"fmt"
 	"net/http"
 
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
+	"github.com/QuoineFinancial/liquid-chain/trie"
 )
 
-const defaultTransactionPerPage = int(50)
-const startPage = int(0)
-
-// GetTxParams is params of GetTx
-type GetTxParams struct {
+// GetTransactionParams contains query height
+type GetTransactionParams struct {
 	Hash string `json:"hash"`
 }
 
-// GetTxResult is response of Service
-type GetTxResult struct {
-	Transaction *crypto.Transaction `json:"tx"`
+// GetTransactionResult is response of GetTransactions
+type GetTransactionResult struct {
+	Transaction *transaction `json:"transaction"`
+	Receipt     *receipt     `json:"receipt"`
 }
 
-// GetBlockTxsParams is params of GetTxsByBlockHeight
-type GetBlockTxsParams struct {
-	Height int  `json:"height"`
-	Page   *int `json:"page"`
-}
+// GetTransaction returns txs of given block
+func (service *Service) GetTransaction(r *http.Request, params *GetTransactionParams, result *GetTransactionResult) error {
+	service.syncLatestState()
+	if _, err := hex.DecodeString(params.Hash); err != nil {
+		return err
+	}
 
-// GetEventTxsParams is params of GetEventTxs
-type GetEventTxsParams struct {
-	Contract string `json:"contract"`
-	Event    Event  `json:"event"`
-	Page     *int   `json:"page"`
-}
+	// Get block
+	txHash := common.HexToHash(params.Hash)
+	height, err := service.meta.TxHashToBlockHeight(txHash)
+	if err != nil {
+		return err
+	}
+	blockHash := service.meta.BlockHeightToBlockHash(height)
+	if blockHash == common.EmptyHash {
+		return fmt.Errorf("block %d not found", height)
+	}
 
-// Event is including in GetEventTxsParams
-type Event struct {
-	Name  string     `json:"name"`
-	Param EventParam `json:"param"`
-}
+	block, err := service.block.GetBlock(blockHash)
+	if err != nil {
+		return err
+	}
 
-// EventParam is param of Event
-type EventParam struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
+	// Get tx
+	txTrie, err := trie.New(block.TransactionRoot, service.block)
+	if err != nil {
+		return err
+	}
+	rawTx, err := txTrie.Get(txHash.Bytes())
+	if err != nil {
+		return err
+	}
+	tx, err := crypto.DecodeTransaction(rawTx)
+	if err != nil {
+		return err
+	}
+	parsedTx, err := service.parseTransaction(tx, height)
+	if err != nil {
+		return err
+	}
 
-// GetAccountTxsParams is params of GetTxsByBlockHeight
-type GetAccountTxsParams struct {
-	Address string `json:"address"`
-	Page    *int   `json:"page"`
-}
+	result.Transaction = parsedTx
 
-// SearchTransactionResult is response of query request
-type SearchTransactionResult struct {
-	Transactions []*crypto.Transaction `json:"txs"`
-}
+	// Get receipt
+	receiptHash := service.meta.TxHashToReceiptHash(txHash)
+	receiptTrie, err := trie.New(block.ReceiptRoot, service.block)
+	if err != nil {
+		return err
+	}
+	receiptBytes, err := receiptTrie.Get(receiptHash.Bytes())
+	if err != nil {
+		return err
+	}
+	receipt, err := crypto.DecodeReceipt(receiptBytes)
+	if err != nil {
+		return err
+	}
+	parsedReceipt, err := service.parseReceipt(receipt)
+	if err != nil {
+		return err
+	}
+	result.Receipt = parsedReceipt
 
-// GetTx is handler of Service
-func (service *Service) GetTx(r *http.Request, params *GetTxParams, result *GetTxResult) error {
-	return nil
-}
-
-// GetBlockTxs returns all transactions in given block
-func (service *Service) GetBlockTxs(r *http.Request, params *GetBlockTxsParams, result *SearchTransactionResult) error {
-	return nil
-}
-
-// GetAccountTxs returns all transactions realted to given address
-func (service *Service) GetAccountTxs(r *http.Request, params *GetAccountTxsParams, result *SearchTransactionResult) error {
-	return nil
-}
-
-func (service *Service) GetEventTxs(r *http.Request, params *GetEventTxsParams, result *SearchTransactionResult) error {
-	return nil
-}
-
-/* TODO: Technical reviews
-- Is customizable perPage necessary or not?
-- Which value of perPage is suitable? (50, 100, or block capacity?)
-*/
-func (service *Service) searchTransaction(query string, page *int, result *SearchTransactionResult) error {
 	return nil
 }

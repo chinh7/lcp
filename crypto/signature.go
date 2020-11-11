@@ -16,12 +16,11 @@ func Sign(privateKey ed25519.PrivateKey, message []byte) []byte {
 func GetSigHash(tx *Transaction) common.Hash {
 	encoded, _ := rlp.EncodeToBytes([]interface{}{
 		tx.Version,
-		tx.Sender.Nonce,
-		tx.Sender.PublicKey,
-		tx.GasPrice,
-		tx.GasLimit,
+		tx.Sender,
 		tx.Receiver,
 		tx.Payload,
+		tx.GasPrice,
+		tx.GasLimit,
 	})
 	return blake2b.Sum256(encoded)
 }

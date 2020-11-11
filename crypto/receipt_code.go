@@ -9,4 +9,5 @@ const (
 	ReceiptCodeOutOfGas         ReceiptCode = 0x1
 	ReceiptCodeIgniteError      ReceiptCode = 0x2
 	ReceiptCodeContractNotFound ReceiptCode = 0x3
+	ReceiptCodeMethodNotFound   ReceiptCode = 0x4
 )

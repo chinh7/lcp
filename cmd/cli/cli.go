@@ -16,29 +16,25 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/QuoineFinancial/liquid-chain/api/chain"
-	"github.com/QuoineFinancial/liquid-chain/api/storage"
 	"github.com/QuoineFinancial/liquid-chain/consensus"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/util"
 )
 
 func broadcast(endpoint string, hexTx []byte) {
-	log.Println("Signed Transaction Len:", len(hexTx))
+	log.Println("Transaction size:", len(hexTx))
 	serializedTx := base64.StdEncoding.EncodeToString(hexTx)
-	log.Println("Params Len:", len(serializedTx))
+	log.Println("Base-64 encoded size:", len(serializedTx))
 	if len(endpoint) > 0 {
 		var result chain.BroadcastResult
 		postJSON(endpoint, "chain.Broadcast", chain.BroadcastParams{RawTransaction: serializedTx}, &result)
-
 		if result.Code == consensus.ResponseCodeOK {
-			log.Println("Broadcast SUCCESS")
-			log.Printf("Code: %d\n", result.Code)
-			log.Printf("Transaction hash: %s\n", result.TransactionHash)
+			log.Println("SUCCESS")
 		} else {
-			log.Println("Broadcast FAIL")
-			log.Printf("Code: %d\n", result.Code)
-			log.Printf("Log: %s\n", result.Log)
+			log.Println("FAILED")
+			log.Println(result.Log)
 		}
+		log.Printf("Transaction hash: %s\n", result.TransactionHash)
 	} else {
 		log.Println(serializedTx)
 	}
@@ -78,7 +74,6 @@ func deploy(cmd *cobra.Command, args []string) {
 		GasLimit:  gas,
 		GasPrice:  price,
 		Signature: nil,
-		Receipt:   &crypto.TxReceipt{},
 	}
 	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign[:])
@@ -114,7 +109,6 @@ func invoke(cmd *cobra.Command, args []string) {
 		GasLimit:  gas,
 		GasPrice:  price,
 		Signature: nil,
-		Receipt:   &crypto.TxReceipt{},
 	}
 	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign[:])
@@ -133,9 +127,9 @@ func call(cmd *cobra.Command, args []string) {
 	method := args[1]
 	params := args[2:]
 
-	var result storage.CallResult
-	postJSON(endpoint, "storage.Call", storage.CallParams{Address: address, Method: method, Args: params, Height: height}, &result)
-	log.Printf("Return: %v", result.Return)
+	var result chain.CallResult
+	postJSON(endpoint, "chain.Call", chain.CallParams{Address: address, Method: method, Args: params, Height: &height}, &result)
+	log.Printf("Return: %v", result)
 }
 
 func main() {
@@ -173,7 +167,7 @@ func main() {
 	}
 }
 
-func parseFlags(cmd *cobra.Command) (string, string, uint64, uint32, uint32, int64) {
+func parseFlags(cmd *cobra.Command) (string, string, uint64, uint32, uint32, uint64) {
 	seedPath, err := cmd.Root().Flags().GetString("seed")
 	if err != nil {
 		panic(err)
@@ -198,7 +192,7 @@ func parseFlags(cmd *cobra.Command) (string, string, uint64, uint32, uint32, int
 	if err != nil {
 		panic(err)
 	}
-	return seedPath, endpoint, nonce, gas, price, height
+	return seedPath, endpoint, nonce, gas, price, uint64(height)
 }
 
 func postJSON(endpoint string, method string, params interface{}, result interface{}) {

@@ -19,7 +19,7 @@ func TestVMEvent(t *testing.T) {
 	contractAddress, _ := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
 
 	state := storage.NewStateStorage(db.NewMemoryDB())
-	if err := state.LoadState(crypto.GenesisBlock.Header); err != nil {
+	if err := state.LoadState(&crypto.GenesisBlock); err != nil {
 		t.Fatal(err)
 	}
 
@@ -46,7 +46,7 @@ func TestVMEvent(t *testing.T) {
 
 	expectedMessage := "Checking"
 	event, _ := contract.Header.GetEvent("Say")
-	messages, _ := abi.DecodeToBytes(event.Parameters, events[0].Data)
+	messages, _ := abi.DecodeToBytes(event.Parameters, events[0].Args)
 
 	if message := messages[0]; string(message) != expectedMessage {
 		t.Errorf("Expected message %v, got %v", expectedMessage, string(message))

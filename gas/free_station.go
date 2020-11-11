@@ -18,7 +18,7 @@ func (station *FreeStation) Sufficient(addr crypto.Address, gas uint64) bool {
 }
 
 // Burn gas, do nothing
-func (station *FreeStation) Burn(addr crypto.Address, gas uint64) []*crypto.TxEvent {
+func (station *FreeStation) Burn(addr crypto.Address, gas uint64) []*crypto.Event {
 	return nil
 }
 

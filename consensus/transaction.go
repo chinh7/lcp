@@ -3,13 +3,18 @@ package consensus
 import (
 	"fmt"
 
+	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
 func (app *App) validateTx(tx *crypto.Transaction) error {
+	if tx.Version != 1 {
+		return fmt.Errorf("tx version %d not supported", tx.Version)
+	}
+
 	nonce := uint64(0)
 	address := crypto.AddressFromPubKey(tx.Sender.PublicKey)
-	account, err := app.state.GetAccount(address)
+	account, err := app.State.LoadAccount(address)
 	if err != nil {
 		return err
 	}
@@ -24,20 +29,42 @@ func (app *App) validateTx(tx *crypto.Transaction) error {
 
 	// Validate tx signature
 	signingHash := crypto.GetSigHash(tx)
-	if valid := crypto.VerifySignature(tx.Sender.PublicKey, signingHash[:], tx.Signature); !valid {
+	if valid := crypto.VerifySignature(tx.Sender.PublicKey, signingHash.Bytes(), tx.Signature); !valid {
 		return fmt.Errorf("Invalid signature")
 	}
 
-	if tx.Receiver != crypto.EmptyAddress {
-		account, err := app.state.GetAccount(tx.Receiver)
+	if tx.Payload.ID != (crypto.MethodID{}) {
+		var contract *abi.Contract
+		if tx.Receiver != crypto.EmptyAddress {
+			account, err := app.State.LoadAccount(tx.Receiver)
+			if err != nil {
+				return err
+			}
+			if account == nil {
+				return fmt.Errorf("Invoke nil contract")
+			}
+			if !account.IsContract() {
+				return fmt.Errorf("Invoke a non-contract account")
+			}
+			contract, err = account.GetContract()
+			if err != nil {
+				return fmt.Errorf("Contract is missing, database might be corrupted")
+			}
+		} else {
+			contract, err = abi.DecodeContract(tx.Payload.Contract)
+			if err != nil {
+				return err
+			}
+		}
+
+		function, err := contract.Header.GetFunctionByMethodID(tx.Payload.ID)
 		if err != nil {
 			return err
 		}
-		if account == nil {
-			return fmt.Errorf("Invoke nil contract")
-		}
-		if !account.IsContract() {
-			return fmt.Errorf("Invoke a non-contract account")
+
+		_, err = abi.DecodeToBytes(function.Parameters, tx.Payload.Args)
+		if err != nil {
+			return err
 		}
 	}
 

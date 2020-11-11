@@ -41,7 +41,7 @@ func readChainID(homeDir string) string {
 }
 
 // NewTendermintAPI returns new instance of TendermintAPI
-func NewTendermintAPI(homeDir, nodeURL string, attempt int) TendermintAPI {
+func NewTendermintAPI(homeDir, nodeURL string) TendermintAPI {
 	time.Sleep(apiInitDelay)
 	chainID := readChainID(homeDir)
 	logFileName := fmt.Sprintf("tendermint-api-%d.log", time.Now().Unix())
@@ -56,13 +56,6 @@ func NewTendermintAPI(homeDir, nodeURL string, attempt int) TendermintAPI {
 	}
 
 	cert, err := proxy.NewVerifier(chainID, homeDir, node, logger, cacheSize)
-	if err != nil {
-		if attempt >= maxConnectionAttempt {
-			tmos.Exit(err.Error())
-		} else {
-			return NewTendermintAPI(homeDir, nodeURL, attempt+1)
-		}
-	}
 	cert.SetLogger(logger)
 	return proxy.SecureClient(node, cert)
 }

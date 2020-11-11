@@ -8,7 +8,7 @@ import (
 // Station interface for check and burn gas
 type Station interface {
 	Sufficient(addr crypto.Address, gas uint64) bool
-	Burn(addr crypto.Address, gas uint64) []*crypto.TxEvent
+	Burn(addr crypto.Address, gas uint64) []*crypto.Event
 	CheckGasPrice(price uint32) bool
 	Switch() bool
 	GetPolicy() Policy
@@ -17,7 +17,7 @@ type Station interface {
 // Token interface
 type Token interface {
 	GetBalance(addr crypto.Address) (uint64, error)
-	Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]*crypto.TxEvent, error)
+	Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]*crypto.Event, error)
 	GetContract() *storage.Account
 }
 

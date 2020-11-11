@@ -53,24 +53,15 @@ func TestGetSigHash(t *testing.T) {
 				Receiver: Address{},
 				Payload: &TxPayload{
 					Contract: []byte{1, 2, 3},
-					Method:   "Transfer",
-					Params:   []byte{4, 5, 6},
+					ID:       GetMethodID("Transfer"),
+					Args:     []byte{4, 5, 6},
 				},
 				GasPrice:  1,
 				GasLimit:  2,
 				Signature: []byte{7, 8, 9},
-				Receipt: &TxReceipt{
-					Result:  1,
-					GasUsed: 2,
-					Code:    ReceiptCodeOK,
-					Events: []*TxEvent{{
-						Contract: Address{},
-						Data:     []byte{10, 11, 12},
-					}},
-				},
 			},
 		},
-		want: common.HexToHash("691ddbd987df0883cae0c1d130123c24a35446be20f21bb73f7fdcb2e3992642"),
+		want: common.HexToHash("1c3346e14d541923b557a4ca8bb28f5dd26ca2f2cfe6e3d2558eb5a66864d45e"),
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

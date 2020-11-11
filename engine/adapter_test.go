@@ -38,7 +38,7 @@ func getVM(filename string) *vm.VM {
 
 func TestAdapterGetFunction(t *testing.T) {
 	tests := []testcase{
-		{name: "exit_invalid", entry: "calc", params: []uint64{}, expectedError: "invalid proc_exit argument"},
+		{name: "exit_invalid", entry: "calc", params: []uint64{1}, expectedError: "invalid proc_exit argument"},
 		{name: "exit", entry: "calc", params: []uint64{1}, expectedError: "process exit with code: 1"},
 	}
 

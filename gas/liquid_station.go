@@ -24,7 +24,7 @@ func (station *LiquidStation) Sufficient(addr crypto.Address, fee uint64) bool {
 }
 
 // Burn gas
-func (station *LiquidStation) Burn(addr crypto.Address, fee uint64) []*crypto.TxEvent {
+func (station *LiquidStation) Burn(addr crypto.Address, fee uint64) []*crypto.Event {
 	token := station.app.GetGasContractToken()
 	// Move to gas owner
 	if fee > 0 {

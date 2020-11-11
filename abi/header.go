@@ -1,64 +1,62 @@
 package abi
 
 import (
-	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"sort"
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
 // Event is emitting from engine
 type Event struct {
 	Name       string       `json:"name"`
 	Parameters []*Parameter `json:"parameters"`
-	index      uint32
+	id         crypto.MethodID
 }
 
-// Parameter is model for function signature
+// Parameter describes a param of method
 type Parameter struct {
 	Name    string        `json:"name"`
 	IsArray bool          `json:"-"`
 	Type    PrimitiveType `json:"type"`
 }
 
-// Function is model for function signature
+// Function describes a function in contract
 type Function struct {
 	Name       string       `json:"name"`
 	Parameters []*Parameter `json:"parameters"`
+	id         crypto.MethodID
 }
 
-// Header is model for function signature
+// Header contains declaration for contract
 type Header struct {
 	Version   uint16
-	Functions map[string]*Function
-	Events    map[string]*Event
+	Functions map[crypto.MethodID]*Function
+	Events    map[crypto.MethodID]*Event
+}
+
+// GetFunctionByMethodID return Function by its id
+func (h Header) GetFunctionByMethodID(id crypto.MethodID) (*Function, error) {
+	if function, ok := h.Functions[id]; ok {
+		return function, nil
+	}
+	return nil, fmt.Errorf("function with methodID %v not found", id)
 }
 
 // GetEvent return the event
 func (h Header) GetEvent(name string) (*Event, error) {
-	if event, ok := h.Events[name]; ok {
+	if event, ok := h.Events[crypto.GetMethodID(name)]; ok {
 		return event, nil
 	}
 	return nil, fmt.Errorf("event %s not found", name)
 }
 
-// GetEventByIndex use index to retrieve event
-func (h Header) GetEventByIndex(index uint32) (*Event, error) {
-	for _, event := range h.Events {
-		if event.GetIndex() == index {
-			return event, nil
-		}
-	}
-	return nil, errors.New("Event not found")
-}
-
 // GetFunction returns function of a header from the func name
 func (h Header) GetFunction(funcName string) (*Function, error) {
-	if f, found := h.Functions[funcName]; found {
+	if f, found := h.Functions[crypto.GetMethodID(funcName)]; found {
 		return f, nil
 	}
 	return nil, fmt.Errorf("function %s not found", funcName)
@@ -75,15 +73,16 @@ func DecodeHeader(b []byte) (*Header, error) {
 		return nil, err
 	}
 
-	functions := make(map[string]*Function)
+	functions := make(map[crypto.MethodID]*Function)
 	for _, function := range header.Functions {
-		functions[function.Name] = function
+		function.id = crypto.GetMethodID(function.Name)
+		functions[function.id] = function
 	}
 
-	events := make(map[string]*Event)
-	for index, event := range header.Events {
-		event.index = uint32(index)
-		events[event.Name] = event
+	events := make(map[crypto.MethodID]*Event)
+	for _, event := range header.Events {
+		event.id = crypto.GetMethodID(event.Name)
+		events[event.id] = event
 	}
 
 	return &Header{header.Version, functions, events}, nil
@@ -96,27 +95,42 @@ func (h *Header) Encode() ([]byte, error) {
 }
 
 func (h *Header) getEvents() []*Event {
-	events := []*Event{}
-	var keys []string
-	for key := range h.Events {
-		keys = append(keys, key)
+	var ids []crypto.MethodID
+	for id := range h.Events {
+		ids = append(ids, id)
 	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		events = append(events, h.Events[key])
+	sortMethodIDs(ids)
+	events := []*Event{}
+	for _, id := range ids {
+		events = append(events, h.Events[id])
 	}
 	return events
 }
 
+func sortMethodIDs(ids []crypto.MethodID) {
+	sort.Slice(ids, func(i, j int) bool {
+		for _, idi := range ids[i] {
+			for _, idj := range ids[j] {
+				if idi == idj {
+					continue
+				}
+				return idi < idj
+			}
+		}
+		return true
+	})
+
+}
+
 func (h *Header) getFunctions() []*Function {
-	functions := []*Function{}
-	var keys []string
-	for key := range h.Functions {
-		keys = append(keys, key)
+	var ids []crypto.MethodID
+	for id := range h.Functions {
+		ids = append(ids, id)
 	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		functions = append(functions, h.Functions[key])
+	sortMethodIDs(ids)
+	functions := []*Function{}
+	for _, id := range ids {
+		functions = append(functions, h.Functions[id])
 	}
 	return functions
 }
@@ -158,16 +172,4 @@ func (p *Parameter) MarshalJSON() ([]byte, error) {
 		Name: p.Name,
 		Type: p.Type.String(),
 	})
-}
-
-// GetIndex return index of event
-func (e *Event) GetIndex() uint32 {
-	return e.index
-}
-
-// GetIndexByte return []byte representation of event
-func (e *Event) GetIndexByte() []byte {
-	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, e.index)
-	return b
 }

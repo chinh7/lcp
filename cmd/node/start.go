@@ -38,7 +38,8 @@ func (node *LiquidNode) newTendermintNode(config *config.Config, logger log.Logg
 	)
 }
 
-func (node *LiquidNode) parseConfig() (*config.Config, error) {
+// ParseConfig parses the config file
+func (node *LiquidNode) ParseConfig() (*config.Config, error) {
 	conf := config.DefaultConfig()
 	err := viper.Unmarshal(conf)
 	if err != nil {
@@ -54,7 +55,8 @@ func (node *LiquidNode) parseConfig() (*config.Config, error) {
 	return conf, err
 }
 
-func (node *LiquidNode) startTendermintNode(conf *config.Config) error {
+// StartTendermintNode starts the tmNode
+func (node *LiquidNode) StartTendermintNode(conf *config.Config) error {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	logger, err := tmFlags.ParseLogLevel(conf.LogLevel, logger, config.DefaultLogLevel())
 	if err != nil {
@@ -69,7 +71,7 @@ func (node *LiquidNode) startTendermintNode(conf *config.Config) error {
 
 	// Stop upon receiving SIGTERM or CTRL-C.
 	tmos.TrapSignal(logger, func() {
-		node.stopNode()
+		node.Stop()
 	})
 
 	if err := n.Start(); err != nil {
@@ -79,17 +81,14 @@ func (node *LiquidNode) startTendermintNode(conf *config.Config) error {
 	return nil
 }
 
-func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
-	if err := node.startTendermintNode(conf); err != nil {
+// Start runs the node with optional api given by flag --api
+func (node *LiquidNode) Start(conf *config.Config, apiFlag bool) error {
+	if err := node.StartTendermintNode(conf); err != nil {
 		return err
 	}
 
 	if apiFlag {
-		node.chainAPI = api.NewAPI(":5555", api.Config{
-			HomeDir: node.rootDir,
-			NodeURL: "tcp://localhost:26657",
-			App:     node.app,
-		})
+		node.chainAPI = api.NewAPI(":5555", "tcp://localhost:26657", node.rootDir, *node.app.Meta, *node.app.State, *node.app.Chain)
 		err := node.chainAPI.Serve()
 		if err != nil {
 			return err
@@ -99,7 +98,8 @@ func (node *LiquidNode) startNode(conf *config.Config, apiFlag bool) error {
 	return nil
 }
 
-func (node *LiquidNode) stopNode() {
+// Stop shutdowns the node
+func (node *LiquidNode) Stop() {
 	if node.chainAPI != nil {
 		node.chainAPI.Close()
 	}
@@ -116,12 +116,12 @@ func (node *LiquidNode) addStartNodeCommand() {
 		Use:   "start [--api]",
 		Short: "Start the liquid node",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			conf, err := node.parseConfig()
+			conf, err := node.ParseConfig()
 			if err != nil {
 				return fmt.Errorf("Failed to parse config: %v", err)
 			}
 
-			err = node.startNode(conf, apiFlag)
+			err = node.Start(conf, apiFlag)
 			if err != nil {
 				return err
 			}

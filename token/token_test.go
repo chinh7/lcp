@@ -23,7 +23,7 @@ const otherBalance = uint64(10000)
 
 func setup() *Token {
 	state := storage.NewStateStorage(db.NewMemoryDB())
-	if err := state.LoadState(crypto.GenesisBlock.Header); err != nil {
+	if err := state.LoadState(&crypto.GenesisBlock); err != nil {
 		panic(err)
 	}
 
@@ -50,7 +50,7 @@ func setup() *Token {
 	if err != nil {
 		panic(err)
 	}
-	contractAccount, err := state.GetAccount(contractAddress)
+	contractAccount, err := state.LoadAccount(contractAddress)
 	if err != nil {
 		panic(err)
 	}

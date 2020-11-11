@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"encoding/base32"
+	"encoding/json"
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/crc16"
@@ -27,6 +28,13 @@ func (address *Address) setBytes(b []byte) {
 		b = b[len(b)-AddressLength:]
 	}
 	copy(address[AddressLength-len(b):], b)
+}
+
+func (address Address) MarshalJSON() ([]byte, error) {
+	if address == EmptyAddress {
+		return json.Marshal(nil)
+	}
+	return json.Marshal(address.String())
 }
 
 // String Address string presentation
@@ -59,6 +67,10 @@ func AddressFromString(address string) (Address, error) {
 
 // AddressFromBytes return an address given its bytes
 func AddressFromBytes(b []byte) (Address, error) {
+	if b == nil {
+		return EmptyAddress, nil
+	}
+
 	var a Address
 	_, err := decodeAddressBytes(b)
 	if err != nil {

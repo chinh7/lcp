@@ -31,7 +31,6 @@ func (tr TestResource) getDeployTx(nonce int) *crypto.Transaction {
 		Receiver: crypto.EmptyAddress,
 		GasLimit: 0,
 		GasPrice: 1,
-		Receipt:  &crypto.TxReceipt{},
 	}
 	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign.Bytes())
@@ -52,7 +51,6 @@ func (tr TestResource) getInvokeTx(nonce int) *crypto.Transaction {
 		Receiver: crypto.NewDeploymentAddress(senderAddress, 0),
 		GasLimit: 0,
 		GasPrice: 1,
-		Receipt:  &crypto.TxReceipt{},
 	}
 	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign.Bytes())
@@ -70,7 +68,6 @@ func (tr TestResource) getInvalidMaxSizeTx(nonce int) *crypto.Transaction {
 		Receiver: crypto.EmptyAddress,
 		GasLimit: 0,
 		GasPrice: 1,
-		Receipt:  &crypto.TxReceipt{},
 	}
 	return tx
 }
@@ -89,7 +86,6 @@ func (tr TestResource) getInvalidSignatureTx(nonce int) *crypto.Transaction {
 		Receiver: crypto.NewDeploymentAddress(senderAddress, 0),
 		GasLimit: 0,
 		GasPrice: 1,
-		Receipt:  &crypto.TxReceipt{},
 	}
 	tx.Signature = []byte{1, 2, 3}
 	return tx
@@ -109,7 +105,6 @@ func (tr TestResource) getInvalidNonceTx(nonce int) *crypto.Transaction {
 		Receiver: crypto.NewDeploymentAddress(senderAddress, 0),
 		GasLimit: 0,
 		GasPrice: 1,
-		Receipt:  &crypto.TxReceipt{},
 	}
 	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign.Bytes())
@@ -130,7 +125,6 @@ func (tr TestResource) getInvalidGasPriceTx(nonce int) *crypto.Transaction {
 		Receiver: crypto.NewDeploymentAddress(senderAddress, 0),
 		GasLimit: 0,
 		GasPrice: 0,
-		Receipt:  &crypto.TxReceipt{},
 	}
 	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign.Bytes())
@@ -150,8 +144,7 @@ func (tr TestResource) getInvokeNilContractTx(nonce int) *crypto.Transaction {
 		Payload:  data,
 		Receiver: crypto.NewDeploymentAddress(senderAddress, 123),
 		GasLimit: 0,
-		GasPrice: 0,
-		Receipt:  &crypto.TxReceipt{},
+		GasPrice: 1,
 	}
 	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign.Bytes())
@@ -171,8 +164,7 @@ func (tr TestResource) getInvokeNonContractTx(nonce int) *crypto.Transaction {
 		Payload:  data,
 		Receiver: senderAddress,
 		GasLimit: 0,
-		GasPrice: 0,
-		Receipt:  &crypto.TxReceipt{},
+		GasPrice: 1,
 	}
 	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign.Bytes())
@@ -193,7 +185,6 @@ func (tr TestResource) getInvalidSerializedTx(nonce int) *crypto.Transaction {
 		Receiver: senderAddress,
 		GasLimit: 0,
 		GasPrice: 0,
-		Receipt:  &crypto.TxReceipt{},
 	}
 	dataToSign := crypto.GetSigHash(tx)
 	tx.Signature = crypto.Sign(privateKey, dataToSign.Bytes())

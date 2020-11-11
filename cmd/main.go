@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	defaultRootDir := filepath.Join(os.ExpandEnv("HOME"), ".liquid-chain")
+	defaultRootDir := filepath.Join(os.Getenv("HOME"), ".liquid-chain")
 	rootDir := defaultRootDir
 	if rootDirEnv, ok := os.LookupEnv("ROOT_DIR"); ok {
 		rootDir = rootDirEnv

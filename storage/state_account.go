@@ -11,10 +11,10 @@ import (
 
 // Account stores information related to the account
 type Account struct {
-	Nonce        uint64
-	ContractHash []byte
-	StorageHash  common.Hash // merkle root of the storage trie
-	Creator      crypto.Address
+	Nonce        uint64         `json:"nonce"`
+	ContractHash common.Hash    `json:"contractHash"`
+	StorageHash  common.Hash    `json:"storageHash"`
+	Creator      crypto.Address `json:"creator"`
 
 	dirty    bool
 	address  crypto.Address
@@ -29,14 +29,14 @@ func (state *StateStorage) loadAccount(address crypto.Address) (*Account, error)
 		return nil, err
 	}
 	var account Account
-	if len(raw) <= 0 {
+	if len(raw) == 0 {
 		return nil, nil
 	}
 	if err := rlp.DecodeBytes(raw, &account); err != nil {
 		return nil, err
 	}
 	account.address = address
-	account.contract = state.Get(account.ContractHash)
+	account.contract = state.Get(account.ContractHash.Bytes())
 	if account.storage, err = trie.New(account.StorageHash, state.Database); err != nil {
 		return nil, err
 	}
@@ -45,6 +45,15 @@ func (state *StateStorage) loadAccount(address crypto.Address) (*Account, error)
 
 // GetAccount retrieve the account state at addr
 func (state *StateStorage) GetAccount(address crypto.Address) (*Account, error) {
+	loadedAccount, err := state.loadAccount(address)
+	if err != nil {
+		return nil, err
+	}
+	return loadedAccount, nil
+}
+
+// LoadAccount retrieve the account state at addr
+func (state *StateStorage) LoadAccount(address crypto.Address) (*Account, error) {
 	if state.accounts[address] == nil {
 		loadedAccount, err := state.loadAccount(address)
 		if err != nil {
@@ -93,7 +102,7 @@ func (account *Account) GetAddress() crypto.Address {
 
 // IsContract check whether this is an contract account or a normal account
 func (account *Account) IsContract() bool {
-	return len(account.ContractHash) > 0
+	return account.ContractHash != common.EmptyHash
 }
 
 // GetContract retrieves contract code for account state
@@ -116,7 +125,6 @@ func (account *Account) setContract(contract []byte) {
 	account.dirty = true
 	account.contract = contract
 	if len(account.contract) > 0 {
-		contractHash := blake2b.Sum256(contract)
-		account.ContractHash = contractHash[:]
+		account.ContractHash = blake2b.Sum256(contract)
 	}
 }

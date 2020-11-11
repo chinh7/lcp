@@ -23,7 +23,7 @@ func TestVM(t *testing.T) {
 	contractAddress, _ := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
 
 	state := storage.NewStateStorage(db.NewMemoryDB())
-	if err := state.LoadState(crypto.GenesisBlock.Header); err != nil {
+	if err := state.LoadState(&crypto.GenesisBlock); err != nil {
 		t.Fatal(err)
 	}
 

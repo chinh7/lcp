@@ -41,9 +41,9 @@ func TestEngineIgnite(t *testing.T) {
 	mathAddress, _ := crypto.AddressFromString("LADSUJQLIKT4WBBLGLJ6Q36DEBJ6KFBQIIABD6B3ZWF7NIE4RIZURI53")
 	utilAddress, _ := crypto.AddressFromString("LCR57ROUHIQ2AV4D3E3D7ZBTR6YXMKZQWTI4KSHSWCUCRXBKNJKKBCNY")
 	state := storage.NewStateStorage(db.NewMemoryDB())
-	if err := state.LoadState(&crypto.BlockHeader{
+	if err := state.LoadState(&crypto.Block{
 		Height: 1,
-		Time:   time.Unix(1578905663, 0),
+		Time:   uint64(time.Unix(1578905663, 0).UTC().Unix()),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -240,9 +240,9 @@ func TestDelegatedCall(t *testing.T) {
 	abiContract := loadContract("testdata/delegated-token-abi.json", "testdata/delegated-token.wasm")
 	contractBytes, _ := rlp.EncodeToBytes(abiContract)
 	state := storage.NewStateStorage(db.NewMemoryDB())
-	if err = state.LoadState(&crypto.BlockHeader{
+	if err = state.LoadState(&crypto.Block{
 		Height: 1,
-		Time:   time.Unix(1578905663, 0),
+		Time:   1578905663,
 	}); err != nil {
 		t.Fatal(err)
 	}

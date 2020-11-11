@@ -10,7 +10,7 @@ jobs:
     steps:
       - checkout
       - restore_cache: # restores saved cache if no changes are detected since last run
-      # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
+          # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
           keys:
             - v1-pkg-cache-{{ checksum "go.sum" }}
             - v1-pkg-cache
@@ -26,7 +26,8 @@ jobs:
       - run:
           name: Test
           command: |
-            go test ./... -coverprofile=c.out
+            go get -u github.com/ory/go-acc
+            $GOPATH/bin/go-acc ./... -o c.out
             go tool cover -html=c.out -o coverage.html
             mv coverage.html /tmp/artifacts
       - run:

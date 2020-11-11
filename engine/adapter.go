@@ -120,11 +120,11 @@ func (engine *Engine) chainMethodBind(vm *vm.VM, args ...uint64) (uint64, error)
 }
 
 func (engine *Engine) chainBlockHeight(vm *vm.VM, args ...uint64) (uint64, error) {
-	return engine.state.GetBlockHeader().Height, nil
+	return engine.state.GetBlock().Height, nil
 }
 
 func (engine *Engine) chainBlockTime(vm *vm.VM, args ...uint64) (uint64, error) {
-	return uint64(engine.state.GetBlockHeader().Time.Unix()), nil
+	return uint64(engine.state.GetBlock().Time), nil
 }
 
 func (engine *Engine) chainArgsWrite(vm *vm.VM, args ...uint64) (uint64, error) {
@@ -210,7 +210,7 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 		return 0, errors.New("call depth limit reached")
 	}
 
-	foreignAccount, err := engine.state.GetAccount(foreignMethod.contractAddress)
+	foreignAccount, err := engine.state.LoadAccount(foreignMethod.contractAddress)
 	if err != nil {
 		return 0, err
 	}
@@ -255,7 +255,7 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 		return 0, err
 	}
 
-	account, err := engine.state.GetAccount(foreignMethod.contractAddress)
+	account, err := engine.state.LoadAccount(foreignMethod.contractAddress)
 	if err != nil {
 		return 0, err
 	}

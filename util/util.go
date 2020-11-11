@@ -9,7 +9,7 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
-// BuildInvokeTxData build data for invoke transaction
+// BuildInvokeTxPayload builds data for invoke transaction
 func BuildInvokeTxPayload(headerPath string, methodName string, params []string) (*crypto.TxPayload, error) {
 	header, err := abi.LoadHeaderFromFile(headerPath)
 	if err != nil {
@@ -27,12 +27,12 @@ func BuildInvokeTxPayload(headerPath string, methodName string, params []string)
 	}
 
 	return &crypto.TxPayload{
-		Method: methodName,
-		Params: encodedArgs,
+		ID:   crypto.GetMethodID(methodName),
+		Args: encodedArgs,
 	}, nil
 }
 
-// BuildDeployTxPayload build data for deploy transaction
+// BuildDeployTxPayload builds data for deploy transaction
 func BuildDeployTxPayload(codePath string, headerPath string, initFuncName string, params []string) (*crypto.TxPayload, error) {
 	code, err := ioutil.ReadFile(codePath)
 	if err != nil {
@@ -64,8 +64,8 @@ func BuildDeployTxPayload(codePath string, headerPath string, initFuncName strin
 		if err != nil {
 			return nil, err
 		}
-		payload.Method = initFuncName
-		payload.Params = encodedArgs
+		payload.ID = crypto.GetMethodID(initFuncName)
+		payload.Args = encodedArgs
 	} else if err.Error() != fmt.Sprintf("function %s not found", initFuncName) {
 		return nil, err
 	}

@@ -13,10 +13,15 @@ const (
 	blockHeightToBlockHashPrefix metaKeyPrefix = 0x0
 	txHashToBlockHeightPrefix    metaKeyPrefix = 0x1
 	latestBlockHeightPrefix      metaKeyPrefix = 0x2
+	txHashToReceiptHashPrefix    metaKeyPrefix = 0x3
 )
 
+func (index *MetaStorage) encodeTxHashToReceiptHashKey(hash common.Hash) []byte {
+	return index.encodeKey(txHashToReceiptHashPrefix, hash.Bytes())
+}
+
 func (index *MetaStorage) encodeTxHashToBlockHeightKey(hash common.Hash) []byte {
-	return index.encodeKey(txHashToBlockHeightPrefix, hash[:])
+	return index.encodeKey(txHashToBlockHeightPrefix, hash.Bytes())
 }
 
 func (index *MetaStorage) encodeBlockHeightToBlockHashKey(height uint64) []byte {

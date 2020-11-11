@@ -58,9 +58,10 @@ func (engine *Engine) handleEmitEvent(eventHeader *abi.Event, vm *vm.VM, args ..
 		return 0, err
 	}
 
-	engine.pushEvent(&crypto.TxEvent{
+	engine.pushEvent(&crypto.Event{
+		ID:       crypto.GetMethodID(eventHeader.Name),
 		Contract: engine.account.GetAddress(),
-		Data:     values,
+		Args:     values,
 	})
 	return 0, nil
 }

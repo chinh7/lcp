@@ -318,8 +318,8 @@ func LoadHeaderFromFile(path string) (*Header, error) {
 	}
 	header := Header{
 		Version:   headerFile.Version,
-		Functions: make(map[string]*Function),
-		Events:    make(map[string]*Event),
+		Functions: make(map[crypto.MethodID]*Function),
+		Events:    make(map[crypto.MethodID]*Event),
 	}
 
 	for _, hFunction := range headerFile.Functions {
@@ -345,7 +345,7 @@ func LoadHeaderFromFile(path string) (*Header, error) {
 			parameter.Name = hParam.Name
 			function.Parameters = append(function.Parameters, &parameter)
 		}
-		header.Functions[function.Name] = &function
+		header.Functions[crypto.GetMethodID(function.Name)] = &function
 	}
 
 	for _, hEvent := range headerFile.Events {
@@ -364,7 +364,7 @@ func LoadHeaderFromFile(path string) (*Header, error) {
 				Type:    paramType,
 			})
 		}
-		header.Events[event.Name] = &event
+		header.Events[crypto.GetMethodID(event.Name)] = &event
 	}
 
 	return &header, nil

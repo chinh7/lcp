@@ -16,14 +16,14 @@ func (token *MockToken) GetBalance(addr crypto.Address) (uint64, error) {
 	return 100, nil
 }
 
-func (token *MockToken) Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]*crypto.TxEvent, error) {
+func (token *MockToken) Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]*crypto.Event, error) {
 	if addr.String() != contractAddressStr {
 		panic("Expected collector is gas contract address")
 	}
 	if amount == 10000 {
 		return nil, errors.New("Token transfer failed")
 	}
-	return []*crypto.TxEvent{}, nil
+	return []*crypto.Event{}, nil
 }
 
 func (token *MockToken) GetContract() *storage.Account {

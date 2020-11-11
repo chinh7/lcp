@@ -14,6 +14,8 @@ type Trie struct {
 	root Node
 }
 
+var emptyRoot = common.HexToHash("45b0cfc220ceec5b7c1c62c4d4193d38e4eba48e8815729ce75f9c0ab0e4c1c0")
+
 // New returns a Trie based
 func New(rootHash common.Hash, db db.Database) (*Trie, error) {
 	if db == nil {
@@ -21,7 +23,7 @@ func New(rootHash common.Hash, db db.Database) (*Trie, error) {
 	}
 	trie := &Trie{db: db}
 	if rootHash != common.EmptyHash {
-		rootNode, err := trie.loadNode(rootHash[:])
+		rootNode, err := trie.loadNode(rootHash.Bytes())
 		if err != nil {
 			return nil, err
 		}
@@ -33,11 +35,11 @@ func New(rootHash common.Hash, db db.Database) (*Trie, error) {
 // loadNode loads the node from database
 func (tree *Trie) loadNode(node hashNode) (Node, error) {
 	hash := common.BytesToHash(node)
-	data := tree.db.Get(hash[:])
+	data := tree.db.Get(hash.Bytes())
 	if data == nil {
-		return nil, fmt.Errorf("Missing node data for node %s", string(hash[:]))
+		return nil, fmt.Errorf("Missing node data for node %s", string(hash.Bytes()))
 	}
-	return mustDecodeNode(hash[:], data), nil
+	return mustDecodeNode(hash.Bytes(), data), nil
 }
 
 func (tree *Trie) newFlag() nodeFlag { return nodeFlag{dirty: true} }
@@ -325,4 +327,10 @@ func (tree *Trie) delete(node Node, key []byte) (bool, Node, error) {
 	default:
 		panic(fmt.Sprintf("%T: invalid node: %v (%v)", node, node, key))
 	}
+}
+
+// NodeIterator returns an iterator that returns nodes of the trie. Iteration starts at
+// the key after the given start key.
+func (tree *Trie) NodeIterator(start []byte) NodeIterator {
+	return newNodeIterator(tree, start)
 }

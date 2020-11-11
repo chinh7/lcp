@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"net/http"
 
-	core_types "github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
 // BroadcastParams is params to broadcast transaction
@@ -14,15 +14,9 @@ type BroadcastParams struct {
 
 // BroadcastResult is result of broadcast
 type BroadcastResult struct {
-	TransactionHash string `json:"hash"`
 	Code            uint32 `json:"code"`
 	Log             string `json:"log"`
-}
-
-func formatBroadcastResponse(result *BroadcastResult, res *core_types.ResultBroadcastTx) {
-	result.TransactionHash = res.Hash.String()
-	result.Code = res.Code
-	result.Log = res.Log
+	TransactionHash string `json:"hash"`
 }
 
 // Broadcast delivers transaction to blockchain
@@ -31,12 +25,21 @@ func (service *Service) Broadcast(r *http.Request, params *BroadcastParams, resu
 	if err != nil {
 		return err
 	}
-	broadcastResult, err := service.tAPI.BroadcastTxSync(bytes)
+
+	tx, err := crypto.DecodeTransaction(bytes)
 	if err != nil {
 		return err
 	}
 
-	formatBroadcastResponse(result, broadcastResult)
+	tmResult, err := service.tmAPI.BroadcastTxSync(bytes)
+	if err != nil {
+		return err
+	}
+
+	result.TransactionHash = tx.Hash().String()
+	result.Log = tmResult.Log
+	result.Code = tmResult.Code
+
 	return nil
 }
 
@@ -46,11 +49,21 @@ func (service *Service) BroadcastAsync(r *http.Request, params *BroadcastParams,
 	if err != nil {
 		return err
 	}
-	broadcastResult, err := service.tAPI.BroadcastTxAsync(bytes)
+
+	tx, err := crypto.DecodeTransaction(bytes)
 	if err != nil {
 		return err
 	}
-	formatBroadcastResponse(result, broadcastResult)
+
+	tmResult, err := service.tmAPI.BroadcastTxAsync(bytes)
+	if err != nil {
+		return err
+	}
+
+	result.TransactionHash = tx.Hash().String()
+	result.Log = tmResult.Log
+	result.Code = tmResult.Code
+
 	return nil
 }
 
@@ -60,21 +73,20 @@ func (service *Service) BroadcastCommit(r *http.Request, params *BroadcastParams
 	if err != nil {
 		return err
 	}
-	broadcastResult, err := service.tAPI.BroadcastTxCommit(bytes)
+
+	tx, err := crypto.DecodeTransaction(bytes)
 	if err != nil {
 		return err
 	}
 
-	result.TransactionHash = broadcastResult.Hash.String()
-
-	// Handle if tx is rejected by CheckTx
-	if broadcastResult.CheckTx.IsErr() {
-		result.Code = broadcastResult.CheckTx.Code
-		result.Log = broadcastResult.CheckTx.Log
-		return nil
+	tmResult, err := service.tmAPI.BroadcastTxCommit(bytes)
+	if err != nil {
+		return err
 	}
 
-	result.Code = broadcastResult.DeliverTx.Code
-	result.Log = broadcastResult.DeliverTx.Log
+	result.TransactionHash = tx.Hash().String()
+	result.Log = tmResult.CheckTx.Log
+	result.Code = tmResult.CheckTx.Code
+
 	return nil
 }

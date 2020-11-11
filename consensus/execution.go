@@ -1,24 +1,31 @@
 package consensus
 
 import (
+	"bytes"
+
+	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/QuoineFinancial/liquid-chain/engine"
 )
 
-const (
-	// InitFunctionName is default init function name
-	InitFunctionName = "init"
+// InitFunctionName is default init function name
+const InitFunctionName = "init"
+
+var (
+	initFunctionID = crypto.GetMethodID(InitFunctionName)
 )
 
-func (app *App) applyTransaction(tx *crypto.Transaction) (*crypto.TxReceipt, error) {
+func (app *App) applyTransaction(tx *crypto.Transaction) (*crypto.Receipt, error) {
 	if tx.Receiver == crypto.EmptyAddress {
 		return app.deployContract(tx)
 	}
 	return app.invokeContract(tx)
 }
 
-func (app *App) deployContract(tx *crypto.Transaction) (*crypto.TxReceipt, error) {
-	var receipt crypto.TxReceipt
+func (app *App) deployContract(tx *crypto.Transaction) (*crypto.Receipt, error) {
+	receipt := crypto.Receipt{
+		Transaction: tx.Hash(),
+	}
 
 	contractSize := len(tx.Payload.Contract)
 	policy := app.gasStation.GetPolicy()
@@ -28,23 +35,32 @@ func (app *App) deployContract(tx *crypto.Transaction) (*crypto.TxReceipt, error
 		return &receipt, nil
 	}
 
-	// Create contract account
-	senderAddress := crypto.AddressFromPubKey(tx.Sender.PublicKey)
-	contractAddress := crypto.NewDeploymentAddress(senderAddress, tx.Sender.Nonce)
-	contractAccount, err := app.state.CreateAccount(senderAddress, contractAddress, tx.Payload.Contract)
-
+	contract, err := abi.DecodeContract(tx.Payload.Contract)
 	if err != nil {
 		return nil, err
 	}
 
-	if tx.Payload.Method == InitFunctionName {
-		execEngine := engine.NewEngine(app.state, contractAccount, senderAddress, policy, uint64(tx.GasLimit-receipt.GasUsed))
-		if result, err := execEngine.Ignite(tx.Payload.Method, tx.Payload.Params); err != nil {
-			app.state.Revert()
+	// Create contract account
+	senderAddress := crypto.AddressFromPubKey(tx.Sender.PublicKey)
+	contractAddress := crypto.NewDeploymentAddress(senderAddress, tx.Sender.Nonce)
+	contractAccount, err := app.State.CreateAccount(senderAddress, contractAddress, tx.Payload.Contract)
+	if err != nil {
+		return nil, err
+	}
+
+	if bytes.Equal(tx.Payload.ID[:], initFunctionID[:]) {
+		function, err := contract.Header.GetFunctionByMethodID(tx.Payload.ID)
+		if err != nil {
+			return nil, err
+		}
+		execEngine := engine.NewEngine(app.State, contractAccount, senderAddress, policy, uint64(tx.GasLimit-receipt.GasUsed))
+		if result, err := execEngine.Ignite(function.Name, tx.Payload.Args); err != nil {
 			receipt.Code = crypto.ReceiptCodeIgniteError
+			app.State.Revert()
 		} else {
 			receipt.Result = result
 			receipt.Code = crypto.ReceiptCodeOK
+			receipt.Events = append(receipt.Events, execEngine.GetEvents()...)
 		}
 		receipt.GasUsed += uint32(execEngine.GetGasUsed())
 	}
@@ -56,13 +72,17 @@ func (app *App) deployContract(tx *crypto.Transaction) (*crypto.TxReceipt, error
 
 	gasEvents := app.gasStation.Burn(senderAddress, uint64(receipt.GasUsed)*uint64(tx.GasPrice))
 	receipt.Events = append(receipt.Events, gasEvents...)
+	receipt.PostState = app.State.Hash()
+
 	return &receipt, nil
 }
 
-func (app *App) invokeContract(tx *crypto.Transaction) (*crypto.TxReceipt, error) {
-	var receipt crypto.TxReceipt
+func (app *App) invokeContract(tx *crypto.Transaction) (*crypto.Receipt, error) {
+	receipt := crypto.Receipt{
+		Transaction: tx.Hash(),
+	}
 
-	contractAccount, err := app.state.GetAccount(tx.Receiver)
+	contractAccount, err := app.State.LoadAccount(tx.Receiver)
 	if err != nil {
 		panic(err)
 	}
@@ -72,13 +92,23 @@ func (app *App) invokeContract(tx *crypto.Transaction) (*crypto.TxReceipt, error
 		return &receipt, nil
 	}
 
+	contract, err := contractAccount.GetContract()
+	if err != nil {
+		panic(err)
+	}
+	function, err := contract.Header.GetFunctionByMethodID(tx.Payload.ID)
+	if err != nil {
+		receipt.Code = crypto.ReceiptCodeMethodNotFound
+		return &receipt, nil
+	}
+
 	policy := app.gasStation.GetPolicy()
 	senderAddress := crypto.AddressFromPubKey(tx.Sender.PublicKey)
-	execEngine := engine.NewEngine(app.state, contractAccount, senderAddress, policy, uint64(tx.GasLimit))
+	execEngine := engine.NewEngine(app.State, contractAccount, senderAddress, policy, uint64(tx.GasLimit))
 
-	if result, err := execEngine.Ignite(tx.Payload.Method, tx.Payload.Params); err != nil {
+	if result, err := execEngine.Ignite(function.Name, tx.Payload.Args); err != nil {
 		receipt.Code = crypto.ReceiptCodeIgniteError
-		app.state.Revert()
+		app.State.Revert()
 	} else {
 		receipt.Result = result
 		receipt.Events = append(receipt.Events, execEngine.GetEvents()...)
@@ -92,19 +122,20 @@ func (app *App) invokeContract(tx *crypto.Transaction) (*crypto.TxReceipt, error
 	receipt.GasUsed = uint32(execEngine.GetGasUsed())
 	gasEvents := app.gasStation.Burn(senderAddress, uint64(receipt.GasUsed)*uint64(tx.GasPrice))
 	receipt.Events = append(receipt.Events, gasEvents...)
+	receipt.PostState = app.State.Hash()
 
 	return &receipt, nil
 }
 
 func (app *App) increaseNonce(address crypto.Address) error {
-	account, err := app.state.GetAccount(address)
+	account, err := app.State.LoadAccount(address)
 	if err != nil {
 		return err
 	}
 
 	// Make sure account is created
 	if account == nil {
-		account, err = app.state.CreateAccount(address, address, nil)
+		account, err = app.State.CreateAccount(address, address, nil)
 		if err != nil {
 			return err
 		}

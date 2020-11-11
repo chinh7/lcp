@@ -31,7 +31,7 @@ type Engine struct {
 	gasPolicy     gas.Policy
 	callDepth     int
 	memAggr       int
-	events        []*crypto.TxEvent
+	events        []*crypto.Event
 	methodLookup  map[string]*foreignMethod
 	ptrArgSizeMap map[int]int
 	gas           *vertex.Gas
@@ -45,7 +45,7 @@ func NewEngine(state *storage.StateStorage, account *storage.Account, caller cry
 		caller:        caller,
 		account:       account,
 		gasPolicy:     gasPolicy,
-		events:        []*crypto.TxEvent{},
+		events:        []*crypto.Event{},
 		methodLookup:  make(map[string]*foreignMethod),
 		ptrArgSizeMap: make(map[int]int),
 		gas:           &vm.Gas{Limit: gasLimit},
@@ -54,7 +54,7 @@ func NewEngine(state *storage.StateStorage, account *storage.Account, caller cry
 }
 
 // GetEvents return the event of engine
-func (engine *Engine) GetEvents() []*crypto.TxEvent {
+func (engine *Engine) GetEvents() []*crypto.Event {
 	return engine.events
 }
 
@@ -70,7 +70,7 @@ func (engine *Engine) newChildEngine(account *storage.Account) *Engine {
 		state:         engine.state,
 		caller:        engine.account.GetAddress(),
 		gasPolicy:     engine.gasPolicy,
-		events:        []*crypto.TxEvent{},
+		events:        []*crypto.Event{},
 		methodLookup:  make(map[string]*foreignMethod),
 		ptrArgSizeMap: make(map[int]int),
 		gas:           engine.gas,
@@ -163,7 +163,7 @@ func (engine *Engine) ptrArgSizeSet(ptr int, size int) {
 	engine.ptrArgSizeMap[ptr] = size
 }
 
-func (engine *Engine) pushEvent(event *crypto.TxEvent) {
+func (engine *Engine) pushEvent(event *crypto.Event) {
 	if engine.parent != nil {
 		engine.parent.pushEvent(event)
 	} else {

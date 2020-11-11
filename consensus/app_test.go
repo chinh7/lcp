@@ -20,13 +20,13 @@ import (
 func newAppTestResource() *TestResource {
 	rand.Seed(time.Now().UTC().UnixNano())
 	dbDir := "./tmp" + strconv.Itoa(rand.Intn(10000)) + "/"
-	err := os.MkdirAll(dbDir, os.ModePerm)
-	if err != nil {
+	if err := os.MkdirAll(dbDir, os.ModePerm); err != nil {
 		panic(err)
 	}
 	app := NewApp(dbDir, "")
-	app.state.LoadState(crypto.GenesisBlock.Header)
-
+	if err := app.State.LoadState(&crypto.GenesisBlock); err != nil {
+		panic(err)
+	}
 	return &TestResource{app, dbDir}
 }
 
@@ -55,7 +55,7 @@ func TestApp_BeginBlock(t *testing.T) {
 	t.Run("Should load state from genesis block", func(t *testing.T) {
 		reqHeight := int64(0)
 		previousBlockHash := common.EmptyHash.Bytes()
-		stateRootHash, txRootHash := tr.app.state.Commit()
+		stateRootHash := tr.app.State.Commit()
 
 		req := types.RequestBeginBlock{Header: types.Header{Height: reqHeight, AppHash: previousBlockHash}}
 		got := app.BeginBlock(req)
@@ -65,27 +65,26 @@ func TestApp_BeginBlock(t *testing.T) {
 		}
 
 		// loadState() should be called
-		assert.NotNil(t, app.state)
-		assert.Equal(t, uint64(reqHeight), app.state.GetBlockHeader().Height)
-		assert.Equal(t, stateRootHash, app.state.Hash())
-		assert.Equal(t, txRootHash, app.state.Hash())
+		assert.NotNil(t, app.State)
+		assert.Equal(t, uint64(reqHeight), app.State.GetBlock().Height)
+		assert.Equal(t, stateRootHash, app.State.Hash())
 	})
 
 	t.Run("Should load state", func(t *testing.T) {
-		stateRootHash, txRootHash := tr.app.state.Commit()
+		stateRootHash := tr.app.State.Commit()
 		reqHeight := int64(1)
 
 		previousBlock := crypto.Block{
-			Header:       &crypto.BlockHeader{Height: uint64(reqHeight), Time: time.Now(), Parent: common.EmptyHash, StateRoot: stateRootHash, TransactionRoot: txRootHash},
-			Transactions: nil,
-		}
+			Height: uint64(reqHeight),
+			Time:   uint64(time.Now().Unix()),
+			Parent: common.EmptyHash, StateRoot: stateRootHash}
 
 		rawBlock, _ := previousBlock.Encode()
-		blockHash := previousBlock.Header.Hash()
-		app.block.Put(blockHash[:], rawBlock)
+		blockHash := previousBlock.Hash()
+		app.Chain.Put(blockHash.Bytes(), rawBlock)
 
-		assert.NotNil(t, app.state)
-		assert.Equal(t, uint64(0), app.state.GetBlockHeader().Height)
+		assert.NotNil(t, app.State)
+		assert.Equal(t, uint64(0), app.State.GetBlock().Height)
 
 		req := types.RequestBeginBlock{Header: types.Header{Height: reqHeight, AppHash: blockHash.Bytes()}}
 		got := app.BeginBlock(req)
@@ -95,10 +94,9 @@ func TestApp_BeginBlock(t *testing.T) {
 		}
 
 		// loadState() should be called
-		assert.NotNil(t, app.state)
-		assert.Equal(t, uint64(reqHeight), app.state.GetBlockHeader().Height)
-		assert.Equal(t, stateRootHash, app.state.Hash())
-		assert.Equal(t, txRootHash, app.state.Hash())
+		assert.NotNil(t, app.State)
+		assert.Equal(t, uint64(reqHeight), app.State.GetBlock().Height)
+		assert.Equal(t, stateRootHash, app.State.Hash())
 	})
 }
 
@@ -109,18 +107,15 @@ func TestApp_Info(t *testing.T) {
 
 	t.Run("Should return valid response", func(t *testing.T) {
 		height := 2
-		stateRootHash, txRootHash := tr.app.state.Commit()
-		block := crypto.Block{
-			Header:       &crypto.BlockHeader{Height: uint64(height), Time: time.Now(), Parent: common.EmptyHash, StateRoot: stateRootHash, TransactionRoot: txRootHash},
-			Transactions: nil,
-		}
-		app.meta.StoreBlockIndexes(&block)
+		stateRootHash := tr.app.State.Commit()
+		block := crypto.Block{Height: uint64(height), Time: uint64(time.Now().Unix()), Parent: common.EmptyHash, StateRoot: stateRootHash}
+		app.Meta.StoreBlockMetas(&block)
 
 		got := app.Info(types.RequestInfo{})
 		// returns correct current state
 		want := types.ResponseInfo{
 			LastBlockHeight:  int64(height),
-			LastBlockAppHash: block.Header.Hash().Bytes(),
+			LastBlockAppHash: block.Hash().Bytes(),
 		}
 
 		if !cmp.Equal(got, want) {
@@ -176,7 +171,7 @@ func TestApp_CheckTx(t *testing.T) {
 			got := app.CheckTx(types.RequestCheckTx{Tx: rawTx})
 			want := checkTxTest.expectedResponseCheckTx
 			if diff := cmp.Diff(got, want); diff != "" {
-				t.Errorf("Case %d: App.CheckTx() is expected to be = %v, got %v", i+1, want, got)
+				t.Errorf("[%d] App.CheckTx() = %v, want %v", i, got, want)
 			}
 		}
 	})

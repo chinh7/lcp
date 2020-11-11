@@ -4,6 +4,7 @@ package common
 
 import (
 	"encoding/hex"
+	"encoding/json"
 )
 
 const (
@@ -58,5 +59,14 @@ func (h Hash) String() string {
 	return HashToHex(h[:])
 }
 
+func (h Hash) MarshalJSON() ([]byte, error) {
+	return json.Marshal(h.String())
+}
+
 // Bytes gets the byte representation of the underlying hash.
-func (h Hash) Bytes() []byte { return h[:] }
+func (h Hash) Bytes() []byte {
+	if h == EmptyHash {
+		return nil
+	}
+	return h[:]
+}

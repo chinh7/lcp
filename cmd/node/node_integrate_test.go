@@ -44,7 +44,7 @@ func (ts *testServer) startNode() {
 	fmt.Println("Init node config data...")
 
 	ts.node = New(conf.RootDir, "")
-	conf, err := ts.node.parseConfig()
+	conf, err := ts.node.ParseConfig()
 	if err != nil {
 		panic(err)
 	}
@@ -52,7 +52,7 @@ func (ts *testServer) startNode() {
 	conf.Consensus.CreateEmptyBlocks = false
 
 	go func() {
-		err := ts.node.startTendermintNode(conf)
+		err := ts.node.StartTendermintNode(conf)
 		if err != nil && err.Error() != "http: Server closed" {
 			panic(err)
 		}
@@ -65,7 +65,7 @@ func (ts *testServer) startNode() {
 func (ts *testServer) stopNode() {
 	time.Sleep(2 * time.Second)
 
-	ts.node.stopNode()
+	ts.node.Stop()
 	fmt.Println("Clean up node data")
 	time.Sleep(500 * time.Millisecond)
 	os.RemoveAll(ts.node.rootDir)
@@ -81,21 +81,11 @@ func loadPrivateKey(SEED string) ed25519.PrivateKey {
 	return ed25519.NewKeyFromSeed(hexSeed)
 }
 
-func TestBroadcastTx(t *testing.T) {
-	ts := &testServer{}
-	defer ts.stopNode()
-	ts.startNode()
-
-	api := api.NewAPI(":5555", api.Config{
-		HomeDir: ts.node.rootDir,
-		NodeURL: "tcp://localhost:26657",
-	})
-
-	router := api.Router
+func getDeployLiquidTokenTx(t *testing.T, nonce uint64) string {
 	seed := make([]byte, 32)
 	privateKey := ed25519.NewKeyFromSeed(seed)
 	sender := crypto.TxSender{
-		Nonce:     uint64(0),
+		Nonce:     nonce,
 		PublicKey: privateKey.Public().(ed25519.PublicKey),
 	}
 	payload, err := util.BuildDeployTxPayload("../../test/testdata/liquid-token.wasm", "../../test/testdata/liquid-token-abi.json", "init", []string{"0"})
@@ -103,24 +93,48 @@ func TestBroadcastTx(t *testing.T) {
 		t.Fatal(err)
 	}
 	deployTx := &crypto.Transaction{
+		Version:   1,
 		Sender:    &sender,
 		Payload:   payload,
 		Receiver:  crypto.EmptyAddress,
 		GasLimit:  0,
 		GasPrice:  1,
 		Signature: nil,
-		Receipt:   &crypto.TxReceipt{},
 	}
 	dataToSign := crypto.GetSigHash(deployTx)
 	deployTx.Signature = crypto.Sign(privateKey, dataToSign[:])
 	rawTx, _ := deployTx.Encode()
 	serializedTx := base64.StdEncoding.EncodeToString(rawTx)
+	return serializedTx
+}
+
+func TestBroadcastTx(t *testing.T) {
+	ts := &testServer{}
+	defer ts.stopNode()
+	ts.startNode()
+
+	api := api.NewAPI(":5555", "tcp://localhost:26657", ts.node.rootDir, *ts.node.app.Meta, *ts.node.app.State, *ts.node.app.Chain)
+
+	router := api.Router
+
 	testcases := []testCase{
+		{
+			name:   "Broadcast Commit",
+			method: "chain.BroadcastCommit",
+			params: fmt.Sprintf(`{"rawTx": "%s"}`, getDeployLiquidTokenTx(t, 0)),
+			result: `{"jsonrpc":"2.0","result":{"code":0,"log":"","hash":"420719772415f7902c8669678cfdf09b9a74c886652cae607786f6e6d2ee7cbc"},"id":1}`,
+		},
 		{
 			name:   "Broadcast",
 			method: "chain.Broadcast",
-			params: fmt.Sprintf(`{"rawTx": "%s"}`, serializedTx),
-			result: `{"jsonrpc":"2.0","result":{"hash":"8ABD8063E6DBF3FD957812E5E23E94E45C76804EF34FD7E31F8E776CC3ED0E19","code":0,"log":""},"id":1}`,
+			params: fmt.Sprintf(`{"rawTx": "%s"}`, getDeployLiquidTokenTx(t, 1)),
+			result: `{"jsonrpc":"2.0","result":{"code":0,"log":"","hash":"1f22b901c58ed95927c4c4d866289ecaf084d93d852044a795722ac2bd1a15a6"},"id":1}`,
+		},
+		{
+			name:   "Broadcast Async",
+			method: "chain.BroadcastAsync",
+			params: fmt.Sprintf(`{"rawTx": "%s"}`, getDeployLiquidTokenTx(t, 2)),
+			result: `{"jsonrpc":"2.0","result":{"code":0,"log":"","hash":"6de59e09494f6beb18928d3865a2293480aca86c4bea7846dd7d5e0b6cf6f4d1"},"id":1}`,
 		},
 	}
 
@@ -129,6 +143,7 @@ func TestBroadcastTx(t *testing.T) {
 		request, _ := makeRequest(test.method, test.params)
 		router.ServeHTTP(response, request)
 		result := readBody(response)
+		fmt.Println(result)
 		if diff := cmp.Diff(string(result), test.result); diff != "" {
 			t.Errorf("%s: expect %s, got %s, diff: %s", test.name, test.result, result, diff)
 		}

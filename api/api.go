@@ -11,77 +11,65 @@ import (
 
 	"github.com/QuoineFinancial/liquid-chain/api/chain"
 	"github.com/QuoineFinancial/liquid-chain/api/resource"
-	"github.com/QuoineFinancial/liquid-chain/api/storage"
-	"github.com/QuoineFinancial/liquid-chain/consensus"
+	"github.com/QuoineFinancial/liquid-chain/db"
+	"github.com/QuoineFinancial/liquid-chain/storage"
 )
 
 // API contains all info to serve an api server
 type API struct {
-	url    string
-	config Config
-	srv    *http.Server
-	server *rpc.Server
-	Router *mux.Router
+	url        string
+	rpcServer  *rpc.Server
+	httpServer *http.Server
+	Router     *mux.Router
 
 	tmAPI resource.TendermintAPI
-	app   *consensus.App
-}
-
-// Config to modify the API
-type Config struct {
-	HomeDir string
-	NodeURL string
-	App     *consensus.App
+	meta  *storage.MetaStorage
+	state *storage.StateStorage
+	chain *storage.ChainStorage
 }
 
 // NewAPI return an new instance of API
-func NewAPI(url string, config Config) *API {
+func NewAPI(url, tmURL, rootDir string, metaDB, stateDB, chainDB db.Database) *API {
 	api := &API{
-		url:    url,
-		config: config,
-		app:    config.App,
+		url:   url,
+		tmAPI: resource.NewTendermintAPI(rootDir, tmURL),
+		meta:  storage.NewMetaStorage(metaDB),
+		state: storage.NewStateStorage(stateDB),
+		chain: storage.NewChainStorage(chainDB),
 	}
-	api.setupExternalAPIs()
 	api.setupServer()
 	api.registerServices()
 	api.setupRouter()
 	return api
 }
 
-func (api *API) setupExternalAPIs() {
-	tAPI := resource.NewTendermintAPI(
-		api.config.HomeDir,
-		api.config.NodeURL,
-		0,
-	)
-	api.tmAPI = tAPI
-}
-
 func (api *API) setupServer() {
 	server := rpc.NewServer()
 	server.RegisterCodec(json2.NewCodec(), "application/json")
-	api.server = server
+	api.rpcServer = server
 }
 
 func (api *API) setupRouter() {
-	if api.server == nil {
+	if api.rpcServer == nil {
 		panic("api.setupRouter call without api.server")
 	}
-	router := mux.NewRouter()
-	router.Handle("/", api.server).Methods("POST")
-	api.Router = router
+	api.Router = mux.NewRouter()
+	api.Router.Handle("/", api.rpcServer).Methods("POST")
+	api.httpServer = &http.Server{
+		Handler: cors.New(cors.Options{
+			AllowedOrigins:   []string{"*"},
+			AllowCredentials: true,
+			AllowedMethods:   []string{"POST", "DELETE", "PUT", "GET", "HEAD", "OPTIONS"},
+		}).Handler(api.Router),
+		Addr: api.url,
+	}
 }
 
 func (api *API) registerServices() {
-	if api.server == nil {
+	if api.rpcServer == nil {
 		panic("api.registerServices call without api.server")
 	}
-	err := api.server.RegisterService(chain.NewService(api.tmAPI, api.app), "chain")
-	if err != nil {
-		panic(err)
-	}
-	err = api.server.RegisterService(storage.NewService(api.tmAPI, api.app), "storage")
-	if err != nil {
+	if err := api.rpcServer.RegisterService(chain.NewService(api.tmAPI, api.meta, api.state, api.chain), "chain"); err != nil {
 		panic(err)
 	}
 }
@@ -89,23 +77,7 @@ func (api *API) registerServices() {
 // Serve starts the server to serve request
 func (api *API) Serve() error {
 	log.Println("Server is ready at", api.url)
-
-	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowCredentials: true,
-		AllowedMethods:   []string{"POST", "DELETE", "PUT", "GET", "HEAD", "OPTIONS"},
-	})
-	handler := c.Handler(api.Router)
-	// err := http.ListenAndServe(api.url, handler)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// err = http.ListenAndServe(api.url, api.Router)
-	// if err != nil {
-	// 	panic(err)
-
-	api.srv = &http.Server{Addr: api.url, Handler: handler}
-	err := api.srv.ListenAndServe()
+	err := api.httpServer.ListenAndServe()
 	return err
 }
 
@@ -113,8 +85,8 @@ func (api *API) Serve() error {
 // For gracefully shutdown please implement another function and use Server.Shutdown()
 func (api *API) Close() {
 	log.Println("Closing server")
-	if api.srv != nil {
-		err := api.srv.Close()
+	if api.httpServer != nil {
+		err := api.httpServer.Close()
 		if err != nil {
 			panic(err)
 		}
