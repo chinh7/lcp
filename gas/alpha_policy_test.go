@@ -1,8 +1,9 @@
 package gas
 
 import (
-	"github.com/vertexdlt/vertexvm/opcode"
 	"testing"
+
+	"github.com/vertexdlt/vertexvm/opcode"
 )
 
 func TestAlphaPolicy(t *testing.T) {
@@ -22,5 +23,9 @@ func TestAlphaPolicy(t *testing.T) {
 	cost = policy.GetCostForEvent(100)
 	if cost != 100 {
 		t.Errorf("Expect cost %v, got %v", 100, cost)
+	}
+	cost = policy.GetCostForMalloc(1)
+	if cost != GasMemoryPage {
+		t.Errorf("Expect cost %v, got %v", GasMemoryPage, cost)
 	}
 }

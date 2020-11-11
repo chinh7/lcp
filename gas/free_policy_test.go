@@ -1,8 +1,9 @@
 package gas
 
 import (
-	"github.com/vertexdlt/vertexvm/opcode"
 	"testing"
+
+	"github.com/vertexdlt/vertexvm/opcode"
 )
 
 func TestFreePolicy(t *testing.T) {
@@ -20,6 +21,10 @@ func TestFreePolicy(t *testing.T) {
 		t.Errorf("Expect cost %v, got %v", 0, cost)
 	}
 	cost = policy.GetCostForEvent(100)
+	if cost != 0 {
+		t.Errorf("Expect cost %v, got %v", 0, cost)
+	}
+	cost = policy.GetCostForMalloc(1)
 	if cost != 0 {
 		t.Errorf("Expect cost %v, got %v", 0, cost)
 	}

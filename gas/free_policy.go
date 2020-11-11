@@ -28,3 +28,8 @@ func (p *FreePolicy) GetCostForContract(size int) uint64 {
 func (p *FreePolicy) GetCostForEvent(size int) uint64 {
 	return 0
 }
+
+// GetCostForMalloc returns cost for new memory allocation
+func (p *FreePolicy) GetCostForMalloc(pages int) uint64 {
+	return 0
+}

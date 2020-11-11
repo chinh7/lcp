@@ -8,13 +8,14 @@ type gasTable [256]uint64
 
 // Cost for generics operations
 const (
-	GasStack     uint64 = 1
-	GasFrame     uint64 = 1
-	GasJump      uint64 = 3
-	GasBlock     uint64 = 5
-	GasNumUnary  uint64 = 1
-	GasNumBinary uint64 = 2
-	GasMemory    uint64 = 1
+	GasStack      uint64 = 1
+	GasFrame      uint64 = 1
+	GasJump       uint64 = 3
+	GasBlock      uint64 = 5
+	GasNumUnary   uint64 = 1
+	GasNumBinary  uint64 = 2
+	GasMemory     uint64 = 1
+	GasMemoryPage uint64 = 1024
 )
 
 func newGasTable() gasTable {
@@ -217,4 +218,9 @@ func (p *AlphaPolicy) GetCostForContract(size int) uint64 {
 // GetCostForEvent emission
 func (p *AlphaPolicy) GetCostForEvent(size int) uint64 {
 	return uint64(size)
+}
+
+// GetCostForMalloc returns cost for new memory allocation
+func (p *AlphaPolicy) GetCostForMalloc(pages int) uint64 {
+	return GasMemoryPage * uint64(pages)
 }
