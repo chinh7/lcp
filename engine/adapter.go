@@ -42,7 +42,7 @@ func (engine *Engine) chainStorageSet(vm *vm.VM, args ...uint64) (uint64, error)
 		return 0, err
 	}
 	err = engine.account.SetStorage(key, value)
-	return 0, err
+	return uint64(len(value)), err
 }
 
 func (engine *Engine) chainStorageGet(vm *vm.VM, args ...uint64) (uint64, error) {
@@ -53,14 +53,11 @@ func (engine *Engine) chainStorageGet(vm *vm.VM, args ...uint64) (uint64, error)
 	}
 	valuePtr := int(uint32(args[2]))
 	value, err := engine.account.GetStorage(key)
-	if err == nil {
-		if len(value) == 0 {
-			valuePtr = 0
-		} else {
-			_, err = vm.MemWrite(value, valuePtr)
-		}
+	if err != nil {
+		return 0, err
 	}
-	return uint64(valuePtr), err
+	byteSize, err := vm.MemWrite(value, valuePtr)
+	return uint64(byteSize), err
 }
 
 func (engine *Engine) chainStorageSizeGet(vm *vm.VM, args ...uint64) (uint64, error) {
@@ -259,7 +256,6 @@ func (engine *Engine) handleInvokeAlias(foreignMethod *foreignMethod, vm *vm.VM,
 	if err != nil {
 		return 0, err
 	}
-	// TODO memcheck
 	childEngine := engine.newChildEngine(account)
 	childEngine.setStats(engine.callDepth+1, engine.memAggr+vm.MemSize())
 	return childEngine.Ignite(foreignMethod.name, methodArgs)

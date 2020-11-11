@@ -73,7 +73,6 @@ func (app *App) deployContract(tx *crypto.Transaction) (*crypto.Receipt, error) 
 	gasEvents := app.gasStation.Burn(senderAddress, uint64(receipt.GasUsed)*uint64(tx.GasPrice))
 	receipt.Events = append(receipt.Events, gasEvents...)
 	receipt.PostState = app.State.Hash()
-
 	return &receipt, nil
 }
 
