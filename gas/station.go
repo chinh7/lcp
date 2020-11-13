@@ -17,7 +17,7 @@ type Station interface {
 // Token interface
 type Token interface {
 	GetBalance(addr crypto.Address) (uint64, error)
-	Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]*crypto.Event, error)
+	Transfer(caller crypto.Address, addr crypto.Address, amount uint64, memo uint64) ([]*crypto.Event, error)
 	GetContract() *storage.Account
 }
 

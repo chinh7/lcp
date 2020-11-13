@@ -27,11 +27,11 @@ func setup() *Token {
 		panic(err)
 	}
 
-	header, err := abi.LoadHeaderFromFile("../test/testdata/liquid-token-abi.json")
+	header, err := abi.LoadHeaderFromFile("../test/testdata/gas-token-abi.json")
 	if err != nil {
 		panic(err)
 	}
-	data, err := ioutil.ReadFile("../test/testdata/liquid-token.wasm")
+	data, err := ioutil.ReadFile("../test/testdata/gas-token.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -55,15 +55,15 @@ func setup() *Token {
 		panic(err)
 	}
 	token := NewToken(state, contractAccount)
-	_, _, err = token.invokeContract(ownerAddress, "mint", []string{strconv.FormatUint(1000000000, 10)})
+	_, _, err = token.invokeContract(ownerAddress, "init", []string{strconv.FormatUint(1000000000, 10)})
 	if err != nil {
 		panic(err)
 	}
-	_, err = token.Transfer(ownerAddress, otherAddress, 10000)
+	_, err = token.Transfer(ownerAddress, otherAddress, 10000, 0)
 	if err != nil {
 		panic(err)
 	}
-	_, err = token.Transfer(ownerAddress, contractAddress, 4319)
+	_, err = token.Transfer(ownerAddress, contractAddress, 4319, 0)
 	if err != nil {
 		panic(err)
 	}
@@ -105,7 +105,7 @@ func TestTransferOK(t *testing.T) {
 	caller, _ := crypto.AddressFromString(otherAddressStr)
 	amount := uint64(100)
 
-	events, err := token.Transfer(caller, collector, amount)
+	events, err := token.Transfer(caller, collector, amount, 0)
 	if err != nil {
 		panic(err)
 	}
@@ -127,8 +127,8 @@ func TestTransferFail(t *testing.T) {
 
 	collector, _ := crypto.AddressFromString(contractAddressStr)
 	caller, _ := crypto.AddressFromString(nonExistentAddressStr)
-	_, err := token.Transfer(caller, collector, 100)
-	if err == nil || err.Error() != "Token transfer failed" {
+	_, err := token.Transfer(caller, collector, 100, 0)
+	if err == nil || err.Error() != "process exit with code: 1" {
 		t.Errorf("Expect token transfer failed")
 	}
 }

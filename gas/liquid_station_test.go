@@ -16,7 +16,7 @@ func (token *MockToken) GetBalance(addr crypto.Address) (uint64, error) {
 	return 100, nil
 }
 
-func (token *MockToken) Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]*crypto.Event, error) {
+func (token *MockToken) Transfer(caller crypto.Address, addr crypto.Address, amount uint64, memo uint64) ([]*crypto.Event, error) {
 	if addr.String() != contractAddressStr {
 		panic("Expected collector is gas contract address")
 	}

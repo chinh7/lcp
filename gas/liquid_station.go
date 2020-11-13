@@ -5,6 +5,7 @@ import (
 )
 
 const minimumGasPrice = uint32(18)
+const feeTranferMemo = uint64(0)
 
 // LiquidStation provide a liquid as a gas station
 type LiquidStation struct {
@@ -28,7 +29,7 @@ func (station *LiquidStation) Burn(addr crypto.Address, fee uint64) []*crypto.Ev
 	token := station.app.GetGasContractToken()
 	// Move to gas owner
 	if fee > 0 {
-		events, err := token.Transfer(addr, station.collector, fee)
+		events, err := token.Transfer(addr, station.collector, fee, feeTranferMemo)
 		if err != nil {
 			panic(err)
 		}

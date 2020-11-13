@@ -1,8 +1,6 @@
 package token
 
 import (
-	"errors"
-	"math"
 	"strconv"
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
@@ -18,7 +16,7 @@ type Token struct {
 	contract *storage.Account
 }
 
-func (token *Token) invokeContract(caller crypto.Address, method string, values []string) (uint64, []*crypto.Event, error) {
+func (token *Token) invokeContract(caller crypto.Address, method string, args []string) (uint64, []*crypto.Event, error) {
 	contract, err := token.contract.GetContract()
 	if err != nil {
 		return 0, nil, err
@@ -27,7 +25,7 @@ func (token *Token) invokeContract(caller crypto.Address, method string, values 
 	if err != nil {
 		return 0, nil, err
 	}
-	methodArgs, err := abi.EncodeFromString(function.Parameters, values)
+	methodArgs, err := abi.EncodeFromString(function.Parameters, args)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -47,11 +45,13 @@ func (token *Token) GetBalance(addr crypto.Address) (uint64, error) {
 }
 
 // Transfer transfer token from caller address to another address
-func (token *Token) Transfer(caller crypto.Address, addr crypto.Address, amount uint64) ([]*crypto.Event, error) {
-	ret, events, err := token.invokeContract(caller, "transfer", []string{addr.String(), strconv.FormatUint(amount, 10)})
-	if ret > math.MaxInt32 {
-		return events, errors.New("Token transfer failed")
+func (token *Token) Transfer(caller crypto.Address, addr crypto.Address, amount uint64, memo uint64) ([]*crypto.Event, error) {
+	args := []string{
+		addr.String(),
+		strconv.FormatUint(amount, 10),
+		strconv.FormatUint(memo, 10),
 	}
+	_, events, err := token.invokeContract(caller, "transfer", args)
 	return events, err
 }
 
