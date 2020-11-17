@@ -15,6 +15,6 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c
 	github.com/tendermint/tendermint v0.33.8
-	github.com/vertexdlt/vertexvm v0.0.0-20200403095113-7f0a725a8184
+	github.com/vertexdlt/vertexvm v0.0.0-20201113091753-272c4d87302a
 	golang.org/x/crypto v0.0.0-20201012173705-84dcc777aaee
 )

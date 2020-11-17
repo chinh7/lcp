@@ -428,6 +428,8 @@ github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijb
 github.com/urfave/cli v1.22.1/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
 github.com/vertexdlt/vertexvm v0.0.0-20200403095113-7f0a725a8184 h1:X4Sy0QkApi+n1uRxLiQvVV1MUh93xQGJkGlfkEDbnWw=
 github.com/vertexdlt/vertexvm v0.0.0-20200403095113-7f0a725a8184/go.mod h1:ifLAtZAxszFiq3RAMVfJ8YZmIaWN4lxfF8yV94d+K4k=
+github.com/vertexdlt/vertexvm v0.0.0-20201113091753-272c4d87302a h1:QRNcPUTx+DwEPnaeGUnD/Fgb9TuPinIJ2nKdIiHb9so=
+github.com/vertexdlt/vertexvm v0.0.0-20201113091753-272c4d87302a/go.mod h1:ifLAtZAxszFiq3RAMVfJ8YZmIaWN4lxfF8yV94d+K4k=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
