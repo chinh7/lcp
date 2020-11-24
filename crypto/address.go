@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"crypto/ed25519"
 	"encoding/base32"
 	"encoding/json"
 
@@ -8,7 +9,6 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/crc16"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/blake2b"
-	"golang.org/x/crypto/ed25519"
 )
 
 const (

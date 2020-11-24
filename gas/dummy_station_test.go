@@ -1,10 +1,9 @@
 package gas
 
 import (
-	cryptoRand "crypto/rand"
+	"crypto/ed25519"
+	"crypto/rand"
 	"testing"
-
-	"golang.org/x/crypto/ed25519"
 
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 	"github.com/google/go-cmp/cmp"
@@ -13,7 +12,7 @@ import (
 func TestDummyStation_Sufficient(t *testing.T) {
 	t.Run("Sufficient", func(t *testing.T) {
 		station := &DummyStation{app: nil, policy: &FreePolicy{}}
-		pub, _, _ := ed25519.GenerateKey(cryptoRand.Reader)
+		pub, _, _ := ed25519.GenerateKey(rand.Reader)
 		toAddr := crypto.AddressFromPubKey(pub)
 		want := false
 
@@ -23,7 +22,7 @@ func TestDummyStation_Sufficient(t *testing.T) {
 	})
 
 	t.Run("Insufficient", func(t *testing.T) {
-		pub, _, _ := ed25519.GenerateKey(cryptoRand.Reader)
+		pub, _, _ := ed25519.GenerateKey(rand.Reader)
 		station := &DummyStation{app: nil, policy: &FreePolicy{}}
 		toAddr := crypto.AddressFromPubKey(pub)
 		want := true
@@ -39,7 +38,7 @@ func TestDummyStation_Burn(t *testing.T) {
 		app:    nil,
 		policy: &FreePolicy{},
 	}
-	pub, _, _ := ed25519.GenerateKey(cryptoRand.Reader)
+	pub, _, _ := ed25519.GenerateKey(rand.Reader)
 	addr := crypto.AddressFromPubKey(pub)
 	var want []*crypto.Event
 	if got := station.Burn(addr, uint64(0)); !cmp.Equal(got, want) {

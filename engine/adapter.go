@@ -1,19 +1,17 @@
 package engine
 
 import (
+	"crypto/ed25519"
 	"encoding/binary"
 	"errors"
 	"fmt"
-
-	"golang.org/x/crypto/blake2b"
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/abi"
 	"github.com/QuoineFinancial/liquid-chain/constant"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
-
 	"github.com/vertexdlt/vertexvm/vm"
-	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/blake2b"
 )
 
 const pointerSize = int(4)

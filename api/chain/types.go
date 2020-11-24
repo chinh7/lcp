@@ -18,6 +18,7 @@ type call struct {
 }
 
 type receipt struct {
+	Index       uint32             `json:"index"`
 	Transaction common.Hash        `json:"transaction"`
 	Result      string             `json:"result"`
 	GasUsed     uint32             `json:"gasUsed"`

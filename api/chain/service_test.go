@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"crypto/ed25519"
 	"encoding/base64"
 	"os"
 	"testing"
@@ -24,12 +25,13 @@ func TestMain(m *testing.M) {
 func TestGetLatestBlock(t *testing.T) {
 	var result BlockResult
 	testResourceInstance.service.GetLatestBlock(nil, &LatestBlockParams{}, &result)
+
 	assert.Equal(t, block{
-		Hash:            common.HexToHash("7ad9917bf11abdffc2be47e966d1cfabe4d573e2cdd5e83db1baa5b94ada21e1"),
+		Hash:            common.HexToHash("c3bfeccd3d6ac912c723dc2127101693763e1e31ca28fa53cdb30c69b4e1d051"),
 		Height:          4,
 		Time:            4,
-		Parent:          common.HexToHash("49ec9a40849711c6207c458024c150b1dd306b4ae351902b1a049f5e90fe1ff7"),
-		StateRoot:       common.HexToHash("4932482ebd2cc8031f0a44de9158ec1fd7c9d388a4ad2de02e914c1babb823f7"),
+		Parent:          common.HexToHash("2d8dd7ca6b5afdf9dba6470968b17a7cabac443aa87fe6a6468195f28b7a2965"),
+		StateRoot:       common.HexToHash("37919c75f0336a7e2bd96e8551facb7089960f99d09b10ed75808491da53ecf4"),
 		TransactionRoot: common.HexToHash("45b0cfc220ceec5b7c1c62c4d4193d38e4eba48e8815729ce75f9c0ab0e4c1c0"),
 		ReceiptRoot:     common.HexToHash("45b0cfc220ceec5b7c1c62c4d4193d38e4eba48e8815729ce75f9c0ab0e4c1c0"),
 		Transactions:    []transaction{},
@@ -43,30 +45,78 @@ func TestGetBlockByHeight(t *testing.T) {
 		Height: 2,
 	}, &result)
 
-	sender, _ := crypto.AddressFromString("LA5WUJ54Z23KILLCUOUNAKTPBVZWKMQVO4O6EQ5GHLAERIMLLHNCTXXT")
-	receiver, _ := crypto.AddressFromString("LBAPQ4LVHFYZQXRSS3CCN6VUZ2EEC6IN5S2RGQLHS3RNNOIBNP4B6XNH")
-	signature, _ := base64.StdEncoding.DecodeString("OttqA4/C5Bk/04EMSXsBZ8U8bNWb4ErsBwStsdo4gDuV9kKEdb2Z/TEr9WQb100e7gj3g1meyKVinI2ZbjGcBg==")
+	senders := make([]crypto.Address, 3)
+	receivers := make([]crypto.Address, 3)
+
+	for i := range senders {
+		_, pk := testResourceInstance.getSenderWithNonce(byte(i), 0)
+		senders[i] = crypto.AddressFromPubKey(pk.Public().(ed25519.PublicKey))
+		receivers[i] = crypto.NewDeploymentAddress(senders[i], 0)
+	}
+
+	signatures := make([][]byte, 3)
+	signatures[0], _ = base64.StdEncoding.DecodeString("OttqA4/C5Bk/04EMSXsBZ8U8bNWb4ErsBwStsdo4gDuV9kKEdb2Z/TEr9WQb100e7gj3g1meyKVinI2ZbjGcBg==")
+	signatures[1], _ = base64.StdEncoding.DecodeString("qSZ39N1f1bOVE9Hhd9dog6iOHYbzXXNBr1fPjdUq5uOqrMbzh65gxPqpHNTZCHNgRRvC2QXLV+OReQqf4R9OCA==")
+	signatures[2], _ = base64.StdEncoding.DecodeString("yyi3QL2b4IHPunS6m+cpc0dxD0k6Rx8frmQfHzc6hNt+gOZG4sBEesz92dGk2tnu/4dm7NNJKAQdBGYJoFPYDQ==")
 
 	assert.Equal(t, block{
 		Time:            2,
 		Height:          2,
-		Hash:            common.HexToHash("c150cbb67250266d77d573c8603ccd88f13cecb527e9e4fde208acbe4d078601"),
-		Parent:          common.HexToHash("838330cdd2952a26233f30dd805e449d35bd14eec1cc4f53b0af7229dfbc2c51"),
-		StateRoot:       common.HexToHash("50f3d1d9c48e5d967600fcc19ba7c6fd124bcef6d0c3701134122af51cd2e6e2"),
-		TransactionRoot: common.HexToHash("eb9f7258591dca0b1d890ecb5e506d67c9e3d16f1fc6e3be40eeb084d78df501"),
-		ReceiptRoot:     common.HexToHash("215b491384a59b0aef1a4764f8869a4da55686ff457191b50fb72519583fd588"),
+		Hash:            common.HexToHash("6ef55f78f482353d673e1429d30c967051ce8b7d47a3602e93d87e686bb5c7b0"),
+		Parent:          common.HexToHash("acb376f46a530ef5c8d7702863d81e7c1f1b1a54f008cdbc7c380a8b8e13339b"),
+		StateRoot:       common.HexToHash("3ec58cab3d13e0eaff2d4e06effb5445b9016324b38aef7f922157c987e5bbf7"),
+		TransactionRoot: common.HexToHash("7c627e647b368cb1911bb95850210034927fb09394ff6be40548febe2db01b3d"),
+		ReceiptRoot:     common.HexToHash("b54d0a78cdcdfba14bcaa39b7d7e2fccb56b594f4748fce3b6a55df9197e0758"),
 
 		Transactions: []transaction{{
+			Hash:        common.HexToHash("5e6552f82be4fe44e5f6915ca37ca2de24085da0cc83385040b68ace94b6d213"),
+			Type:        "invoke",
+			BlockHeight: 2,
+			Version:     1,
+			Sender:      senders[1],
+			Nonce:       1,
+			Receiver:    receivers[1],
+			GasPrice:    1,
+			GasLimit:    0,
+			Signature:   signatures[1],
+			Payload: call{
+				Name: "mint",
+				Args: []argument{{
+					Type:  "uint64",
+					Name:  "amount",
+					Value: "1000",
+				}},
+			},
+		}, {
 			Hash:        common.HexToHash("b3fef26e5cb52f0681a06bb9c9ff78acb53ef79daa0c46fecbf1e212e9a67ddc"),
 			Type:        "invoke",
 			BlockHeight: 2,
 			Version:     1,
-			Sender:      sender,
+			Sender:      senders[0],
 			Nonce:       1,
-			Receiver:    receiver,
+			Receiver:    receivers[0],
 			GasPrice:    1,
 			GasLimit:    0,
-			Signature:   signature,
+			Signature:   signatures[0],
+			Payload: call{
+				Name: "mint",
+				Args: []argument{{
+					Type:  "uint64",
+					Name:  "amount",
+					Value: "1000",
+				}},
+			},
+		}, {
+			Hash:        common.HexToHash("c253c3e7f7ed6b393ba5a6e2ea73e4218abb3aa0eb5d36065a4367871341784b"),
+			Type:        "invoke",
+			BlockHeight: 2,
+			Version:     1,
+			Sender:      senders[2],
+			Nonce:       1,
+			Receiver:    receivers[2],
+			GasPrice:    1,
+			GasLimit:    0,
+			Signature:   signatures[2],
 			Payload: call{
 				Name: "mint",
 				Args: []argument{{
@@ -78,24 +128,65 @@ func TestGetBlockByHeight(t *testing.T) {
 		}},
 
 		Receipts: []receipt{{
-			Transaction: common.HexToHash("b3fef26e5cb52f0681a06bb9c9ff78acb53ef79daa0c46fecbf1e212e9a67ddc"),
+			Index:       0,
+			Transaction: common.HexToHash("5e6552f82be4fe44e5f6915ca37ca2de24085da0cc83385040b68ace94b6d213"),
 			Result:      "0",
 			GasUsed:     0,
 			Code:        0,
 			Events: []call{{
-				Contract: receiver.String(),
+				Contract: receivers[1].String(),
 				Name:     "Mint",
 				Args: []argument{{
 					Type:  "address",
 					Name:  "to",
-					Value: "LA5WUJ54Z23KILLCUOUNAKTPBVZWKMQVO4O6EQ5GHLAERIMLLHNCTXXT",
+					Value: senders[1].String(),
 				}, {
 					Type:  "uint64",
 					Name:  "amount",
 					Value: "1000",
 				}},
 			}},
-			PostState: common.HexToHash("50f3d1d9c48e5d967600fcc19ba7c6fd124bcef6d0c3701134122af51cd2e6e2"),
+			PostState: common.HexToHash("a6324a4017b35eb099ec4768d79e3a968f73510d1a5f38b42fce197d5fc021d7"),
+		}, {
+			Index:       1,
+			Transaction: common.HexToHash("b3fef26e5cb52f0681a06bb9c9ff78acb53ef79daa0c46fecbf1e212e9a67ddc"),
+			Result:      "0",
+			GasUsed:     0,
+			Code:        0,
+			Events: []call{{
+				Contract: receivers[0].String(),
+				Name:     "Mint",
+				Args: []argument{{
+					Type:  "address",
+					Name:  "to",
+					Value: senders[0].String(),
+				}, {
+					Type:  "uint64",
+					Name:  "amount",
+					Value: "1000",
+				}},
+			}},
+			PostState: common.HexToHash("3b214fa485b8125b9221fac1ae38dc24b259759772af8800044dc67caef5979c"),
+		}, {
+			Index:       2,
+			Transaction: common.HexToHash("c253c3e7f7ed6b393ba5a6e2ea73e4218abb3aa0eb5d36065a4367871341784b"),
+			Result:      "0",
+			GasUsed:     0,
+			Code:        0,
+			Events: []call{{
+				Contract: receivers[2].String(),
+				Name:     "Mint",
+				Args: []argument{{
+					Type:  "address",
+					Name:  "to",
+					Value: senders[2].String(),
+				}, {
+					Type:  "uint64",
+					Name:  "amount",
+					Value: "1000",
+				}},
+			}},
+			PostState: common.HexToHash("3ec58cab3d13e0eaff2d4e06effb5445b9016324b38aef7f922157c987e5bbf7"),
 		}},
 	}, *result.Block)
 }
@@ -132,6 +223,7 @@ func TestGetTransaction(t *testing.T) {
 	}, *result.Transaction)
 
 	assert.Equal(t, receipt{
+		Index:       1,
 		Transaction: common.HexToHash("b3fef26e5cb52f0681a06bb9c9ff78acb53ef79daa0c46fecbf1e212e9a67ddc"),
 		Result:      "0",
 		GasUsed:     0,
@@ -149,7 +241,7 @@ func TestGetTransaction(t *testing.T) {
 				Value: "1000",
 			}},
 		}},
-		PostState: common.HexToHash("50f3d1d9c48e5d967600fcc19ba7c6fd124bcef6d0c3701134122af51cd2e6e2"),
+		PostState: common.HexToHash("3b214fa485b8125b9221fac1ae38dc24b259759772af8800044dc67caef5979c"),
 	}, *result.Receipt)
 }
 

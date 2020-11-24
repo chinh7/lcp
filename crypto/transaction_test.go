@@ -1,11 +1,11 @@
 package crypto
 
 import (
+	"crypto/ed25519"
 	"testing"
 
 	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/google/go-cmp/cmp"
-	"golang.org/x/crypto/ed25519"
 )
 
 func TestTransaction_Serialize(t *testing.T) {

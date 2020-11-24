@@ -16,6 +16,7 @@ type Event struct {
 // Receipt reflects corresponding Transaction execution result
 type Receipt struct {
 	Transaction common.Hash
+	Index       uint32      `json:"index"`
 	Result      uint64      `json:"result"`
 	GasUsed     uint32      `json:"gasUsed"`
 	Code        ReceiptCode `json:"code"`

@@ -2,6 +2,7 @@ package node
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -12,8 +13,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"golang.org/x/crypto/ed25519" // This is used in place of crypto/ed25519 to support older version of Go
 
 	"github.com/QuoineFinancial/liquid-chain/api"
 	"github.com/QuoineFinancial/liquid-chain/crypto"

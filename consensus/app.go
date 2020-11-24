@@ -136,7 +136,7 @@ func (app *App) DeliverTx(req abciTypes.RequestDeliverTx) abciTypes.ResponseDeli
 	}
 
 	app.State.Commit()
-	if err := app.Chain.AddTransaction(tx, receipt); err != nil {
+	if err := app.Chain.AddTransactionWithReceipt(tx, receipt); err != nil {
 		panic(err)
 	}
 

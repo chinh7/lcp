@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 
 	"github.com/QuoineFinancial/liquid-chain/abi"
+	"github.com/QuoineFinancial/liquid-chain/common"
 	"github.com/QuoineFinancial/liquid-chain/crypto"
 )
 
@@ -164,6 +166,7 @@ func (service *Service) parseTransaction(tx *crypto.Transaction, blockHeight uin
 
 func (service *Service) parseReceipt(r *crypto.Receipt) (*receipt, error) {
 	parsedReceipt := receipt{
+		Index:       r.Index,
 		Transaction: r.Transaction,
 		Result:      fmt.Sprintf("%x", r.Result),
 		Code:        r.Code,
@@ -202,13 +205,23 @@ func (service *Service) parseBlock(rawBlock *crypto.Block) (*block, error) {
 		parsedBlock.Transactions = append(parsedBlock.Transactions, *parsedTx)
 	}
 
+	txHashToReceipt := make(map[common.Hash]*receipt)
 	for _, receipt := range rawBlock.Receipts() {
 		parsedReceipt, err := service.parseReceipt(receipt)
+		txHashToReceipt[parsedReceipt.Transaction] = parsedReceipt
 		if err != nil {
 			return nil, err
 		}
 		parsedBlock.Receipts = append(parsedBlock.Receipts, *parsedReceipt)
 	}
+
+	sort.Slice(parsedBlock.Receipts, func(i, j int) bool {
+		return parsedBlock.Receipts[i].Index < parsedBlock.Receipts[j].Index
+	})
+
+	sort.Slice(parsedBlock.Transactions, func(i, j int) bool {
+		return txHashToReceipt[parsedBlock.Transactions[i].Hash].Index < txHashToReceipt[parsedBlock.Transactions[j].Hash].Index
+	})
 
 	return &parsedBlock, nil
 }

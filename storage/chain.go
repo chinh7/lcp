@@ -72,8 +72,8 @@ func (bs *ChainStorage) Commit(stateRoot common.Hash) common.Hash {
 	return hash
 }
 
-// AddTransaction add tx to currentBlock
-func (bs *ChainStorage) AddTransaction(tx *crypto.Transaction, receipt *crypto.Receipt) error {
+// AddTransactionWithReceipt add tx and receipt to currentBlock
+func (bs *ChainStorage) AddTransactionWithReceipt(tx *crypto.Transaction, receipt *crypto.Receipt) error {
 	if bs.CurrentBlock == nil {
 		panic("ChainStorage.currentBlock is nil")
 	}
@@ -85,6 +85,7 @@ func (bs *ChainStorage) AddTransaction(tx *crypto.Transaction, receipt *crypto.R
 	bs.txTrie.Update(tx.Hash().Bytes(), rawTx)
 	bs.CurrentBlock.AddTransactions(tx)
 
+	receipt.Index = uint32(len(bs.CurrentBlock.Receipts()))
 	rawReceipt, err := receipt.Encode()
 	if err != nil {
 		return err

@@ -1,10 +1,11 @@
 package crypto
 
 import (
+	"crypto/ed25519"
+
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/common"
 	"golang.org/x/crypto/blake2b"
-	"golang.org/x/crypto/ed25519"
 )
 
 // Sign return signature of message when signing using privateKey

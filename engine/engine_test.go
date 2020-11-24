@@ -1,14 +1,14 @@
 package engine
 
 import (
+	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"math"
 	"strings"
-	"time"
-
 	"testing"
+	"time"
 
 	"github.com/QuoineFinancial/liquid-chain-rlp/rlp"
 	"github.com/QuoineFinancial/liquid-chain/abi"
@@ -17,7 +17,6 @@ import (
 	"github.com/QuoineFinancial/liquid-chain/gas"
 	"github.com/QuoineFinancial/liquid-chain/storage"
 	"golang.org/x/crypto/blake2b"
-	"golang.org/x/crypto/ed25519"
 )
 
 func loadContract(abiPath, wasmPath string) *abi.Contract {

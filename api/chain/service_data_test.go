@@ -46,7 +46,15 @@ func (resource testResource) seed() {
 		height: 1,
 		time:   time.Unix(1, 0),
 		txRequests: []txRequest{{
-			tx:                        resource.getDeployTx(0),
+			tx:                        resource.getDeployTx(0, 0),
+			expectedResponseCheckTx:   types.ResponseCheckTx{Code: consensus.ResponseCodeOK},
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: consensus.ResponseCodeOK},
+		}, {
+			tx:                        resource.getDeployTx(1, 0),
+			expectedResponseCheckTx:   types.ResponseCheckTx{Code: consensus.ResponseCodeOK},
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: consensus.ResponseCodeOK},
+		}, {
+			tx:                        resource.getDeployTx(2, 0),
 			expectedResponseCheckTx:   types.ResponseCheckTx{Code: consensus.ResponseCodeOK},
 			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: consensus.ResponseCodeOK},
 		}},
@@ -54,7 +62,15 @@ func (resource testResource) seed() {
 		height: 2,
 		time:   time.Unix(2, 0),
 		txRequests: []txRequest{{
-			tx:                        resource.getInvokeTx(1),
+			tx:                        resource.getInvokeTx(1, 1),
+			expectedResponseCheckTx:   types.ResponseCheckTx{Code: consensus.ResponseCodeOK},
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: consensus.ResponseCodeOK},
+		}, {
+			tx:                        resource.getInvokeTx(0, 1),
+			expectedResponseCheckTx:   types.ResponseCheckTx{Code: consensus.ResponseCodeOK},
+			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: consensus.ResponseCodeOK},
+		}, {
+			tx:                        resource.getInvokeTx(2, 1),
 			expectedResponseCheckTx:   types.ResponseCheckTx{Code: consensus.ResponseCodeOK},
 			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: consensus.ResponseCodeOK},
 		}},
@@ -62,7 +78,7 @@ func (resource testResource) seed() {
 		height: 3,
 		time:   time.Unix(3, 0),
 		txRequests: []txRequest{{
-			tx:                        resource.getDeployEventStringTx(2),
+			tx:                        resource.getDeployEventStringTx(0, 2),
 			expectedResponseCheckTx:   types.ResponseCheckTx{Code: consensus.ResponseCodeOK},
 			expectedResponseDeliverTx: types.ResponseDeliverTx{Code: consensus.ResponseCodeOK},
 		}},
@@ -70,22 +86,22 @@ func (resource testResource) seed() {
 		height: 4,
 		time:   time.Unix(4, 0),
 		txRequests: []txRequest{{
-			tx:                      resource.getInvokeNilContractTx(3),
+			tx:                      resource.getInvokeNilContractTx(0, 3),
 			expectedResponseCheckTx: types.ResponseCheckTx{Code: consensus.ResponseCodeNotOK, Log: "Invoke nil contract"},
 		}, {
-			tx:                      resource.getInvalidMaxSizeTx(3),
+			tx:                      resource.getInvalidMaxSizeTx(0, 3),
 			expectedResponseCheckTx: types.ResponseCheckTx{Code: consensus.ResponseCodeNotOK, Log: fmt.Sprintf("Transaction size exceed %vB", constant.MaxTransactionSize)},
 		}, {
-			tx:                      resource.getInvalidSignatureTx(3),
+			tx:                      resource.getInvalidSignatureTx(0, 3),
 			expectedResponseCheckTx: types.ResponseCheckTx{Code: consensus.ResponseCodeNotOK, Log: "Invalid signature"},
 		}, {
-			tx:                      resource.getInvalidNonceTx(123),
+			tx:                      resource.getInvalidNonceTx(0, 123),
 			expectedResponseCheckTx: types.ResponseCheckTx{Code: consensus.ResponseCodeNotOK, Log: "Invalid nonce. Expected 3, got 123"},
 		}, {
-			tx:                      resource.getInvalidGasPriceTx(3),
+			tx:                      resource.getInvalidGasPriceTx(0, 3),
 			expectedResponseCheckTx: types.ResponseCheckTx{Code: consensus.ResponseCodeNotOK, Log: "Invalid gas price"},
 		}, {
-			tx:                      resource.getInvokeNonContractTx(3),
+			tx:                      resource.getInvokeNonContractTx(0, 3),
 			expectedResponseCheckTx: types.ResponseCheckTx{Code: consensus.ResponseCodeNotOK, Log: "Invoke a non-contract account"},
 		}},
 	}}
@@ -130,8 +146,8 @@ func newTestResource() *testResource {
 	return &testResource{service, app, dbDir}
 }
 
-func (testResource) getSenderWithNonce(nonce int) (crypto.TxSender, ed25519.PrivateKey) {
-	seed := make([]byte, 32)
+func (testResource) getSenderWithNonce(senderIndex byte, nonce int) (crypto.TxSender, ed25519.PrivateKey) {
+	seed := append(make([]byte, 31), senderIndex)
 	privateKey := ed25519.NewKeyFromSeed(seed)
 	sender := crypto.TxSender{
 		Nonce:     uint64(nonce),
@@ -140,8 +156,8 @@ func (testResource) getSenderWithNonce(nonce int) (crypto.TxSender, ed25519.Priv
 	return sender, privateKey
 }
 
-func (resource testResource) getDeployEventStringTx(nonce int) *crypto.Transaction {
-	sender, privateKey := resource.getSenderWithNonce(nonce)
+func (resource testResource) getDeployEventStringTx(senderIndex byte, nonce int) *crypto.Transaction {
+	sender, privateKey := resource.getSenderWithNonce(senderIndex, nonce)
 	data, err := util.BuildDeployTxPayload("../../test/testdata/event-string.wasm", "../../test/testdata/event-string-abi.json", "", []string{})
 	if err != nil {
 		panic(err)
@@ -159,8 +175,8 @@ func (resource testResource) getDeployEventStringTx(nonce int) *crypto.Transacti
 	return tx
 }
 
-func (resource testResource) getDeployTx(nonce int) *crypto.Transaction {
-	sender, privateKey := resource.getSenderWithNonce(nonce)
+func (resource testResource) getDeployTx(senderIndex byte, nonce int) *crypto.Transaction {
+	sender, privateKey := resource.getSenderWithNonce(senderIndex, nonce)
 	data, err := util.BuildDeployTxPayload("../../test/testdata/liquid-token.wasm", "../../test/testdata/liquid-token-abi.json", "", []string{})
 	if err != nil {
 		panic(err)
@@ -178,8 +194,8 @@ func (resource testResource) getDeployTx(nonce int) *crypto.Transaction {
 	return tx
 }
 
-func (resource testResource) getInvokeTx(nonce int) *crypto.Transaction {
-	sender, privateKey := resource.getSenderWithNonce(nonce)
+func (resource testResource) getInvokeTx(senderIndex byte, nonce int) *crypto.Transaction {
+	sender, privateKey := resource.getSenderWithNonce(senderIndex, nonce)
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 	data, err := util.BuildInvokeTxPayload("../../test/testdata/liquid-token-abi.json", "mint", []string{"1000"})
 	if err != nil {
@@ -198,8 +214,8 @@ func (resource testResource) getInvokeTx(nonce int) *crypto.Transaction {
 	return tx
 }
 
-func (resource testResource) getInvalidMaxSizeTx(nonce int) *crypto.Transaction {
-	sender, _ := resource.getSenderWithNonce(nonce)
+func (resource testResource) getInvalidMaxSizeTx(senderIndex byte, nonce int) *crypto.Transaction {
+	sender, _ := resource.getSenderWithNonce(senderIndex, nonce)
 	type maxSizeContart [constant.MaxTransactionSize]byte
 	var contract maxSizeContart
 	tx := &crypto.Transaction{
@@ -213,8 +229,8 @@ func (resource testResource) getInvalidMaxSizeTx(nonce int) *crypto.Transaction 
 	return tx
 }
 
-func (resource testResource) getInvalidSignatureTx(nonce int) *crypto.Transaction {
-	sender, _ := resource.getSenderWithNonce(nonce)
+func (resource testResource) getInvalidSignatureTx(senderIndex byte, nonce int) *crypto.Transaction {
+	sender, _ := resource.getSenderWithNonce(senderIndex, nonce)
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 	data, err := util.BuildInvokeTxPayload("../../test/testdata/liquid-token-abi.json", "mint", []string{"1000"})
 	if err != nil {
@@ -232,8 +248,8 @@ func (resource testResource) getInvalidSignatureTx(nonce int) *crypto.Transactio
 	return tx
 }
 
-func (resource testResource) getInvalidNonceTx(nonce int) *crypto.Transaction {
-	sender, privateKey := resource.getSenderWithNonce(nonce)
+func (resource testResource) getInvalidNonceTx(senderIndex byte, nonce int) *crypto.Transaction {
+	sender, privateKey := resource.getSenderWithNonce(senderIndex, nonce)
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 	data, err := util.BuildInvokeTxPayload("../../test/testdata/liquid-token-abi.json", "mint", []string{"1000"})
 	if err != nil {
@@ -252,8 +268,8 @@ func (resource testResource) getInvalidNonceTx(nonce int) *crypto.Transaction {
 	return tx
 }
 
-func (resource testResource) getInvalidGasPriceTx(nonce int) *crypto.Transaction {
-	sender, privateKey := resource.getSenderWithNonce(nonce)
+func (resource testResource) getInvalidGasPriceTx(senderIndex byte, nonce int) *crypto.Transaction {
+	sender, privateKey := resource.getSenderWithNonce(senderIndex, nonce)
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 	data, err := util.BuildInvokeTxPayload("../../test/testdata/liquid-token-abi.json", "mint", []string{"1000"})
 	if err != nil {
@@ -272,8 +288,8 @@ func (resource testResource) getInvalidGasPriceTx(nonce int) *crypto.Transaction
 	return tx
 }
 
-func (resource testResource) getInvokeNilContractTx(nonce int) *crypto.Transaction {
-	sender, privateKey := resource.getSenderWithNonce(nonce)
+func (resource testResource) getInvokeNilContractTx(senderIndex byte, nonce int) *crypto.Transaction {
+	sender, privateKey := resource.getSenderWithNonce(senderIndex, nonce)
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 	data, err := util.BuildInvokeTxPayload("../../test/testdata/liquid-token-abi.json", "mint", []string{"1000"})
 	if err != nil {
@@ -292,8 +308,8 @@ func (resource testResource) getInvokeNilContractTx(nonce int) *crypto.Transacti
 	return tx
 }
 
-func (resource testResource) getInvokeNonContractTx(nonce int) *crypto.Transaction {
-	sender, privateKey := resource.getSenderWithNonce(nonce)
+func (resource testResource) getInvokeNonContractTx(senderIndex byte, nonce int) *crypto.Transaction {
+	sender, privateKey := resource.getSenderWithNonce(senderIndex, nonce)
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 	data, err := util.BuildInvokeTxPayload("../../test/testdata/liquid-token-abi.json", "mint", []string{"1000"})
 	if err != nil {
@@ -312,8 +328,8 @@ func (resource testResource) getInvokeNonContractTx(nonce int) *crypto.Transacti
 	return tx
 }
 
-func (resource testResource) getInvalidSerializedTx(nonce int) *crypto.Transaction {
-	sender, privateKey := resource.getSenderWithNonce(nonce)
+func (resource testResource) getInvalidSerializedTx(senderIndex byte, nonce int) *crypto.Transaction {
+	sender, privateKey := resource.getSenderWithNonce(senderIndex, nonce)
 	senderAddress := crypto.AddressFromPubKey(sender.PublicKey)
 	data, err := util.BuildInvokeTxPayload("../../test/testdata/liquid-token-abi.json", "mint", []string{"1000"})
 	if err != nil {
