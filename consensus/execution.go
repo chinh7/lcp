@@ -54,15 +54,20 @@ func (app *App) deployContract(tx *crypto.Transaction) (*crypto.Receipt, error) 
 			return nil, err
 		}
 		execEngine := engine.NewEngine(app.State, contractAccount, senderAddress, policy, uint64(tx.GasLimit-receipt.GasUsed))
-		if result, err := execEngine.Ignite(function.Name, tx.Payload.Args); err != nil {
+		result, err := execEngine.Ignite(function.Name, tx.Payload.Args)
+		receipt.GasUsed += uint32(execEngine.GetGasUsed())
+		if err != nil {
 			receipt.Code = crypto.ReceiptCodeIgniteError
+			app.State.Revert()
+		} else if !app.gasStation.Sufficient(senderAddress, uint64(receipt.GasUsed)*uint64(tx.GasPrice)) {
+			receipt.Code = crypto.ReceiptCodeOutOfGas
+			receipt.GasUsed = tx.GasLimit
 			app.State.Revert()
 		} else {
 			receipt.Result = result
 			receipt.Code = crypto.ReceiptCodeOK
 			receipt.Events = append(receipt.Events, execEngine.GetEvents()...)
 		}
-		receipt.GasUsed += uint32(execEngine.GetGasUsed())
 	}
 
 	// Create account for creator and increase nonce by 1
@@ -105,8 +110,15 @@ func (app *App) invokeContract(tx *crypto.Transaction) (*crypto.Receipt, error) 
 	senderAddress := crypto.AddressFromPubKey(tx.Sender.PublicKey)
 	execEngine := engine.NewEngine(app.State, contractAccount, senderAddress, policy, uint64(tx.GasLimit))
 
-	if result, err := execEngine.Ignite(function.Name, tx.Payload.Args); err != nil {
+	result, err := execEngine.Ignite(function.Name, tx.Payload.Args)
+	receipt.GasUsed = uint32(execEngine.GetGasUsed())
+
+	if err != nil {
 		receipt.Code = crypto.ReceiptCodeIgniteError
+		app.State.Revert()
+	} else if !app.gasStation.Sufficient(senderAddress, uint64(receipt.GasUsed)*uint64(tx.GasPrice)) {
+		receipt.Code = crypto.ReceiptCodeOutOfGas
+		receipt.GasUsed = tx.GasLimit
 		app.State.Revert()
 	} else {
 		receipt.Result = result
@@ -118,7 +130,6 @@ func (app *App) invokeContract(tx *crypto.Transaction) (*crypto.Receipt, error) 
 		return nil, err
 	}
 
-	receipt.GasUsed = uint32(execEngine.GetGasUsed())
 	gasEvents := app.gasStation.Burn(senderAddress, uint64(receipt.GasUsed)*uint64(tx.GasPrice))
 	receipt.Events = append(receipt.Events, gasEvents...)
 	receipt.PostState = app.State.Hash()
