@@ -1,13 +1,12 @@
-version: '3'
+version: "3"
 services:
-  node:
+  lqc-node:
+    environment:
+      ROOT_DIR: /lqc-node-data
     volumes:
-      - ./data:/root/.liquid
+      - ./data:/lqc-node-data
     ports:
       - 26657:26657
       - 26656:26656
       - 5555:5555
-    build:
-      context: .
-      dockerfile: ./dockers/liquid.Dockerfile
-    command: node
+    build: .

@@ -4,9 +4,7 @@ jobs:
   test:
     working_directory: ~/liquid
     docker:
-      - image: quoine/rocksdb:latest
-        environment:
-          GO111MODULE: "on"
+      - image: golang:1.15
     steps:
       - checkout
       - restore_cache: # restores saved cache if no changes are detected since last run
