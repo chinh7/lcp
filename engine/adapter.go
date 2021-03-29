@@ -306,7 +306,7 @@ func (engine *Engine) GetFunction(module, name string) vm.HostFunction {
 				}
 			}
 		}
-	case "wasi_unstable", "wasi_snapshot_review1":
+	case "wasi_unstable", "wasi_snapshot_preview1":
 		return wasiUnstableHandler(name)
 	}
 	return func(vm *vm.VM, args ...uint64) (uint64, error) {
